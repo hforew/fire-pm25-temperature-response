@@ -41,7 +41,7 @@ world_usa_pm <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = annual_ave_USA,
-            aes(x = lon, y = lat, fill = pm25_annual)) +
+            aes(x = lon, y = lat, fill = pm_2000)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "PM2.5 (μg/m³)",
                       na.value = NA) +
@@ -58,7 +58,7 @@ world_usa_fpm <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = annual_ave_USA,
-            aes(x = lon, y = lat, fill = fpm25_annual)) +
+            aes(x = lon, y = lat, fill = fpm_2000)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "FPM2.5 (μg/m³)",
                       na.value = NA) +
@@ -75,7 +75,7 @@ world_usa_fpm_mon4to9 <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = month4to9_ave_USA,
-            aes(x = lon, y = lat, fill = fpm25_m4to9)) +
+            aes(x = lon, y = lat, fill = fpm_2000)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "FPM2.5 (μg/m³)",
                       na.value = NA) +
@@ -97,7 +97,7 @@ world_ind_pm <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = annual_ave_IND,
-            aes(x = lon, y = lat, fill = pm25_annual)) +
+            aes(x = lon, y = lat, fill = pm_2000)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "PM2.5 (μg/m³)",
                       na.value = NA) +
@@ -118,7 +118,7 @@ world_chn_pm <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = annual_ave_CHN,
-            aes(x = lon, y = lat, fill = pm25_annual)) +
+            aes(x = lon, y = lat, fill = pm_2000)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "PM2.5 (μg/m³)",
                       na.value = NA) +
@@ -139,7 +139,7 @@ world_rus_pm <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = annual_ave_RUS,
-            aes(x = lon, y = lat, fill = pm25_annual)) +
+            aes(x = lon, y = lat, fill = pm_2000)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "PM2.5 (μg/m³)",
                       na.value = NA) +
@@ -160,7 +160,7 @@ world_pm <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = annual_ave_mapped,
-            aes(x = lon, y = lat, fill = pm25_annual)) +
+            aes(x = lon, y = lat, fill = pm_2000)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "PM2.5 (μg/m³)",
                       na.value = NA) +
