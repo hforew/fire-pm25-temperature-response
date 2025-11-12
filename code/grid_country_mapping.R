@@ -1,6 +1,6 @@
-######################
-## ACC Country Level ##
-######################
+#########################################
+## Create grid cell to country mapping ##
+#########################################
 
 # Remove all objects from the environment
 rm(list = ls())

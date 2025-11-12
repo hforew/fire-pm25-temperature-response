@@ -1,0 +1,176 @@
+###########################
+## Plot select countries ##
+###########################
+
+
+# Remove all objects from the environment
+rm(list = ls())
+
+############ Packages #####################################################
+
+library(here)
+library(tidyverse)
+library(ggplot2)
+library(maps)
+
+############ Import #####################################################
+
+# Import annual average PM2.5 data
+annual_ave <- read_csv(here("output", "annual_ave_pm25_2000.csv"))
+month4to9_ave <- read_csv(here("output", "month4to9_ave_pm25_2000.csv"))
+
+
+# Preview the data
+head(annual_ave)
+str(annual_ave)
+
+############ plot select countries on map #####################################################
+
+# 1. Get world map data
+world_map <- map_data("world")
+
+# USA
+annual_ave_USA <- annual_ave %>%
+  filter(country_code_iso3 == "USA")
+
+month4to9_ave_USA <- month4to9_ave %>%
+  filter(country_code_iso3 == "USA")
+
+world_usa_pm <- ggplot() +
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group),
+               fill = "lightgray", color = "white", size = 0.1) +
+  geom_tile(data = annual_ave_USA,
+            aes(x = lon, y = lat, fill = pm25_annual)) +
+  scale_fill_gradient(low = "yellow", high = "darkred",
+                      name = "PM2.5 (μg/m³)",
+                      na.value = NA) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(title = "Annual Average PM2.5 - USA (2000)",
+       x = "Longitude", y = "Latitude") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("images", "world_usa_pm.png"), world_usa_pm, width = 10, height = 6)
+
+world_usa_fpm <- ggplot() +
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group),
+               fill = "lightgray", color = "white", size = 0.1) +
+  geom_tile(data = annual_ave_USA,
+            aes(x = lon, y = lat, fill = fpm25_annual)) +
+  scale_fill_gradient(low = "yellow", high = "darkred",
+                      name = "FPM2.5 (μg/m³)",
+                      na.value = NA) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(title = "Annual Average FPM2.5 - USA (2000)",
+       x = "Longitude", y = "Latitude") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("images", "world_usa_fpm.png"), world_usa_fpm, width = 10, height = 6)
+
+world_usa_fpm_mon4to9 <- ggplot() +
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group),
+               fill = "lightgray", color = "white", size = 0.1) +
+  geom_tile(data = month4to9_ave_USA,
+            aes(x = lon, y = lat, fill = fpm25_m4to9)) +
+  scale_fill_gradient(low = "yellow", high = "darkred",
+                      name = "FPM2.5 (μg/m³)",
+                      na.value = NA) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(title = "Apr. to Sep. Average FPM2.5 - USA (2000)",
+       x = "Longitude", y = "Latitude") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("images", "world_usa_fpm_mon4to9.png"), world_usa_fpm_mon4to9, width = 10, height = 6)
+
+
+# India
+annual_ave_IND <- annual_ave %>%
+  filter(country_code_iso3 == "IND")
+
+world_ind_pm <- ggplot() +
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group),
+               fill = "lightgray", color = "white", size = 0.1) +
+  geom_tile(data = annual_ave_IND,
+            aes(x = lon, y = lat, fill = pm25_annual)) +
+  scale_fill_gradient(low = "yellow", high = "darkred",
+                      name = "PM2.5 (μg/m³)",
+                      na.value = NA) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(title = "Annual Average PM2.5 - India (2000)",
+       x = "Longitude", y = "Latitude") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("images", "world_ind_pm.png"), world_ind_pm, width = 10, height = 6)
+
+# China
+annual_ave_CHN <- annual_ave %>%
+  filter(country_code_iso3 == "CHN")
+
+world_chn_pm <- ggplot() +
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group),
+               fill = "lightgray", color = "white", size = 0.1) +
+  geom_tile(data = annual_ave_CHN,
+            aes(x = lon, y = lat, fill = pm25_annual)) +
+  scale_fill_gradient(low = "yellow", high = "darkred",
+                      name = "PM2.5 (μg/m³)",
+                      na.value = NA) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(title = "Annual Average PM2.5 - China (2000)",
+       x = "Longitude", y = "Latitude") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("images", "world_chn_pm.png"), world_chn_pm, width = 10, height = 6)
+
+# Russia
+annual_ave_RUS <- annual_ave %>%
+  filter(country_code_iso3 == "RUS")
+
+world_rus_pm <- ggplot() +
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group),
+               fill = "lightgray", color = "white", size = 0.1) +
+  geom_tile(data = annual_ave_RUS,
+            aes(x = lon, y = lat, fill = pm25_annual)) +
+  scale_fill_gradient(low = "yellow", high = "darkred",
+                      name = "PM2.5 (μg/m³)",
+                      na.value = NA) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(title = "Annual Average PM2.5 - Russia (2000)",
+       x = "Longitude", y = "Latitude") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("images", "world_rus_pm.png"), world_rus_pm, width = 10, height = 6)
+
+# Global - only mapped countries (exclude ocean/unmapped areas)
+annual_ave_mapped <- annual_ave %>%
+  filter(!is.na(country_code_iso3))
+
+world_pm <- ggplot() +
+  geom_polygon(data = world_map, 
+               aes(x = long, y = lat, group = group),
+               fill = "lightgray", color = "white", size = 0.1) +
+  geom_tile(data = annual_ave_mapped,
+            aes(x = lon, y = lat, fill = pm25_annual)) +
+  scale_fill_gradient(low = "yellow", high = "darkred",
+                      name = "PM2.5 (μg/m³)",
+                      na.value = NA) +
+  coord_fixed(1.3) +
+  theme_minimal() +
+  labs(title = "Annual Average PM2.5 - Global (2000)",
+       x = "Longitude", y = "Latitude") +
+  theme(panel.grid = element_blank())
+
+ggsave(here("images", "world_pm.png"), world_pm, width = 12, height = 6)
+
+
+print("All plots saved to images folder")

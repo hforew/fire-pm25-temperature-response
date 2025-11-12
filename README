@@ -1,14 +1,30 @@
 
-#######################
-### R Code Files ###
-#######################
+#####################################
+### R Code Files and their output ###
+#####################################
 
-#### grid_country_mapping.R
-* this file maps grid cells by lat and lon to countries
+#### grid_country_mapping.R ####
+* this code maps NetCDF file grid cells by lat and lon to countries
+
+## outputs 
+
+* grid_country_lookup.csv 
+** columns: lon	lat	grid_id	country_name	country_code_iso3	country_code_iso2
+** country code assigned to every grid cell
+
+#### NetCDF_extract.R
+* this code 1) extracts grid cell data from NetCDF file 2) joins with country mapping
+3) creates dataframe and exports as csv
+
+## outputs 
+
+* annual_ave_pm25_2000.csv
+** columns: lon	lat	country_name	country_code_iso3	pm25_annual	n_months
+** annual PM25 per grid cell, includes all PM (fire plus all other)
 
 
 #######################
-### DATE FILE NOTES ###
+### DATE INPUT NOTES ###
 #######################
 
 ####
@@ -30,3 +46,4 @@ Time: 12 time steps (monthly data)
 Data coverage:
 10-year average (2001-2010) of PM2.5 components including sulfate, nitrate, organic aerosols, black carbon, fine dust, and sea salt.
 The grid is global at approximately 1° resolution with 12 monthly averages.
+
