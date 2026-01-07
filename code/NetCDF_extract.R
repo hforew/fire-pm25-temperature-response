@@ -248,7 +248,7 @@ pm_country <- pm_country %>%
     lat = as.numeric(lat)
   )
 
-# Create pm_fire column (difference between total PM2.5 and no-fire PM2.5)
+# Create fire pm column (difference between total PM2.5 and no-fire PM2.5)
 # baseline 
 pm_country <- pm_country %>%
   mutate(fpm_2000 = pm_2000 - pm_2000_nf)
@@ -256,6 +256,9 @@ pm_country <- pm_country %>%
 # 2050
 pm_country <- pm_country %>%
   mutate(fpm_2050_45 = pm_2050_45 - pm_2050_45_nf)
+
+pm_country <- pm_country %>%
+  mutate(fpm_2050_45_hi = pm_2050_45_hi - pm_2050_45_nf)
 
 pm_country <- pm_country %>%
   mutate(fpm_2050_85 = pm_2050_85 - pm_2050_85_nf)
@@ -266,6 +269,9 @@ pm_country <- pm_country %>%
 # 2100
 pm_country <- pm_country %>%
   mutate(fpm_2100_45 = pm_2100_45 - pm_2100_45_nf)
+
+pm_country <- pm_country %>%
+  mutate(fpm_2100_45_hi = pm_2100_45_hi - pm_2100_45_nf)
 
 pm_country <- pm_country %>%
   mutate(fpm_2100_85 = pm_2100_85 - pm_2100_85_nf)
@@ -284,16 +290,20 @@ write_csv(pm_country, here("output", "pm_country_month_grid.csv"))
 pm_annual_ave <- pm_country %>%
   group_by(lon, lat, country_name, country_code_iso3) %>%
   summarise(
-    pm_2000 = mean(pm_2000, na.rm = TRUE),
+    pm_2000 = mean(pm_2000, na.rm = TRUE), # baseline 
     fpm_2000 = mean(fpm_2000, na.rm = TRUE),
-    pm_2050_45 = mean(pm_2050_45, na.rm = TRUE),
+    pm_2050_45 = mean(pm_2050_45, na.rm = TRUE), # 2050 
     fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
+    fpm_2050_45_hi = mean(fpm_2050_45_hi, na.rm = TRUE),
     pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
     fpm_2050_85 = mean(fpm_2050_85, na.rm = TRUE),
-    pm_2100_45 = mean(pm_2100_45, na.rm = TRUE),
+    fpm_2050_85_hi = mean(fpm_2050_85_hi, na.rm = TRUE),
+    pm_2100_45 = mean(pm_2100_45, na.rm = TRUE), # 2100
     fpm_2100_45 = mean(fpm_2100_45, na.rm = TRUE),
+    fpm_2100_45_hi = mean(fpm_2100_45_hi, na.rm = TRUE),
     pm_2100_85 = mean(pm_2100_85, na.rm = TRUE),
     fpm_2100_85 = mean(fpm_2100_85, na.rm = TRUE),
+    fpm_2100_85_hi = mean(fpm_2100_85_hi, na.rm = TRUE),
     n_months = n(),
     .groups = "drop"
   )
@@ -303,8 +313,14 @@ pm_annual_ave <- pm_country %>%
 pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2100_rcp_chg = fpm_2100_85 - fpm_2100_45)
 
+pm_annual_ave <- pm_annual_ave %>% 
+  mutate(fpm_2100_rcp_chg_hi = fpm_2100_85_hi - fpm_2100_45_hi) # human intervention
+
 pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2050_rcp_chg = fpm_2050_85 - fpm_2050_45)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2050_rcp_chg_hi = fpm_2050_85_hi - fpm_2050_45_hi) # human intervention
 
 # identify FPM2.5 change w.r.t base year, for each RCP
 pm_annual_ave <- pm_annual_ave %>%
@@ -318,9 +334,6 @@ pm_annual_ave <- pm_annual_ave %>%
 
 pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2100_85_base_chg = fpm_2100_85 - fpm_2000)
-
-# head(pm_annual_ave)
-
 
 # Verify reduction
 print(paste("Original observations:", nrow(pm_country)))
@@ -416,7 +429,6 @@ print(summary_table, n = Inf)
 
 # Save annual average to output folder
 write_csv(pm_annual_ave, here("output", "annual_ave_pm25.csv"))
-write_csv(pm_mon4to9_ave, here("output", "month4to9_ave_pm25.csv"))
 
 print(paste("File saved:", here("output", "pm_annual_ave_pm25.csv")))
 
