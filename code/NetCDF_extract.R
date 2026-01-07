@@ -18,8 +18,6 @@ library(tidyverse)
 # Import the grid lookup table
 grid_lookup <- readRDS(here("output", "grid_country_lookup.rds"))
 
-# import and open NetCDF files
-
 ## BASELINE 
 # PM2.5 all (fire plus other)
 pm_2000 <- nc_open(here("input", "CESM_09x125_PM25_2000_Baseline.nc"))
@@ -28,27 +26,66 @@ print(pm_2000)
 pm_2000_nf <- nc_open(here("input", "CESM_09x125_PM25_2000_BaseLine_NoFire.nc"))
 print(pm_2000_nf)
 
-# 2. Extract all months of PM2.5 data
-pm_2000_all <- ncvar_get(pm_2000, "pm25")  # 3D array: [lon, lat, time]
-dates <- ncvar_get(pm_2000, "date")  # Get dates
-
-pm_2000_nf_all <- ncvar_get(pm_2000_nf, "pm25")  # 3D array: [lon, lat, time]
-
 ## 2050 RCP4.5 
 # PM2.5 all (fire plus other)
 pm_2050_45 <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45.nc"))
 print(pm_2050_45)
 # PM2.5 no fire
 pm_2050_45_nf <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45_NoFire.nc"))
-print(pm_2050_45_nf)
+# PM2.5 human intervention
+pm_2050_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45_HI.nc"))
 
-# 2. Extract all months of PM2.5 data
+## 2050 RCP8.5
+# PM2.5 all (fire plus other)
+pm_2050_85 <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85.nc"))
+# PM2.5 no fire
+pm_2050_85_nf <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85_NoFire.nc"))
+# PM2.5 human intervention
+pm_2050_85_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85_HI.nc"))
+
+## 2100 RCP4.5 
+# PM2.5 all (fire plus other)
+pm_2100_45 <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45.nc"))
+# PM2.5 no fire
+pm_2100_45_nf <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45_NoFire.nc"))
+# PM2.5 human intervention
+pm_2100_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45_HI.nc"))
+
+## 2100 RCP8.5
+# PM2.5 all (fire plus other)
+pm_2100_85 <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85.nc"))
+# PM2.5 no fire
+pm_2100_85_nf <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85_NoFire.nc"))
+# PM2.5 human intervention
+pm_2100_85_hi <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85_HI.nc"))
+
+############ extract data from NetCDFs #####################################################
+
+### Extract all months of PM2.5 data 
+
+## BASELINE 
 pm_2000_all <- ncvar_get(pm_2000, "pm25")  # 3D array: [lon, lat, time]
 pm_2000_nf_all <- ncvar_get(pm_2000_nf, "pm25")  # 3D array: [lon, lat, time]
 
+## 2050 RCP4.5 
 pm_2050_45_all <- ncvar_get(pm_2050_45, "pm25")  # 3D array: [lon, lat, time]
 pm_2050_45_nf_all <- ncvar_get(pm_2050_45_nf, "pm25")  # 3D array: [lon, lat, time]
+pm_2050_45_hi_all <- ncvar_get(pm_2050_45_hi, "pm25")  # 3D array: [lon, lat, time]
 
+## 2050 RCP8.5 
+pm_2050_85_all <- ncvar_get(pm_2050_85, "pm25")  # 3D array: [lon, lat, time]
+pm_2050_85_nf_all <- ncvar_get(pm_2050_85_nf, "pm25")  # 3D array: [lon, lat, time]
+pm_2050_85_hi_all <- ncvar_get(pm_2050_85_hi, "pm25")  # 3D array: [lon, lat, time]
+
+## 2100 RCP4.5 
+pm_2100_45_all <- ncvar_get(pm_2100_45, "pm25")  # 3D array: [lon, lat, time]
+pm_2100_45_nf_all <- ncvar_get(pm_2100_45_nf, "pm25")  # 3D array: [lon, lat, time]
+pm_2100_45_hi_all <- ncvar_get(pm_2100_45_hi, "pm25")  # 3D array: [lon, lat, time]
+
+## 2100 RCP8.5
+pm_2100_85_all <- ncvar_get(pm_2100_85, "pm25")  # 3D array: [lon, lat, time]
+pm_2100_85_nf_all <- ncvar_get(pm_2100_85_nf, "pm25")  # 3D array: [lon, lat, time]
+pm_2100_85_hi_all <- ncvar_get(pm_2100_85_hi, "pm25")  # 3D array: [lon, lat, time]
 
 # Extract longitude. latitude, date (can extract from any NetCDF file)
 lon <- ncvar_get(pm_2000, "lon")
@@ -63,26 +100,35 @@ nc_close(pm_2000)
 nc_close(pm_2000_nf)
 nc_close(pm_2050_45)
 nc_close(pm_2050_45_nf)
+nc_close(pm_2050_45_hi)
+nc_close(pm_2100_45)
+nc_close(pm_2100_45_nf)
+nc_close(pm_2100_45_hi)
+nc_close(pm_2050_85)
+nc_close(pm_2050_85_nf)
+nc_close(pm_2050_85_hi)
+nc_close(pm_2100_85)
+nc_close(pm_2100_85_nf)
+nc_close(pm_2100_85_hi)
 
 ############ convert to dataframe #####################################################
 
-# 3. Convert 3D array to long format dataframe
-
+# Convert 3D array to long format dataframe
 
 ## BASELINE 
 # all PM2.5 (with fire)
-pm_df_2000 <- expand.grid(
-  lon_index = 1:dim(pm_2000_all)[1],
+pm_df_2000 <- expand.grid(  # create df with every combo of lat, lon and month = 192x288x12 
+  lon_index = 1:dim(pm_2000_all)[1], 
   lat_index = 1:dim(pm_2000_all)[2],
   month = 1:12
 ) %>%
   mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
+    lon = lon[lon_index], # Converts longitude indices to actual longitude coordinates
+    lat = lat[lat_index], # Converts latitude indices to actual longitude coordinates
     pm_2000 = mapply(function(i, j, k) pm_2000_all[i, j, k], 
-                  lon_index, lat_index, month)
+                  lon_index, lat_index, month) # Extracts the PM2.5 value for each combination
   ) %>%
-  select(month, lon, lat, pm_2000)
+  select(month, lon, lat, pm_2000) # select columns needed 
 
 # no fire 
 pm_df_2000_nf <- expand.grid(
@@ -99,7 +145,6 @@ pm_df_2000_nf <- expand.grid(
   select(month, lon, lat, pm_2000_nf)
 
 ## 2050 RCP4.5 
-
 # all PM2.5 (with fire)
 pm_df_2050_45 <- expand.grid(
   lon_index = 1:dim(pm_2050_45_all)[1],
@@ -128,19 +173,96 @@ pm_df_2050_45_nf <- expand.grid(
   ) %>%
   select(month, lon, lat, pm_2050_45_nf)
 
-
 ## 2050 RCP8.5 
+# all PM2.5 (with fire)
+pm_df_2050_85 <- expand.grid(
+  lon_index = 1:dim(pm_2050_85_all)[1],
+  lat_index = 1:dim(pm_2050_85_all)[2],
+  month = 1:12
+) %>%
+  mutate(
+    lon = lon[lon_index],
+    lat = lat[lat_index],
+    pm_2050_85 = mapply(function(i, j, k) pm_2050_85_all[i, j, k], 
+                        lon_index, lat_index, month)
+  ) %>%
+  select(month, lon, lat, pm_2050_85)
+
+# no fire 
+pm_df_2050_85_nf <- expand.grid(
+  lon_index = 1:dim(pm_2050_85_nf_all)[1],
+  lat_index = 1:dim(pm_2050_85_nf_all)[2],
+  month = 1:12
+) %>%
+  mutate(
+    lon = lon[lon_index],
+    lat = lat[lat_index],
+    pm_2050_85_nf = mapply(function(i, j, k) pm_2050_85_nf_all[i, j, k], 
+                           lon_index, lat_index, month)
+  ) %>%
+  select(month, lon, lat, pm_2050_85_nf)
+
+
 
 ## 2100 RCP4.5 
+# all PM2.5 (with fire)
+pm_df_2100_45 <- expand.grid(
+  lon_index = 1:dim(pm_2100_45_all)[1],
+  lat_index = 1:dim(pm_2100_45_all)[2],
+  month = 1:12
+) %>%
+  mutate(
+    lon = lon[lon_index],
+    lat = lat[lat_index],
+    pm_2100_45 = mapply(function(i, j, k) pm_2100_45_all[i, j, k], 
+                        lon_index, lat_index, month)
+  ) %>%
+  select(month, lon, lat, pm_2100_45)
+
+# no fire 
+pm_df_2100_45_nf <- expand.grid(
+  lon_index = 1:dim(pm_2100_45_nf_all)[1],
+  lat_index = 1:dim(pm_2100_45_nf_all)[2],
+  month = 1:12
+) %>%
+  mutate(
+    lon = lon[lon_index],
+    lat = lat[lat_index],
+    pm_2100_45_nf = mapply(function(i, j, k) pm_2100_45_nf_all[i, j, k], 
+                           lon_index, lat_index, month)
+  ) %>%
+  select(month, lon, lat, pm_2100_45_nf)
 
 ## 2100 RCP8.5 
+# all PM2.5 (with fire)
+pm_df_2100_85 <- expand.grid(
+  lon_index = 1:dim(pm_2100_85_all)[1],
+  lat_index = 1:dim(pm_2100_85_all)[2],
+  month = 1:12
+) %>%
+  mutate(
+    lon = lon[lon_index],
+    lat = lat[lat_index],
+    pm_2100_85 = mapply(function(i, j, k) pm_2100_85_all[i, j, k], 
+                        lon_index, lat_index, month)
+  ) %>%
+  select(month, lon, lat, pm_2100_85)
 
+# no fire 
+pm_df_2100_85_nf <- expand.grid(
+  lon_index = 1:dim(pm_2100_85_nf_all)[1],
+  lat_index = 1:dim(pm_2100_85_nf_all)[2],
+  month = 1:12
+) %>%
+  mutate(
+    lon = lon[lon_index],
+    lat = lat[lat_index],
+    pm_2100_85_nf = mapply(function(i, j, k) pm_2100_85_nf_all[i, j, k], 
+                           lon_index, lat_index, month)
+  ) %>%
+  select(month, lon, lat, pm_2100_85_nf)
 
-# # Rename pm25 column in pm25_df_2000_nf
-# pm25_df_2000_nf <- pm25_df_2000_nf %>%
-#   rename(pm25_nf = pm25)
-
-# 4. Join with grid_lookup to add country information
+# Join with grid_lookup to add country information
 pm_country <- pm_df_2000 %>%
   left_join(grid_lookup %>% select(lon, lat, country_name, country_code_iso3),
             by = c("lon", "lat")) %>%
@@ -149,6 +271,18 @@ pm_country <- pm_df_2000 %>%
   left_join(pm_df_2050_45 %>% select(month, lon, lat, pm_2050_45),
             by = c("month", "lon", "lat")) %>%
   left_join(pm_df_2050_45_nf %>% select(month, lon, lat, pm_2050_45_nf),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2050_85 %>% select(month, lon, lat, pm_2050_85),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2050_85_nf %>% select(month, lon, lat, pm_2050_85_nf),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2100_45 %>% select(month, lon, lat, pm_2100_45),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2100_45_nf %>% select(month, lon, lat, pm_2100_45_nf),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2100_85 %>% select(month, lon, lat, pm_2100_85),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2100_85_nf %>% select(month, lon, lat, pm_2100_85_nf),
             by = c("month", "lon", "lat"))
 
 # Convert lon/lat to numeric
@@ -165,13 +299,22 @@ pm_country <- pm_country %>%
 pm_country <- pm_country %>%
   mutate(fpm_2050_45 = pm_2050_45 - pm_2050_45_nf)
 
+pm_country <- pm_country %>%
+  mutate(fpm_2050_85 = pm_2050_85 - pm_2050_85_nf)
+
+pm_country <- pm_country %>%
+  mutate(fpm_2100_45 = pm_2100_45 - pm_2100_45_nf)
+
+pm_country <- pm_country %>%
+  mutate(fpm_2100_85 = pm_2100_85 - pm_2100_85_nf)
+
 # Preview the result
 colnames(pm_country)
-head(pm_country, 20)
+head(pm_country, 5)
 
 # Summary by country and month -- averages across cells in country
 
-# all PM2.5
+### all PM2.5
 pm_country_month_ave <- pm_country %>%
   filter(!is.na(country_code_iso3)) %>%
   group_by(country_code_iso3, country_name, month) %>%
@@ -180,13 +323,19 @@ pm_country_month_ave <- pm_country %>%
     mean_fpm_2000 = mean(fpm_2000, na.rm = TRUE),
     mean_pm_2050_45 = mean(pm_2050_45, na.rm = TRUE),
     mean_fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
+    mean_pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
+    mean_fpm_2050_85 = mean(fpm_2050_85, na.rm = TRUE),
+    mean_pm_2100_45 = mean(pm_2100_45, na.rm = TRUE),
+    mean_fpm_2100_45 = mean(fpm_2100_45, na.rm = TRUE),
+    mean_pm_2100_85 = mean(pm_2100_85, na.rm = TRUE),
+    mean_fpm_2100_85 = mean(fpm_2100_85, na.rm = TRUE),
     n_cells = n(),
     .groups = "drop"
   )
 
 head(pm_country_month_ave, 5)
 
-# Create annual average by averaging across all 12 months for each grid cell
+### Create annual average by averaging across all 12 months for each grid cell
 pm_annual_ave <- pm_country %>%
   group_by(lon, lat, country_name, country_code_iso3) %>%
   summarise(
@@ -194,11 +343,38 @@ pm_annual_ave <- pm_country %>%
     fpm_2000 = mean(fpm_2000, na.rm = TRUE),
     pm_2050_45 = mean(pm_2050_45, na.rm = TRUE),
     fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
+    pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
+    fpm_2050_85 = mean(fpm_2050_85, na.rm = TRUE),
+    pm_2100_45 = mean(pm_2100_45, na.rm = TRUE),
+    fpm_2100_45 = mean(fpm_2100_45, na.rm = TRUE),
+    pm_2100_85 = mean(pm_2100_85, na.rm = TRUE),
+    fpm_2100_85 = mean(fpm_2100_85, na.rm = TRUE),
     n_months = n(),
     .groups = "drop"
   )
 
-# Create month 4-9 average (April to September)
+
+# identify FPM2.5 change within year between RCP
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2100_rcp_chg = fpm_2100_85 - fpm_2100_45)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2050_rcp_chg = fpm_2050_85 - fpm_2050_45)
+
+# identify FPM2.5 change w.r.t base year, for each RCP
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2050_45_base_chg = fpm_2050_45 - fpm_2000)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2050_85_base_chg = fpm_2050_85 - fpm_2000)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2100_45_base_chg = fpm_2100_45 - fpm_2000)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2100_85_base_chg = fpm_2100_85 - fpm_2000)
+
+### Create month 4-9 average (April to September)
 pm_mon4to9_ave <- pm_country %>%
   filter(month >= 4 & month <= 9) %>%
   group_by(lon, lat, country_name, country_code_iso3) %>%
@@ -207,6 +383,12 @@ pm_mon4to9_ave <- pm_country %>%
     fpm_2000 = mean(fpm_2000, na.rm = TRUE),
     pm_2050_45 = mean(pm_2050_45, na.rm = TRUE),
     fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
+    pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
+    fpm_2050_85 = mean(fpm_2050_85, na.rm = TRUE),
+    pm_2100_45 = mean(pm_2100_45, na.rm = TRUE),
+    fpm_2100_45 = mean(fpm_2100_45, na.rm = TRUE),
+    pm_2100_85 = mean(pm_2100_85, na.rm = TRUE),
+    fpm_2100_85 = mean(fpm_2100_85, na.rm = TRUE),
     n_months = n(),
     .groups = "drop"
   )
@@ -225,24 +407,93 @@ print(paste("Reduction factor:", nrow(pm_country) / nrow(pm_annual_ave)))
 # Preview
 head(pm_annual_ave, 6)
 
-# # Convert lon/lat to numeric before saving
-# pm_annual_ave <- pm_annual_ave %>%
-#   mutate(
-#     lon = as.numeric(lon),
-#     lat = as.numeric(lat)
-#   )
-# 
-# pm_month4to9_ave <- pm_month4to9_ave %>%
-#   mutate(
-#     lon = as.numeric(lon),
-#     lat = as.numeric(lat)
-#   )
+############ basic stats #####################################################
+
+summary(pm_annual_ave$fpm_2050_rcp_chg) # In 2050, the difference in PM2.5 concentration between RCP8.5 and RCP4.5
+summary(pm_annual_ave$fpm_2100_rcp_chg) # In 2100, the difference in PM2.5 concentration between RCP8.5 and RCP4.5
+summary(pm_annual_ave$fpm_2050_45_base_chg) # For RCP4.5, the difference in PM2.5 concentration between 2050 and 2000
+summary(pm_annual_ave$fpm_2050_85_base_chg) # For RCP8.5, the difference in PM2.5 concentration between 2050 and 2000
+summary(pm_annual_ave$fpm_2100_45_base_chg) # For RCP4.5, the difference in PM2.5 concentration between 2100 and 2000
+summary(pm_annual_ave$fpm_2100_85_base_chg) # For RCP8.5, the difference in PM2.5 concentration between 2100 and 2000
+
+# Create summary table
+summary_table <- tibble(
+  Variable = c(
+    "fpm_2050_rcp_chg",
+    "fpm_2100_rcp_chg",
+    "fpm_2050_45_base_chg",
+    "fpm_2050_85_base_chg",
+    "fpm_2100_45_base_chg",
+    "fpm_2100_85_base_chg"
+  ),
+  Description = c(
+    "2050: RCP8.5 - RCP4.5",
+    "2100: RCP8.5 - RCP4.5",
+    "RCP4.5: 2050 - 2000",
+    "RCP8.5: 2050 - 2000",
+    "RCP4.5: 2100 - 2000",
+    "RCP8.5: 2100 - 2000"
+  ),
+  Min = c(
+    min(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
+    min(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
+    min(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
+    min(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
+    min(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
+    min(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
+  ),
+  Q1 = c(
+    quantile(pm_annual_ave$fpm_2050_rcp_chg, 0.25, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2100_rcp_chg, 0.25, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2050_45_base_chg, 0.25, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2050_85_base_chg, 0.25, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2100_45_base_chg, 0.25, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2100_85_base_chg, 0.25, na.rm = TRUE)
+  ),
+  Median = c(
+    median(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
+    median(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
+    median(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
+    median(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
+    median(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
+    median(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
+  ),
+  Mean = c(
+    mean(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
+    mean(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
+    mean(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
+    mean(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
+    mean(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
+    mean(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
+  ),
+  Q3 = c(
+    quantile(pm_annual_ave$fpm_2050_rcp_chg, 0.75, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2100_rcp_chg, 0.75, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2050_45_base_chg, 0.75, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2050_85_base_chg, 0.75, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2100_45_base_chg, 0.75, na.rm = TRUE),
+    quantile(pm_annual_ave$fpm_2100_85_base_chg, 0.75, na.rm = TRUE)
+  ),
+  Max = c(
+    max(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
+    max(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
+    max(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
+    max(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
+    max(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
+    max(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
+  )
+)
+
+# Print table
+print(summary_table, n = Inf)
+
 
 
 ############ save outputs #####################################################
 
 # Save annual average to output folder
-write_csv(pm_annual_ave, here("output", "annual_ave_pm25_2000.csv"))
-write_csv(pm_mon4to9_ave, here("output", "month4to9_ave_pm25_2000.csv"))
+write_csv(pm_annual_ave, here("output", "annual_ave_pm25.csv"))
+write_csv(pm_mon4to9_ave, here("output", "month4to9_ave_pm25.csv"))
 
-print(paste("File saved:", here("output", "pm_annual_ave_pm25_2000.csv")))
+print(paste("File saved:", here("output", "pm_annual_ave_pm25.csv")))
+
