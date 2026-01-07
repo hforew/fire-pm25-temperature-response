@@ -249,9 +249,11 @@ pm_country <- pm_country %>%
   )
 
 # Create pm_fire column (difference between total PM2.5 and no-fire PM2.5)
+# baseline 
 pm_country <- pm_country %>%
   mutate(fpm_2000 = pm_2000 - pm_2000_nf)
 
+# 2050
 pm_country <- pm_country %>%
   mutate(fpm_2050_45 = pm_2050_45 - pm_2050_45_nf)
 
@@ -259,37 +261,24 @@ pm_country <- pm_country %>%
   mutate(fpm_2050_85 = pm_2050_85 - pm_2050_85_nf)
 
 pm_country <- pm_country %>%
+  mutate(fpm_2050_85_hi = pm_2050_85_hi - pm_2050_85_nf)
+
+# 2100
+pm_country <- pm_country %>%
   mutate(fpm_2100_45 = pm_2100_45 - pm_2100_45_nf)
 
 pm_country <- pm_country %>%
   mutate(fpm_2100_85 = pm_2100_85 - pm_2100_85_nf)
 
+pm_country <- pm_country %>%
+  mutate(fpm_2100_85_hi = pm_2100_85_hi - pm_2100_85_nf)
+
 # Preview the result
 colnames(pm_country)
 head(pm_country, 5)
 
-# Summary by country and month -- averages across cells in country
-
-### all PM2.5
-pm_country_month_ave <- pm_country %>%
-  filter(!is.na(country_code_iso3)) %>%
-  group_by(country_code_iso3, country_name, month) %>%
-  summarise(
-    mean_pm_2000 = mean(pm_2000, na.rm = TRUE),
-    mean_fpm_2000 = mean(fpm_2000, na.rm = TRUE),
-    mean_pm_2050_45 = mean(pm_2050_45, na.rm = TRUE),
-    mean_fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
-    mean_pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
-    mean_fpm_2050_85 = mean(fpm_2050_85, na.rm = TRUE),
-    mean_pm_2100_45 = mean(pm_2100_45, na.rm = TRUE),
-    mean_fpm_2100_45 = mean(fpm_2100_45, na.rm = TRUE),
-    mean_pm_2100_85 = mean(pm_2100_85, na.rm = TRUE),
-    mean_fpm_2100_85 = mean(fpm_2100_85, na.rm = TRUE),
-    n_cells = n(),
-    .groups = "drop"
-  )
-
-head(pm_country_month_ave, 5)
+# save pm_country as intermediate detailed data file
+write_csv(pm_country, here("output", "pm_country_month_grid.csv"))
 
 ### Create annual average by averaging across all 12 months for each grid cell
 pm_annual_ave <- pm_country %>%
@@ -330,29 +319,7 @@ pm_annual_ave <- pm_annual_ave %>%
 pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2100_85_base_chg = fpm_2100_85 - fpm_2000)
 
-### Create month 4-9 average (April to September)
-pm_mon4to9_ave <- pm_country %>%
-  filter(month >= 4 & month <= 9) %>%
-  group_by(lon, lat, country_name, country_code_iso3) %>%
-  summarise(
-    pm_2000 = mean(pm_2000, na.rm = TRUE),
-    fpm_2000 = mean(fpm_2000, na.rm = TRUE),
-    pm_2050_45 = mean(pm_2050_45, na.rm = TRUE),
-    fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
-    pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
-    fpm_2050_85 = mean(fpm_2050_85, na.rm = TRUE),
-    pm_2100_45 = mean(pm_2100_45, na.rm = TRUE),
-    fpm_2100_45 = mean(fpm_2100_45, na.rm = TRUE),
-    pm_2100_85 = mean(pm_2100_85, na.rm = TRUE),
-    fpm_2100_85 = mean(fpm_2100_85, na.rm = TRUE),
-    n_months = n(),
-    .groups = "drop"
-  )
-
-# Verify
-head(pm_mon4to9_ave)
-head(pm_annual_ave)
-summary(pm_mon4to9_ave$n_months)  # Should be 6 for all rows
+# head(pm_annual_ave)
 
 
 # Verify reduction
