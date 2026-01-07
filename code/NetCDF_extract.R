@@ -115,6 +115,7 @@ nc_close(pm_2100_85_hi)
 
 # Convert 3D array to long format dataframe
 
+### example for 1 array 
 ## BASELINE 
 # all PM2.5 (with fire)
 pm_df_2000 <- expand.grid(  # create df with every combo of lat, lon and month = 192x288x12 
@@ -130,137 +131,84 @@ pm_df_2000 <- expand.grid(  # create df with every combo of lat, lon and month =
   ) %>%
   select(month, lon, lat, pm_2000) # select columns needed 
 
-# no fire 
-pm_df_2000_nf <- expand.grid(
-  lon_index = 1:dim(pm_2000_nf_all)[1],
-  lat_index = 1:dim(pm_2000_nf_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2000_nf = mapply(function(i, j, k) pm_2000_nf_all[i, j, k], 
-                  lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2000_nf)
+### loop to convert all arrays to df 
 
-## 2050 RCP4.5 
-# all PM2.5 (with fire)
-pm_df_2050_45 <- expand.grid(
-  lon_index = 1:dim(pm_2050_45_all)[1],
-  lat_index = 1:dim(pm_2050_45_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2050_45 = mapply(function(i, j, k) pm_2050_45_all[i, j, k], 
-                       lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2050_45)
+# Create a named list with the CORRECT array names (all should end in _all)
+arrays_to_process <- list(
+  # Year 2000
+  pm_2000_all = "2000",
+  pm_2000_nf_all = "2000_nf",
+  
+  # Year 2050 RCP 4.5
+  pm_2050_45_all = "2050_45",
+  pm_2050_45_nf_all = "2050_45_nf",
+  pm_2050_45_hi_all = "2050_45_hi",
+  
+  # Year 2050 RCP 8.5
+  pm_2050_85_all = "2050_85",
+  pm_2050_85_nf_all = "2050_85_nf",
+  pm_2050_85_hi_all = "2050_85_hi",
+  
+  # Year 2100 RCP 4.5
+  pm_2100_45_all = "2100_45",
+  pm_2100_45_nf_all = "2100_45_nf",
+  pm_2100_45_hi_all = "2100_45_hi",
+  
+  # Year 2100 RCP 8.5
+  pm_2100_85_all = "2100_85",
+  pm_2100_85_nf_all = "2100_85_nf",
+  pm_2100_85_hi_all = "2100_85_hi"
+)
 
-# no fire 
-pm_df_2050_45_nf <- expand.grid(
-  lon_index = 1:dim(pm_2050_45_nf_all)[1],
-  lat_index = 1:dim(pm_2050_45_nf_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2050_45_nf = mapply(function(i, j, k) pm_2050_45_nf_all[i, j, k], 
-                          lon_index, lat_index, month)
+# Loop through each array in the list
+for (array_name in names(arrays_to_process)) {
+  
+  # Check if the array exists before processing
+  if (!exists(array_name)) {
+    cat("WARNING: Array", array_name, "does not exist. Skipping.\n")
+    next
+  }
+  
+  # Get the actual array object from the environment
+  pm_array <- get(array_name)
+  
+  # Check if array has 3 dimensions
+  if (is.null(dim(pm_array)) || length(dim(pm_array)) != 3) {
+    cat("WARNING: Array", array_name, "doesn't have 3 dimensions. Skipping.\n")
+    next
+  }
+  
+  # Get the desired column name suffix
+  suffix <- arrays_to_process[[array_name]]
+  
+  # Create column name and data frame name
+  col_name <- paste0("pm_", suffix)      # e.g., "pm_2000"
+  df_name <- paste0("pm_df_", suffix)    # e.g., "pm_df_2000"
+  
+  # Process the 3D array into a tidy data frame
+  result <- expand.grid(
+    lon_index = 1:dim(pm_array)[1],   # 288 longitude points
+    lat_index = 1:dim(pm_array)[2],   # 192 latitude points
+    month = 1:12                       # 12 months
   ) %>%
-  select(month, lon, lat, pm_2050_45_nf)
-
-## 2050 RCP8.5 
-# all PM2.5 (with fire)
-pm_df_2050_85 <- expand.grid(
-  lon_index = 1:dim(pm_2050_85_all)[1],
-  lat_index = 1:dim(pm_2050_85_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2050_85 = mapply(function(i, j, k) pm_2050_85_all[i, j, k], 
-                        lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2050_85)
-
-# no fire 
-pm_df_2050_85_nf <- expand.grid(
-  lon_index = 1:dim(pm_2050_85_nf_all)[1],
-  lat_index = 1:dim(pm_2050_85_nf_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2050_85_nf = mapply(function(i, j, k) pm_2050_85_nf_all[i, j, k], 
+    mutate(
+      # Convert indices to actual coordinates
+      lon = lon[lon_index],
+      lat = lat[lat_index],
+      # Extract PM2.5 value for each combination
+      !!col_name := mapply(function(i, j, k) pm_array[i, j, k], 
                            lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2050_85_nf)
-
-
-
-## 2100 RCP4.5 
-# all PM2.5 (with fire)
-pm_df_2100_45 <- expand.grid(
-  lon_index = 1:dim(pm_2100_45_all)[1],
-  lat_index = 1:dim(pm_2100_45_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2100_45 = mapply(function(i, j, k) pm_2100_45_all[i, j, k], 
-                        lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2100_45)
-
-# no fire 
-pm_df_2100_45_nf <- expand.grid(
-  lon_index = 1:dim(pm_2100_45_nf_all)[1],
-  lat_index = 1:dim(pm_2100_45_nf_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2100_45_nf = mapply(function(i, j, k) pm_2100_45_nf_all[i, j, k], 
-                           lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2100_45_nf)
-
-## 2100 RCP8.5 
-# all PM2.5 (with fire)
-pm_df_2100_85 <- expand.grid(
-  lon_index = 1:dim(pm_2100_85_all)[1],
-  lat_index = 1:dim(pm_2100_85_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2100_85 = mapply(function(i, j, k) pm_2100_85_all[i, j, k], 
-                        lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2100_85)
-
-# no fire 
-pm_df_2100_85_nf <- expand.grid(
-  lon_index = 1:dim(pm_2100_85_nf_all)[1],
-  lat_index = 1:dim(pm_2100_85_nf_all)[2],
-  month = 1:12
-) %>%
-  mutate(
-    lon = lon[lon_index],
-    lat = lat[lat_index],
-    pm_2100_85_nf = mapply(function(i, j, k) pm_2100_85_nf_all[i, j, k], 
-                           lon_index, lat_index, month)
-  ) %>%
-  select(month, lon, lat, pm_2100_85_nf)
+    ) %>%
+    # Keep only final columns
+    select(month, lon, lat, all_of(col_name))
+  
+  # Create the data frame in global environment
+  assign(df_name, result)
+  
+  # Print success message
+  cat("✓ Successfully processed:", df_name, 
+      "(", nrow(result), "rows )\n")
+}
 
 # Join with grid_lookup to add country information
 pm_country <- pm_df_2000 %>%
@@ -268,21 +216,29 @@ pm_country <- pm_df_2000 %>%
             by = c("lon", "lat")) %>%
   left_join(pm_df_2000_nf %>% select(month, lon, lat, pm_2000_nf),
             by = c("month", "lon", "lat")) %>%
-  left_join(pm_df_2050_45 %>% select(month, lon, lat, pm_2050_45),
+  left_join(pm_df_2050_45 %>% select(month, lon, lat, pm_2050_45), # 2050  RCP 4.5 
             by = c("month", "lon", "lat")) %>%
   left_join(pm_df_2050_45_nf %>% select(month, lon, lat, pm_2050_45_nf),
             by = c("month", "lon", "lat")) %>%
-  left_join(pm_df_2050_85 %>% select(month, lon, lat, pm_2050_85),
+  left_join(pm_df_2050_45_hi %>% select(month, lon, lat, pm_2050_45_hi),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2050_85 %>% select(month, lon, lat, pm_2050_85), # 2050  RCP 8.5 
             by = c("month", "lon", "lat")) %>%
   left_join(pm_df_2050_85_nf %>% select(month, lon, lat, pm_2050_85_nf),
             by = c("month", "lon", "lat")) %>%
-  left_join(pm_df_2100_45 %>% select(month, lon, lat, pm_2100_45),
+  left_join(pm_df_2050_85_hi %>% select(month, lon, lat, pm_2050_85_hi),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2100_45 %>% select(month, lon, lat, pm_2100_45), # 2100  RCP 4.5 
             by = c("month", "lon", "lat")) %>%
   left_join(pm_df_2100_45_nf %>% select(month, lon, lat, pm_2100_45_nf),
             by = c("month", "lon", "lat")) %>%
-  left_join(pm_df_2100_85 %>% select(month, lon, lat, pm_2100_85),
+  left_join(pm_df_2100_45_hi %>% select(month, lon, lat, pm_2100_45_hi), 
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2100_85 %>% select(month, lon, lat, pm_2100_85), # 2100  RCP 8.5 
             by = c("month", "lon", "lat")) %>%
   left_join(pm_df_2100_85_nf %>% select(month, lon, lat, pm_2100_85_nf),
+            by = c("month", "lon", "lat")) %>%
+  left_join(pm_df_2100_85_hi %>% select(month, lon, lat, pm_2100_85_hi),
             by = c("month", "lon", "lat"))
 
 # Convert lon/lat to numeric
