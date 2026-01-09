@@ -32,7 +32,7 @@ pm_2050_45 <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45.nc"))
 print(pm_2050_45)
 # PM2.5 no fire
 pm_2050_45_nf <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45_NoFire.nc"))
-# PM2.5 human intervention
+# PM2.5 human influence
 pm_2050_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45_HI.nc"))
 
 ## 2050 RCP8.5
@@ -40,7 +40,7 @@ pm_2050_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45_HI.nc"))
 pm_2050_85 <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85.nc"))
 # PM2.5 no fire
 pm_2050_85_nf <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85_NoFire.nc"))
-# PM2.5 human intervention
+# PM2.5 human influence
 pm_2050_85_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85_HI.nc"))
 
 ## 2100 RCP4.5 
@@ -48,7 +48,7 @@ pm_2050_85_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85_HI.nc"))
 pm_2100_45 <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45.nc"))
 # PM2.5 no fire
 pm_2100_45_nf <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45_NoFire.nc"))
-# PM2.5 human intervention
+# PM2.5 human influence
 pm_2100_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45_HI.nc"))
 
 ## 2100 RCP8.5
@@ -56,7 +56,7 @@ pm_2100_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45_HI.nc"))
 pm_2100_85 <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85.nc"))
 # PM2.5 no fire
 pm_2100_85_nf <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85_NoFire.nc"))
-# PM2.5 human intervention
+# PM2.5 human influence
 pm_2100_85_hi <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85_HI.nc"))
 
 ############ extract data from NetCDFs #####################################################
@@ -314,15 +314,17 @@ pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2100_rcp_chg = fpm_2100_85 - fpm_2100_45)
 
 pm_annual_ave <- pm_annual_ave %>% 
-  mutate(fpm_2100_rcp_chg_hi = fpm_2100_85_hi - fpm_2100_45_hi) # human intervention
+  mutate(fpm_2100_rcp_chg_hi = fpm_2100_85_hi - fpm_2100_45_hi) # human influence
 
 pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2050_rcp_chg = fpm_2050_85 - fpm_2050_45)
 
 pm_annual_ave <- pm_annual_ave %>%
-  mutate(fpm_2050_rcp_chg_hi = fpm_2050_85_hi - fpm_2050_45_hi) # human intervention
+  mutate(fpm_2050_rcp_chg_hi = fpm_2050_85_hi - fpm_2050_45_hi) # human influence
 
 # identify FPM2.5 change w.r.t base year, for each RCP
+
+# without human influence
 pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2050_45_base_chg = fpm_2050_45 - fpm_2000)
 
@@ -335,6 +337,20 @@ pm_annual_ave <- pm_annual_ave %>%
 pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2100_85_base_chg = fpm_2100_85 - fpm_2000)
 
+
+# with human influence --- allows USA comparison with Ford et al 2018
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2050_45_base_chg_hi = fpm_2050_45_hi - fpm_2000)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2050_85_base_chg_hi = fpm_2050_85_hi - fpm_2000)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2100_45_base_chg_hi = fpm_2100_45_hi - fpm_2000)
+
+pm_annual_ave <- pm_annual_ave %>%
+  mutate(fpm_2100_85_base_chg_hi = fpm_2100_85_hi - fpm_2000)
+
 # Verify reduction
 print(paste("Original observations:", nrow(pm_country)))
 print(paste("Annual average observations:", nrow(pm_annual_ave)))
@@ -342,88 +358,6 @@ print(paste("Reduction factor:", nrow(pm_country) / nrow(pm_annual_ave)))
 
 # Preview
 head(pm_annual_ave, 6)
-
-############ basic stats #####################################################
-
-summary(pm_annual_ave$fpm_2050_rcp_chg) # In 2050, the difference in PM2.5 concentration between RCP8.5 and RCP4.5
-summary(pm_annual_ave$fpm_2100_rcp_chg) # In 2100, the difference in PM2.5 concentration between RCP8.5 and RCP4.5
-summary(pm_annual_ave$fpm_2050_45_base_chg) # For RCP4.5, the difference in PM2.5 concentration between 2050 and 2000
-summary(pm_annual_ave$fpm_2050_85_base_chg) # For RCP8.5, the difference in PM2.5 concentration between 2050 and 2000
-summary(pm_annual_ave$fpm_2100_45_base_chg) # For RCP4.5, the difference in PM2.5 concentration between 2100 and 2000
-summary(pm_annual_ave$fpm_2100_85_base_chg) # For RCP8.5, the difference in PM2.5 concentration between 2100 and 2000
-
-# Create summary table
-summary_table <- tibble(
-  Variable = c(
-    "fpm_2050_rcp_chg",
-    "fpm_2100_rcp_chg",
-    "fpm_2050_45_base_chg",
-    "fpm_2050_85_base_chg",
-    "fpm_2100_45_base_chg",
-    "fpm_2100_85_base_chg"
-  ),
-  Description = c(
-    "2050: RCP8.5 - RCP4.5",
-    "2100: RCP8.5 - RCP4.5",
-    "RCP4.5: 2050 - 2000",
-    "RCP8.5: 2050 - 2000",
-    "RCP4.5: 2100 - 2000",
-    "RCP8.5: 2100 - 2000"
-  ),
-  Min = c(
-    min(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
-    min(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
-    min(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
-    min(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
-    min(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
-    min(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
-  ),
-  Q1 = c(
-    quantile(pm_annual_ave$fpm_2050_rcp_chg, 0.25, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2100_rcp_chg, 0.25, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2050_45_base_chg, 0.25, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2050_85_base_chg, 0.25, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2100_45_base_chg, 0.25, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2100_85_base_chg, 0.25, na.rm = TRUE)
-  ),
-  Median = c(
-    median(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
-    median(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
-    median(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
-    median(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
-    median(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
-    median(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
-  ),
-  Mean = c(
-    mean(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
-    mean(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
-    mean(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
-    mean(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
-    mean(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
-    mean(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
-  ),
-  Q3 = c(
-    quantile(pm_annual_ave$fpm_2050_rcp_chg, 0.75, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2100_rcp_chg, 0.75, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2050_45_base_chg, 0.75, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2050_85_base_chg, 0.75, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2100_45_base_chg, 0.75, na.rm = TRUE),
-    quantile(pm_annual_ave$fpm_2100_85_base_chg, 0.75, na.rm = TRUE)
-  ),
-  Max = c(
-    max(pm_annual_ave$fpm_2050_rcp_chg, na.rm = TRUE),
-    max(pm_annual_ave$fpm_2100_rcp_chg, na.rm = TRUE),
-    max(pm_annual_ave$fpm_2050_45_base_chg, na.rm = TRUE),
-    max(pm_annual_ave$fpm_2050_85_base_chg, na.rm = TRUE),
-    max(pm_annual_ave$fpm_2100_45_base_chg, na.rm = TRUE),
-    max(pm_annual_ave$fpm_2100_85_base_chg, na.rm = TRUE)
-  )
-)
-
-# Print table
-print(summary_table, n = Inf)
-
-
 
 ############ save outputs #####################################################
 
