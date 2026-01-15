@@ -15,7 +15,7 @@
 ####### fix_unmapped_country.R ###########################################################
 * this troubleshoots some specific countries not initially captured in grid_country_mapping.R
 
-####### NetCDF_extract.R #################################################################
+####### NetCDF_extract_pm.R #################################################################
 * this code 1) extracts grid cell data from NetCDF file 2) joins with country mapping
 3) creates dataframe and exports as csv
 

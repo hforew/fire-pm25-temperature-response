@@ -1,10 +1,23 @@
+###########################
+## Basic data stats ##
+###########################
 
-library(ncdf4)
+
+# Remove all objects from the environment
+rm(list = ls())
+
+############ Packages #####################################################
+
 library(here)
+library(tidyverse)
 
+############ Import #####################################################
 
+# Import pop density NetCDF data
 pop_ssp1 <- nc_open(here("input", "SSP1_for_RCP45_2006-2100_population_density_c160701.nc"))
-print(pop_ssp1)
+print(pop_ssp1) # dimensions 720 x 360 x 95 --- longitude x latitude x time, for 95 years
+
+############ preliminary #####################################################
 
 # Extract the population density variable for historical period (2006-2009)
 pop_density <- ncvar_get(pop_ssp1, "hdm")  # dim: [720, 360, 95]
@@ -37,3 +50,9 @@ avg_historical_pop <- apply(historical_pop, c(1, 2), mean, na.rm = TRUE)
 
 # Summary of non-zero population values
 summary(avg_historical_pop[landmask == 1 & avg_historical_pop > 0])
+
+
+############ basic stats #####################################################
+
+# SEE basic stats pm
+

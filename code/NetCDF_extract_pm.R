@@ -1,5 +1,5 @@
 #########################################
-## Extract grid cell data from NetCDF ##
+## Extract PM2.5 grid cell data from NetCDF ##
 #########################################
 
 
@@ -24,7 +24,7 @@ pm_2000 <- nc_open(here("input", "CESM_09x125_PM25_2000_Baseline.nc"))
 print(pm_2000)
 # PM2.5 no fire
 pm_2000_nf <- nc_open(here("input", "CESM_09x125_PM25_2000_BaseLine_NoFire.nc"))
-print(pm_2000_nf)
+print(pm_2000_nf) # dimensions 288x192x12 --- longitude x latitude x time, for 12 months
 
 ## 2050 RCP4.5 
 # PM2.5 all (fire plus other)
