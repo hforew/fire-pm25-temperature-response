@@ -3,6 +3,15 @@
 ~~~~~~~~~~~~~~~~~~~~  R Code Files and their output           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ##########################################################################################
 
+####### FILE EXECUTION ORDER ############################################################
+
+NetCDF_extract_pm
+NetCDF_extract_pop
+pm_to_pop_regrid
+country_map_pop_pm
+pm_mortality
+plots_
+
 ####### grid_country_mapping.R ############################################################
 * this code maps NetCDF file grid cells by lat and lon to countries
 

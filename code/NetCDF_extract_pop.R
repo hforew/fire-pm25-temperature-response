@@ -85,7 +85,7 @@ pop_df <- expand.grid(
 ) %>%
   mutate(
     # Add population density values to each lon/lat combination
-    pop_density = as.vector(pop_density_2009),  
+    pop_dens_2009 = as.vector(pop_density_2009),  
           # as.vector() flattens the 2D array [720, 360] into 1D vector [259,200]
           # Order matches expand.grid: lon varies fastest (fills column-wise)
           # Row 1 = lon[1], lat[1]; Row 2 = lon[2], lat[1]; etc. after all lon filled, next lat
@@ -101,19 +101,19 @@ pop_df <- expand.grid(
 glimpse(pop_df)
 head(pop_df)
 # Check if there's non-zero population
-sum(pop_df$pop_density > 0)
+sum(pop_df$pop_dens_2009 > 0)
 
 # See populated cells (returns first 20 cells non zer0)
 pop_df %>% 
-  filter(pop_density > 0) %>% 
+  filter(pop_dens_2009 > 0) %>% 
   head(20)
 
 # Summary statistics
-summary(pop_df$pop_density)
+summary(pop_df$pop_dens_2009)
 
 # Check dimensions
 cat("Total cells:", nrow(pop_df), "\n")
-cat("Cells with population > 0:", sum(pop_df$pop_density > 0), "\n")
+cat("Cells with population > 0:", sum(pop_df$pop_dens_2009 > 0), "\n")
 
 ############ convert pop. density to pop total #####################################################
 
@@ -129,11 +129,11 @@ pop_df <- pop_df %>%
     
     # Calculate total population in grid cell
     # Units: (people/km^2) × (km^2) = people
-    pop_total = pop_density * cell_area_km2
+    pop_tot_2009 = pop_dens_2009 * cell_area_km2
   )
 
 # Verification checks
-cat("Total global population (millions):", sum(pop_df$pop_total) / 1e6, "\n")
+cat("Total global population (millions):", sum(pop_df$pop_tot_2009) / 1e6, "\n")
 cat("Expected ~6,800 million for 2009\n")
 
 # Check area variation by latitude
@@ -160,7 +160,7 @@ pop_df <- pop_df %>%
     lon = as.numeric(lon),
     lat = as.numeric(lat),
     cell_area_km2 = as.numeric(cell_area_km2),
-    pop_total = as.numeric(pop_total)
+    pop_tot_2009 = as.numeric(pop_tot_2009)
   )
 
 # Now save
