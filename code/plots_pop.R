@@ -61,7 +61,7 @@ world_usa_pop_2009 <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = pop_pm_country_USA,
-            aes(x = lon, y = lat, fill = pop_total)) +
+            aes(x = lon, y = lat, fill = pop_tot_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Total",
                       na.value = NA) +
@@ -78,7 +78,7 @@ world_usa_pop_den_2009 <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = pop_pm_country_USA,
-            aes(x = lon, y = lat, fill = pop_density)) +
+            aes(x = lon, y = lat, fill = pop_dens_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Density",
                       na.value = NA) +
@@ -100,7 +100,7 @@ world_pop_2009 <- ggplot() +
                aes(x = long, y = lat, group = group),
                fill = "lightgray", color = "white", size = 0.1) +
   geom_tile(data = pop_pm_country_mapped,
-            aes(x = lon, y = lat, fill = pop_total)) +
+            aes(x = lon, y = lat, fill = pop_tot_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Total Population",
                       na.value = NA) +
@@ -123,7 +123,7 @@ print("All plots saved to images folder")
 # USA - Population Total (2009)
 usa_pop_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_USA,
-            aes(x = lon, y = lat, fill = pop_total)) +
+            aes(x = lon, y = lat, fill = pop_tot_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Total",
                       na.value = NA) +
@@ -138,7 +138,7 @@ ggsave(here("images/pop", "usa_pop_2009.png"), usa_pop_2009, width = 10, height 
 # USA - Population Density (2009)
 usa_pop_den_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_USA,
-            aes(x = lon, y = lat, fill = pop_density)) +
+            aes(x = lon, y = lat, fill = pop_dens_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Density",
                       na.value = NA) +
@@ -153,7 +153,7 @@ ggsave(here("images/pop", "usa_pop_den_2009.png"), usa_pop_den_2009, width = 10,
 # India - Population Total (2009)
 ind_pop_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_IND,
-            aes(x = lon, y = lat, fill = pop_total)) +
+            aes(x = lon, y = lat, fill = pop_tot_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Total",
                       na.value = NA) +
@@ -168,7 +168,7 @@ ggsave(here("images/pop", "ind_pop_2009.png"), ind_pop_2009, width = 10, height 
 # India - Population Density (2009)
 ind_pop_den_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_IND,
-            aes(x = lon, y = lat, fill = pop_density)) +
+            aes(x = lon, y = lat, fill = pop_dens_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Density",
                       na.value = NA) +
@@ -183,7 +183,7 @@ ggsave(here("images/pop", "ind_pop_den_2009.png"), ind_pop_den_2009, width = 10,
 # China - Population Total (2009)
 chn_pop_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_CHN,
-            aes(x = lon, y = lat, fill = pop_total)) +
+            aes(x = lon, y = lat, fill = pop_tot_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Total",
                       na.value = NA) +
@@ -198,7 +198,7 @@ ggsave(here("images/pop", "chn_pop_2009.png"), chn_pop_2009, width = 10, height 
 # China - Population Density (2009)
 chn_pop_den_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_CHN,
-            aes(x = lon, y = lat, fill = pop_density)) +
+            aes(x = lon, y = lat, fill = pop_dens_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Density",
                       na.value = NA) +
@@ -213,7 +213,7 @@ ggsave(here("images/pop", "chn_pop_den_2009.png"), chn_pop_den_2009, width = 10,
 # Russia - Population Total (2009)
 rus_pop_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_RUS,
-            aes(x = lon, y = lat, fill = pop_total)) +
+            aes(x = lon, y = lat, fill = pop_tot_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Total",
                       na.value = NA) +
@@ -228,7 +228,7 @@ ggsave(here("images/pop", "rus_pop_2009.png"), rus_pop_2009, width = 10, height 
 # Russia - Population Density (2009)
 rus_pop_den_2009 <- ggplot() +
   geom_tile(data = pop_pm_country_RUS,
-            aes(x = lon, y = lat, fill = pop_density)) +
+            aes(x = lon, y = lat, fill = pop_dens_2009)) +
   scale_fill_gradient(low = "yellow", high = "darkred",
                       name = "Population Density",
                       na.value = NA) +

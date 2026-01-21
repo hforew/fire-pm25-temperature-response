@@ -1,43 +1,115 @@
 
-##########################################################################################
-~~~~~~~~~~~~~~~~~~~~  R Code Files and their output           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##########################################################################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+############################  R Code Files and their output  ############################ 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
 
-####### FILE EXECUTION ORDER ############################################################
+This project reads NetCDF data for pm and pop projected over various time periods and computes mortality.
 
-NetCDF_extract_pm
-NetCDF_extract_pop
-pm_to_pop_regrid
-country_map_pop_pm
-pm_mortality
-plots_
+Obtained from authors, data comes from these studies:
 
-####### grid_country_mapping.R ############################################################
-* this code maps NetCDF file grid cells by lat and lon to countries
+https://www.frames.gov/catalog/25211
+https://onlinelibrary.wiley.com/doi/abs/10.1029/2018GH000144
 
-## outputs 
+This README is organized as follows:
 
-* grid_country_lookup.csv 
-** columns: lon	lat	grid_id	country_name	country_code_iso3	country_code_iso2
-** country code assigned to every grid cell
+1) File execution order: provides summary of code file, listed by execution order
+2) Code: Details each file, including inputs and outputs
+3) Data inputs: Details each input file
 
-####### fix_unmapped_country.R ###########################################################
-* this troubleshoots some specific countries not initially captured in grid_country_mapping.R
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+############################  1 - FILE EXECUTION ORDER #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+
+NetCDF_extract_pm.R  (converts NetCDF pm data to data frame)
+
+NetCDF_extract_pop.R (converts NetCDF population data to data frame)
+
+pm_to_pop_regrid.R (re-grids pm data (coarser resolution) to pop data resolution (finer))
+
+country_map_pop_pm.R (maps country codes to combined pm and pop data)
+
+pm_mortality.R (computes mortality)
+
+plots_  (various plot files)
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+############################  2 - Code  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
 
 ####### NetCDF_extract_pm.R #################################################################
-* this code 1) extracts grid cell data from NetCDF file 2) joins with country mapping
-3) creates dataframe and exports as csv
+* this code 1) extracts grid cell data from NetCDF file, converts to dataframe and exports as csv
+
+## inputs
+* CESM_09x125_PM25_ 
+** multiple files with this predix, see section 3 for detail
 
 ## outputs 
+* annual_ave_pm25.csv
+** columns:
+  lon	lat	pm_2000	pm_2050_45	pm_2050_85	pm_2100_45	pm_2100_85	fpm_2000	fpm_2050_45	fpm_2050_45_hi	
+  fpm_2050_85	fpm_2050_85_hi	fpm_2100_45	fpm_2100_45_hi	fpm_2100_85	fpm_2100_85_hi	fpm_2100_rcp_chg	
+  fpm_2100_rcp_chg_hi	fpm_2050_rcp_chg	fpm_2050_rcp_chg_hi	fpm_2050_45_base_chg	fpm_2050_85_base_chg	
+  fpm_2100_45_base_chg	fpm_2100_85_base_chg	fpm_2050_45_base_chg_hi	fpm_2050_85_base_chg_hi	
+  fpm_2100_45_base_chg_hi	fpm_2100_85_base_chg_hi	n_months
+** at grid cell level, this data is:
+    - pm total (including fire)
+    - pm total with human influence
+    - pm without fire 
+    - Fire pm (fpm)  
+    - Computed for years (2000, 2050, 2100) and RCPs (4.5,8.5)
 
-* annual_ave_pm25_2000.csv
-** columns: lon	lat	country_name	country_code_iso3	pm25_annual	n_months
-** annual PM25 per grid cell, includes all PM (fire plus all other)
+####### NetCDF_extract_pop.R #################################################################
+* this code 1) extracts grid cell population data from NetCDF file
+            2) computes area by grid cell and then total population, given pop denisty
+            3) converts to data frame and exports as csv
 
+## inputs
+* SSP1_for_RCP45_2006-2100_population_density_c160701.nc 
+** see section 3 for file detail
 
-##########################################################################################
-~~~~~~~~~~~~~~~~~~~~  DATE INPUT NOTES           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-##########################################################################################
+## outputs 
+* pop_df.csv
+** columns: lon	lat	pop_dens_2009	pop_year	cell_area_km2	pop_tot_2009
+** total population per grid
+
+####### pm_to_pop_regrid.R ############################################################
+* this code 1) imports processed data for pm and population
+            2) re-grids pm data (coarser resolution) to pop data resolution (finer)
+            3) outputs the combined data for pm and pop
+            
+## inputs
+* pop_df.csv (processed data file)
+* annual_ave_pm25.csv (processed data file)
+
+## outputs 
+* pm25_regridded_0.5deg.csv
+** columns: same as annual_ave_pm25.csv
+** the pm data from annual_ave_pm25.csv now has:
+  - lon and lat coordinates converted from edges to centers 
+  - more rows---before 55296, now 259200---because pm value is repeated
+        for each corresponding pop data grid cell 
+
+* pop_pm_combined.csv
+** columns: combined columns from annual_ave_pm25.csv and pop_df.csv
+** for standardized lat and lon coordinates pop and pm data is listed
+
+####### country_map_pop_pm.R ############################################################
+
+* this code maps country codes to combined pm and pop data
+
+## inputs: pop_pm_combined 
+## outputs: pop_pm_with_countries.csv
+
+####### pm_mortality.R ############################################################
+
+* Using prior data output, this code computes pm mortality with CRFs
+
+## inputs: pop_pm_with_countries.csv 
+## outputs: 
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+############################  3 - Data Inputs  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
 
 ####
 ### CESM_09x125_PM25_2000_Baseline.nc
@@ -98,4 +170,12 @@ Identical to above, except future projection under 4.5. 9-year average for 2091-
 
 Identical to above, except future projection under 8.5. 9-year average for 2091-2099. 
 
+####
+### SSP1_for_RCP45_2006-2100_population_density_c160701.nc
+####
 
+720 longitude cells (0.5° resolution: 360°/0.5° = 720)
+360 latitude cells (0.5° resolution: 180°/0.5° = 360)
+95 time steps (years 2006-2100)
+Units: km^-2 = people per square kilometer (population density)
+Data structure: 3D array where each [lon, lat] cell has 95 time values
