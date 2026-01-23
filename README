@@ -3,9 +3,6 @@
 ############################  R Code Files and their output  ############################ 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
 
-# TEST CHANGE
-# one more test change
-
 This project reads NetCDF data for pm and pop projected over various time periods and computes mortality.
 
 Obtained from authors, data comes from these studies:
