@@ -270,7 +270,7 @@ cat("Should match:", nrow(pm25_regridded) == nrow(pop_coords), "\n\n")
 #3.Independently compute the expected value for each population cell by taking the longitude and latitude of its matched PM grid center and 
 #evaluating the same mathematical function at that location.
 
-#4.Compare the two values—the one produced by regridding and the one computed analytically. 
+#4.Compare the two values, the one produced by regridding and the one computed analytically. 
 #If they are identical (up to numerical precision), it confirms that the PM-to-population cell assignment and coordinate mapping are correct.
 
 
