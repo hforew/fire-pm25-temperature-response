@@ -211,9 +211,9 @@ for (array_name in names(arrays_to_process)) {
 }
 
 # Join with grid_lookup to add country information
-pm_country <- pm_df_2000 %>%
-  left_join(grid_lookup %>% select(lon, lat, country_name, country_code_iso3),
-            by = c("lon", "lat")) %>%
+pm_df_all <- pm_df_2000 %>%
+  #left_join(grid_lookup %>% select(lon, lat, country_name, country_code_iso3),
+  #          by = c("lon", "lat")) %>%
   left_join(pm_df_2000_nf %>% select(month, lon, lat, pm_2000_nf),
             by = c("month", "lon", "lat")) %>%
   left_join(pm_df_2050_45 %>% select(month, lon, lat, pm_2050_45), # 2050  RCP 4.5 
@@ -242,7 +242,7 @@ pm_country <- pm_df_2000 %>%
             by = c("month", "lon", "lat"))
 
 # Convert lon/lat to numeric
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(
     lon = as.numeric(lon),
     lat = as.numeric(lat)
@@ -250,49 +250,51 @@ pm_country <- pm_country %>%
 
 # Create fire pm column (difference between total PM2.5 and no-fire PM2.5)
 # baseline 
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2000 = pm_2000 - pm_2000_nf)
 
 # 2050
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2050_45 = pm_2050_45 - pm_2050_45_nf)
 
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2050_45_hi = pm_2050_45_hi - pm_2050_45_nf)
 
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2050_85 = pm_2050_85 - pm_2050_85_nf)
 
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2050_85_hi = pm_2050_85_hi - pm_2050_85_nf)
 
 # 2100
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2100_45 = pm_2100_45 - pm_2100_45_nf)
 
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2100_45_hi = pm_2100_45_hi - pm_2100_45_nf)
 
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2100_85 = pm_2100_85 - pm_2100_85_nf)
 
-pm_country <- pm_country %>%
+pm_df_all <- pm_df_all %>%
   mutate(fpm_2100_85_hi = pm_2100_85_hi - pm_2100_85_nf)
 
 # Preview the result
-colnames(pm_country)
-head(pm_country, 5)
+colnames(pm_df_all)
+head(pm_df_all, 5)
 
-# save pm_country as intermediate detailed data file
-write_csv(pm_country, here("output", "pm_country_month_grid.csv"))
+# save pm_df_all as intermediate detailed data file
+write_csv(pm_df_all, here("output", "pm_df_all_month_grid.csv"))
 
 ### Create annual average by averaging across all 12 months for each grid cell
-pm_annual_ave <- pm_country %>%
-  group_by(lon, lat, country_name, country_code_iso3) %>%
+pm_annual_ave <- pm_df_all %>%
+  group_by(lon, lat) %>%
   summarise(
-    pm_2000 = mean(pm_2000, na.rm = TRUE), # baseline 
-    fpm_2000 = mean(fpm_2000, na.rm = TRUE),
+    pm_2000 = mean(pm_2000, na.rm = TRUE), # baseline
+    pm_2000_nf = mean(pm_2000_nf, na.rm = TRUE), # baseline no fire 
+    fpm_2000 = mean(fpm_2000, na.rm = TRUE),  # baseline minus no fire
     pm_2050_45 = mean(pm_2050_45, na.rm = TRUE), # 2050 
+    pm_2050_45_nf = mean(pm_2050_45_nf, na.rm = TRUE),  
     fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
     fpm_2050_45_hi = mean(fpm_2050_45_hi, na.rm = TRUE),
     pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
@@ -352,9 +354,9 @@ pm_annual_ave <- pm_annual_ave %>%
   mutate(fpm_2100_85_base_chg_hi = fpm_2100_85_hi - fpm_2000)
 
 # Verify reduction
-print(paste("Original observations:", nrow(pm_country)))
+print(paste("Original observations:", nrow(pm_df_all)))
 print(paste("Annual average observations:", nrow(pm_annual_ave)))
-print(paste("Reduction factor:", nrow(pm_country) / nrow(pm_annual_ave)))
+print(paste("Reduction factor:", nrow(pm_df_all) / nrow(pm_annual_ave)))
 
 # Preview
 head(pm_annual_ave, 6)
