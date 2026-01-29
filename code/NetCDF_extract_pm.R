@@ -298,12 +298,15 @@ pm_annual_ave <- pm_df_all %>%
     fpm_2050_45 = mean(fpm_2050_45, na.rm = TRUE),
     fpm_2050_45_hi = mean(fpm_2050_45_hi, na.rm = TRUE),
     pm_2050_85 = mean(pm_2050_85, na.rm = TRUE),
+    pm_2050_85_nf = mean(pm_2050_85_nf, na.rm = TRUE),
     fpm_2050_85 = mean(fpm_2050_85, na.rm = TRUE),
     fpm_2050_85_hi = mean(fpm_2050_85_hi, na.rm = TRUE),
     pm_2100_45 = mean(pm_2100_45, na.rm = TRUE), # 2100
+    pm_2100_45_nf = mean(pm_2100_45_nf, na.rm = TRUE), # 2100
     fpm_2100_45 = mean(fpm_2100_45, na.rm = TRUE),
     fpm_2100_45_hi = mean(fpm_2100_45_hi, na.rm = TRUE),
     pm_2100_85 = mean(pm_2100_85, na.rm = TRUE),
+    pm_2100_85_nf = mean(pm_2100_85_nf, na.rm = TRUE),
     fpm_2100_85 = mean(fpm_2100_85, na.rm = TRUE),
     fpm_2100_85_hi = mean(fpm_2100_85_hi, na.rm = TRUE),
     n_months = n(),
