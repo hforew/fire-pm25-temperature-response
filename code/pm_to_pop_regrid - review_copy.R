@@ -415,6 +415,43 @@ stopifnot(max(d_match) < 1.5)
 # correct, with no spatial misalignment or indexing errors.
 # -------------------------------------------------------------------
 
+#verify by plot by sampling
+set.seed(123)
+idx <- sample(nrow(pop_coords), 2000)
+pop_test <- pop_coords[idx, ]
+
+true_check <- map_df(1:nrow(pop_test), function(i) {
+  plon <- pop_test$lon[i]
+  plat <- pop_test$lat[i]
+  
+  dist_all <- sqrt(
+    (plon - annual_ave$lon_center)^2 +
+      (plat - annual_ave$lat_center)^2
+  )
+  
+  tibble(
+    d_min   = min(dist_all),                       
+    d_match = sqrt(
+      (plon - annual_ave$lon_center[nearest_pm_idx[idx[i]]])^2 +
+        (plat - annual_ave$lat_center[nearest_pm_idx[idx[i]]])^2
+    )
+  )
+})
+
+#For each population cell selected during sampling, 
+#the chosen PM cell is the one with the shortest distance in the entire space.
+ggplot(true_check, aes(x = d_min, y = d_match)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(slope = 1, intercept = 0, 
+              linetype = "dashed", linewidth = 1) +
+  coord_equal() +
+  labs(
+    title = "Nearest-neighbor correctness check",
+    subtitle = "All points must lie on y = x if no mismatches",
+    x = "True minimum distance (min of Pythagorean theorem)",
+    y = "Distance chosen by algorithm"
+  ) +
+  theme_minimal()
 ################################################################################review end
 
 
