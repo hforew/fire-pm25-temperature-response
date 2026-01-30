@@ -448,7 +448,7 @@ ggplot(true_check, aes(x = d_min, y = d_match)) +
   labs(
     title = "Nearest-neighbor correctness check",
     subtitle = "All points must lie on y = x if no mismatches",
-    x = "True minimum distance (min of Pythagorean theorem)",
+    x = "True minimum distance (min of Euclidean distance)",
     y = "Distance chosen by algorithm"
   ) +
   theme_minimal()
