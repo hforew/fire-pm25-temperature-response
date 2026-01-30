@@ -140,7 +140,7 @@ pop_df1 <- pop_df %>%
 #NOAA’s blog notes that 111km is a commonly used approximation rather than an exact value, 
 #so using 111km introduces a small discrepancy.
 #when using 111km, the area will smaller than actual area.
-#https://oceanservice.noaa.gov/facts/latitude.html?utm_source=chatgpt.com
+#https://oceanservice.noaa.gov/facts/longitude.html
 
 #When the Earth is approximated as a sphere: C = 2 * pi * r
 #1 degree arc length = (2 * pi * r) / 360 = (pi * r) / 180
