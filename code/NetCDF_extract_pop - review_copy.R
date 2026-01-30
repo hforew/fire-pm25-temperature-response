@@ -193,6 +193,81 @@ pop_df3 <- pop_df %>%
   ungroup()
 print(pop_df3)
 
+#summary statistics for each method
+summary(pop_df1[, c("cell_area_km2", "pop_dens_2009", "pop_tot_2009")])
+summary(pop_df2[, c("cell_area_km2", "pop_dens_2009", "pop_tot_2009")])
+summary(pop_df3[, c("cell_area_km2", "pop_dens_2009", "pop_tot_2009")])
+
+
+# Combine the three area computation methods into a single long-format table.
+areas_long <- bind_rows(
+  pop_df1 %>% select(lon, lat, cell_area_km2) %>% mutate(method = "111km"),
+  pop_df2 %>% select(lon, lat, cell_area_km2) %>% mutate(method = "sphere"),
+  pop_df3 %>% select(lon, lat, cell_area_km2) %>% mutate(method = "wgs84")
+)
+
+# For a regular latitude–longitude grid, cell area is theoretically
+# invariant with respect to longitude. Therefore, we average cell areas
+# across all latitudes for each longitude and method.
+# The resulting plot should display (approximately) flat horizontal lines,
+# confirming that grid cell area does not vary systematically with longitude.
+lon_area <- areas_long %>%
+  group_by(method, lon) %>%
+  summarise(area = mean(cell_area_km2), .groups = "drop")
+
+ggplot(lon_area, aes(x = lon, y = area, color = method)) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Grid cell area vs longitude",
+    x = "Longitude (degrees)",
+    y = "Cell area (km²)"
+  ) +
+  theme_minimal()
+
+#log
+ggplot(lon_area, aes(x = lon, y = area, color = method)) +
+  geom_line(linewidth = 1) +
+  scale_y_log10() +
+  labs(
+    title = "Grid cell area vs longitude (log scale)",
+    x = "Longitude (degrees)",
+    y = "Cell area (km², log scale)"
+  ) +
+  theme_minimal()
+
+# In contrast, grid cell area varies systematically with latitude.
+# Due to the convergence of meridians toward the poles, the longitudinal
+# width of each grid cell shrinks proportionally to cos(latitude).
+# Cell area is approximately proportional to cos(latitude),
+# reaching its maximum at the equator and approaching zero near the poles.
+lat_area <- areas_long %>%
+  group_by(method, lat) %>%
+  summarise(area = mean(cell_area_km2), .groups = "drop")
+
+ggplot(lat_area, aes(x = lat, y = area, color = method)) +
+  geom_line(linewidth = 1) +
+  labs(
+    title = "Grid cell area vs latitude",
+    x = "Latitude (degrees)",
+    y = "Cell area (km²)"
+  ) +
+  theme_minimal()
+
+#log
+ggplot(lat_area, aes(x = lat, y = area, color = method)) +
+  geom_line(linewidth = 1) +
+  scale_y_log10() +
+  labs(
+    title = "Grid cell area vs latitude (log scale)",
+    x = "Latitude (degrees)",
+    y = "Cell area (km², log scale)"
+  ) +
+  theme_minimal()
+
+#Area is independent of longitude and varies only with latitude according to cos(lat); 
+#the 111km method yields slightly smaller values 
+#overall, while the spherical method and WGS84 are almost identical numerically, 
+#WGS84 should has the highest accuracy intuitively.
 #############################################################################################review end
 
 # Verification checks
