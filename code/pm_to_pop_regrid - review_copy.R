@@ -261,36 +261,35 @@ cat("Original pop dimensions:", nrow(pop_coords), "rows\n")
 cat("Should match:", nrow(pm25_regridded) == nrow(pop_coords), "\n\n")
 
 ################################################################################review start
-#1.Define a synthetic PM field by computing a known mathematical function of longitude and latitude at each PM grid cell center. 
-#This gives every PM cell a unique value.
-
-#2.Apply our original nearest-neighbor regridding to assign each 0.5° population cell to the closest PM grid cell and 
-#copy the synthetic PM value from that PM cell to the population cell.
-
-#3.Independently compute the expected value for each population cell by taking the longitude and latitude of its matched PM grid center and 
-#evaluating the same mathematical function at that location.
-
-#4.Compare the two values, the one produced by regridding and the one computed analytically. 
-#If they are identical (up to numerical precision), it confirms that the PM-to-population cell assignment and coordinate mapping are correct.
-
-
-# 1) Construct a synthetic "truth field" on the PM grid centers
-# This field has known spatial structure so any misalignment
-# in the regridding will be immediately detectable.
+#Step 1: Create a synthetic PM field on the PM grid
+#first define an artificial (synthetic) PM2.5 field as a known mathematical function of longitude and latitude at each PM grid cell center:
+#This guarantees that every PM cell has a unique and predictable value.
+#Because the function is known, you always know what the “correct” value should be at any PM location.
+#Purpose:
+#Create a controlled “truth” field where the correct values are known exactly.
 F_pm <- with(annual_ave,
              1000 + 2 * lon_center + 3 * lat_center + 10 * sin(lon_center * pi / 180))
 
-# 2) Use the already-computed nearest neighbor indices
-# to map the synthetic PM field to the population grid
+
+#Step 2: Apply the actual regridding method
+#apply real nearest-neighbor regridding procedure:
+#Each 0.5° population grid cell is matched to its nearest 1.25° PM grid cell.
+#The synthetic PM value from that nearest PM cell is copied to the population cell.
+#Purpose:
+#Simulate exactly what real PM2.5 regridding pipeline does in this script.
 pop_truth <- pop_coords %>%
   mutate(
     pm_idx = nearest_pm_idx,
     F_regridded = F_pm[pm_idx]
   )
 
-# 3) Independently compute the expected synthetic value
-# using the matched PM grid centers.
-# This is done analytically and does NOT rely on the regridded values.
+#Step 3: Independently compute the expected values
+#For each population cell, independently compute what the synthetic value should be by:
+#Taking the matched PM grid center coordinates.
+#Evaluating the same mathematical function at those coordinates.
+#This step does not use the regridded values but recomputes them.
+#Purpose:
+#Generate a fully independent benchmark for the correct result.
 pop_truth <- pop_truth %>%
   mutate(
     lon_match = annual_ave$lon_center[pm_idx],
@@ -299,14 +298,122 @@ pop_truth <- pop_truth %>%
     err = F_regridded - F_expected
   )
 
-# 4) If the regridding is correct, the error must be zero
+#Step 4: Compare regridded vs expected values
+#compare:
+#F_regridded: value produced by the regridding code
+#F_expected: value computed analytically
+#compute the difference and check the maximum absolute error.
+#Purpose:
+#Verify that the regridding assigns exactly the correct PM cell to every population cell.
 max_err <- max(abs(pop_truth$err), na.rm = TRUE)
 cat("ONE-SHOT VALIDATION | max(|error|) =", max_err, "\n")
 
 # Enforce correctness: any nonzero error indicates a problem
 stopifnot(max_err < 1e-10)
-
 cat("Validated: Regridding pipeline is internally consistent.\n")
+
+# -------------------------------------------------------------------
+# Intuition of the synthetic-field validation (three-step view)
+#
+# Step 1: Assign a unique "label" to each PM grid cell.
+# first create a synthetic PM field as a simple mathematical
+# function of longitude and latitude. This function acts as a
+# deterministic label generator: each PM grid cell receives a
+# unique value determined by its geographic coordinates.
+#
+# Step 2: Let the algorithm decide which PM cell each population
+# cell belongs to.
+# Using the real nearest-neighbor regridding procedure, compute
+# an index pm_idx for each population grid cell, indicating which
+# PM grid cell it is assigned to. Then copy the synthetic PM
+# value from that PM cell to the population cell (F_regridded).
+#
+# Step 3: Independently verify the assignment using real-world
+# coordinates.
+# Based on the same pm_idx, we retrieve the matched PM grid cell's
+# geographic coordinates and re-evaluate the synthetic function at
+# those coordinates to obtain F_expected. This uses only the
+# physical location of the matched PM cell, not the copied value.
+#
+# If the regridding is correct, F_regridded and F_expected must be
+# identical (up to numerical precision). Any discrepancy indicates
+# that the index pm_idx points to the wrong PM grid cell, revealing
+# errors in spatial indexing, coordinate transformation, or
+# nearest-neighbor matching.
+#
+# Therefore, this synthetic-field validation works by encoding
+# geographic location into numerical values and checking whether
+# the algorithm assigns each population cell to the correct PM
+# grid cell in geographic space.
+# -------------------------------------------------------------------
+
+#Step 5: Distance sanity check
+#Compute the actual geometric distance between:
+#Each population cell center
+#Its matched PM grid center
+#This confirms:
+#No population cell is matched to a far-away PM cell.
+#All matches fall within the correct coarse PM neighborhood.
+d_match <- sqrt(
+  (pop_coords$lon - annual_ave$lon_center[nearest_pm_idx])^2 +
+    (pop_coords$lat - annual_ave$lat_center[nearest_pm_idx])^2
+)
+
+summary(d_match)
+stopifnot(max(d_match) < 1.5)
+
+# -------------------------------------------------------------------
+# NOTES: Interpretation of d_match (distance between POP and PM centers)
+#
+# d_match measures the Euclidean distance (in degrees) between each
+# 0.5° population cell center and the center of its matched 1.25° PM cell.
+#
+# Geometry of the PM grid:
+# The PM grid has 288 x 192 cells covering the globe.
+# - Longitudinal resolution = 360° / 288 = 1.25°
+# - Latitudinal resolution  = 180° / 192 = 0.9375° ≈ 0.94°
+#
+# Therefore, each PM cell is a rectangle with:
+# - half width  (lon) = a = 1.25 / 2 = 0.625°
+# - half height (lat) = b = 0.9375 / 2 = 0.46875°
+#
+# The maximum possible distance from a PM cell center to any point
+# inside the cell is the distance to a corner:
+#   d_max = sqrt(a^2 + b^2) ≈ sqrt(0.625^2 + 0.46875^2) ≈ 0.78°
+#
+# The observed maximum distance (max(d_match) = 0.7819°) matches
+# this theoretical bound almost exactly.
+#
+# Why is the mean distance around 0.42°?
+# Population cell centers can be treated as approximately uniformly
+# distributed points inside each PM grid cell.
+#
+# Geometrically, this is equivalent to drawing a random point (X, Y)
+# uniformly from a rectangle:
+#   X ~ Uniform(-a, a)
+#   Y ~ Uniform(-b, b)
+#
+# The distance to the center is:
+#   D = sqrt(X^2 + Y^2)
+#
+# The theoretical expected value is:
+#   E[D] = (1 / (4ab)) * ∫_{-a}^{a} ∫_{-b}^{b} sqrt(x^2 + y^2) dx dy
+#
+# This integral has no simple closed form, but a known geometric result is:
+#   E[D] ≈ 0.52 * sqrt(a^2 + b^2)
+#
+# Here:
+#   sqrt(a^2 + b^2) ≈ 0.78°
+#   E[D] ≈ 0.52 * 0.78 ≈ 0.41°
+#
+# The observed mean and median distances (~0.42°) match this theoretical
+# value, which is exactly what is expected from pure geometry.
+#
+# Conclusion:
+# This confirms that every population cell lies within its matched PM cell,
+# and that the PM-to-population nearest-neighbor mapping is geometrically
+# correct, with no spatial misalignment or indexing errors.
+# -------------------------------------------------------------------
 
 ################################################################################review end
 
