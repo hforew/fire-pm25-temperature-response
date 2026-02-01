@@ -560,6 +560,8 @@ print(p2)
 
 # Aggregate mortality by country (Method 1 only, excluding no-fire scenarios)
 country_mortality <- pop_pm_country %>%
+  # Exclude disputed territories (-99) and unmapped (NA)
+  filter(!is.na(country_code_iso3) & country_code_iso3 != "-99") %>%
   group_by(country_code_iso3, country_name) %>%
   summarise(
     # Population
@@ -634,4 +636,152 @@ country_mortality %>%
   select(country_name, starts_with("fpm_")) %>%
   head(5) %>%
   print()
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Global Mortality Comparison Plots ##########################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Get global totals from country_mortality
+global_totals <- country_mortality %>%
+  summarise(
+    fire_deaths = sum(fpm_2000_mort_m1),
+    total_deaths = sum(pm_2000_mort)
+  ) %>%
+  mutate(
+    year = "2000",
+    rcp = NA_character_,
+    fire_pct = (fire_deaths / total_deaths) * 100
+  )
+
+# Add future scenarios
+global_totals_all <- bind_rows(
+  global_totals,
+  country_mortality %>%
+    summarise(
+      year = "2050",
+      rcp = "45",
+      fire_deaths = sum(fpm_2050_45_mort_m1),
+      total_deaths = sum(pm_2050_45_mort),
+      fire_pct = (fire_deaths / total_deaths) * 100
+    ),
+  country_mortality %>%
+    summarise(
+      year = "2050",
+      rcp = "85",
+      fire_deaths = sum(fpm_2050_85_mort_m1),
+      total_deaths = sum(pm_2050_85_mort),
+      fire_pct = (fire_deaths / total_deaths) * 100
+    ),
+  country_mortality %>%
+    summarise(
+      year = "2100",
+      rcp = "45",
+      fire_deaths = sum(fpm_2100_45_mort_m1),
+      total_deaths = sum(pm_2100_45_mort),
+      fire_pct = (fire_deaths / total_deaths) * 100
+    ),
+  country_mortality %>%
+    summarise(
+      year = "2100",
+      rcp = "85",
+      fire_deaths = sum(fpm_2100_85_mort_m1),
+      total_deaths = sum(pm_2100_85_mort),
+      fire_pct = (fire_deaths / total_deaths) * 100
+    )
+)
+
+print("\n=== Global Mortality Totals ===")
+print(global_totals_all)
+
+# Prepare data for plotting (matching USA format)
+plot_data_global <- global_totals_all %>%
+  mutate(
+    # Create a combined x-axis label
+    scenario = case_when(
+      year == "2000" ~ "2000",
+      TRUE ~ paste0(year, "\nRCP", rcp)
+    ),
+    # Order scenarios chronologically
+    scenario = factor(scenario, levels = c("2000", "2050\nRCP45", "2050\nRCP85", 
+                                           "2100\nRCP45", "2100\nRCP85"))
+  ) %>%
+  select(scenario, fire_deaths, total_deaths) %>%
+  # Reshape for plotting
+  pivot_longer(
+    cols = c(fire_deaths, total_deaths),
+    names_to = "metric",
+    values_to = "deaths"
+  ) %>%
+  mutate(
+    metric = if_else(metric == "fire_deaths", "Fire PM", "Total PM")
+  )
+
+# Plot 1: Total PM Deaths (Global)
+p1_global <- plot_data_global %>%
+  filter(metric == "Total PM") %>%
+  ggplot(aes(x = scenario, y = deaths)) +
+  geom_point(size = 3, color = "#2E86AB") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Total PM2.5 Mortality - Global",
+    subtitle = "Our Estimates (Method 1)",
+    x = "Scenario",
+    y = "Annual Deaths"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+# Plot 2: Fire PM Deaths (Global)
+p2_global <- plot_data_global %>%
+  filter(metric == "Fire PM") %>%
+  ggplot(aes(x = scenario, y = deaths)) +
+  geom_point(size = 3, color = "#A23B72") +
+  scale_y_continuous(labels = scales::comma) +
+  labs(
+    title = "Fire PM2.5 Mortality - Global",
+    subtitle = "Our Estimates (Method 1)",
+    x = "Scenario",
+    y = "Annual Deaths"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+# Display plots
+print(p1_global)
+print(p2_global)
+
+# Optional: Save plots
+ggsave("total_pm_mortality_global.png", p1_global, width = 8, height = 6, dpi = 300)
+ggsave("fire_pm_mortality_global.png", p2_global, width = 8, height = 6, dpi = 300)
+
+# Print summary comparison
+cat("\n=== Global vs USA Comparison (2000 baseline) ===\n")
+cat("Global total PM deaths:", round(global_totals_all$total_deaths[1]), "\n")
+cat("USA total PM deaths:", round(usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(total_deaths)), "\n")
+cat("USA as % of global:", 
+    round((usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(total_deaths)) / 
+            global_totals_all$total_deaths[1] * 100, 1), "%\n")
+cat("\nGlobal fire PM deaths:", round(global_totals_all$fire_deaths[1]), "\n")
+cat("USA fire PM deaths:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fire_deaths)), "\n")
+cat("USA as % of global:", 
+    round((usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fire_deaths)) / 
+            global_totals_all$fire_deaths[1] * 100, 1), "%\n")
+
+
+
+
+
+
+
+
+#### THE END 
+
+
 
