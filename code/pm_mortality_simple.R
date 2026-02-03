@@ -694,6 +694,17 @@ global_totals_all <- bind_rows(
 print("\n=== Global Mortality Totals ===")
 print(global_totals_all)
 
+# Add additional columns for context
+global_totals_all <- global_totals_all %>%
+  mutate(
+    all_death_2009 = 54100000,  # Total global deaths in 2009
+    gmt_chg = c(0.91, 1.4, 2, 1.8, 3.7),  # Global mean temperature change (°C) for each scenario
+    fpm_all_pct = (fpm_deaths / all_death_2009)  # Fire PM deaths as % of all global deaths (decimal form)
+  )
+
+
+print(global_totals_all)
+
 # Prepare data for plotting (matching USA format)
 plot_data_global <- global_totals_all %>%
   mutate(
@@ -725,7 +736,7 @@ p1_global <- plot_data_global %>%
   scale_y_continuous(labels = scales::comma) +
   labs(
     title = "Total PM2.5 Mortality - Global",
-    subtitle = "Our Estimates (Method 1)",
+    subtitle = "Our Estimates",
     x = "Scenario",
     y = "Annual Deaths"
   ) +
@@ -743,7 +754,7 @@ p2_global <- plot_data_global %>%
   scale_y_continuous(labels = scales::comma) +
   labs(
     title = "Fire PM2.5 Mortality - Global",
-    subtitle = "Our Estimates (Method 1)",
+    subtitle = "Our Estimates",
     x = "Scenario",
     y = "Annual Deaths"
   ) +
@@ -774,6 +785,130 @@ cat("USA as % of global:",
     round((usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fpm_deaths)) / 
             global_totals_all$fpm_deaths[1] * 100, 1), "%\n")
 
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Global Death and Temperature Change ########################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Create plot of fire PM deaths vs global mean temperature change
+p_temp <- global_totals_all %>%
+  ggplot(aes(x = gmt_chg, y = fpm_deaths)) +
+  geom_smooth(method = "lm", se = TRUE, color = "#A23B72", fill = "#A23B72", alpha = 0.2) +
+  geom_point(size = 3, color = "#A23B72") +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_continuous(breaks = c(0.91, 1.4, 1.8, 2, 3.7)) +
+  labs(
+    title = "Fire PM2.5 Mortality vs Global Mean Temperature Change",
+    subtitle = "Global Estimates",
+    x = "Global Mean Temperature Change (°C)",
+    y = "Annual Fire PM Deaths"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+# Display plot
+print(p_temp)
+
+
+# Calculate and display linear regression statistics
+temp_model <- lm(fpm_deaths ~ gmt_chg, data = global_totals_all)
+cat("\n=== Linear Regression: Fire PM Deaths ~ Temperature Change ===\n")
+cat("Equation: Fire PM Deaths = ", round(coef(temp_model)[1]), " + ", 
+    round(coef(temp_model)[2]), " × GMT Change\n", sep = "")
+cat("R-squared:", round(summary(temp_model)$r.squared, 3), "\n")
+cat("P-value:", format.pval(summary(temp_model)$coefficients[2,4], digits = 3), "\n")
+cat("\nInterpretation: Each 1°C increase in global mean temperature is associated with\n")
+cat("approximately", round(coef(temp_model)[2]), "additional fire PM deaths per year.\n")
+
+
+# Optional: Save plot
+# ggsave("fire_pm_mortality_vs_temperature.png", p_temp, width = 8, height = 6, dpi = 300)
+
+# Summary statistics
+cat("\n=== Fire PM Deaths by Temperature Scenario ===\n")
+global_totals_all %>%
+  select(year, rcp, gmt_chg, fpm_deaths, fpm_all_pct) %>%
+  mutate(
+    fpm_deaths = round(fpm_deaths),
+    fpm_all_pct = round(fpm_all_pct, 3)
+  ) %>%
+  print()
+
+cat("\n=== Temperature-Mortality Relationship ===\n")
+cat("At +0.91°C (2000 baseline):", round(global_totals_all$fpm_deaths[1]), "deaths\n")
+cat("At +1.40°C (2050 RCP4.5):", round(global_totals_all$fpm_deaths[2]), "deaths\n")
+cat("At +1.80°C (2100 RCP4.5):", round(global_totals_all$fpm_deaths[4]), "deaths\n")
+cat("At +2.00°C (2050 RCP8.5):", round(global_totals_all$fpm_deaths[3]), "deaths\n")
+cat("At +3.70°C (2100 RCP8.5):", round(global_totals_all$fpm_deaths[5]), "deaths\n")
+cat("\nIncrease from +0.91°C to +3.70°C:", 
+    round(global_totals_all$fpm_deaths[5] - global_totals_all$fpm_deaths[1]), 
+    "deaths (", 
+    round((global_totals_all$fpm_deaths[5] / global_totals_all$fpm_deaths[1] - 1) * 100, 1), 
+    "% increase)\n")
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ FPM Death / All Death and Temperature Change ###############################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Create plot of fire PM deaths as % of all deaths vs global mean temperature change
+p_temp_pct <- global_totals_all %>%
+  ggplot(aes(x = gmt_chg, y = fpm_all_pct)) +
+  geom_smooth(method = "lm", se = TRUE, color = "#A23B72", fill = "#A23B72", alpha = 0.2) +
+  geom_point(size = 3, color = "#A23B72") +
+  scale_x_continuous(breaks = c(0.91, 1.8, 2.0, 3.7)) +
+  labs(
+    title = "Fire PM2.5 Deaths as % of All Deaths vs Temperature Change",
+    subtitle = "Global Estimates",
+    x = "Global Mean Temperature Change (°C)",
+    y = "Fire PM Deaths as % of All Deaths"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+# Display plot
+print(p_temp_pct)
+
+# Calculate and display linear regression statistics
+temp_pct_model <- lm(fpm_all_pct ~ gmt_chg, data = global_totals_all)
+cat("\n=== Linear Regression: Fire PM % of All Deaths ~ Temperature Change ===\n")
+cat("Equation: Fire PM % = ", round(coef(temp_pct_model)[1], 5), " + ", 
+    round(coef(temp_pct_model)[2], 5), " × GMT Change\n", sep = "")
+cat("R-squared:", round(summary(temp_pct_model)$r.squared, 3), "\n")
+cat("P-value:", format.pval(summary(temp_pct_model)$coefficients[2,4], digits = 3), "\n")
+cat("\nInterpretation: Each 1°C increase in global mean temperature is associated with\n")
+cat("an increase of", round(coef(temp_pct_model)[2], 3), "percentage points in fire PM deaths\n")
+cat("as a fraction of all global deaths.\n")
+
+# Optional: Save plot
+# ggsave("fire_pm_pct_vs_temperature.png", p_temp_pct, width = 8, height = 6, dpi = 300)
+
+# Summary statistics
+cat("\n=== Fire PM Deaths as % of All Deaths by Temperature Scenario ===\n")
+global_totals_all %>%
+  select(year, rcp, gmt_chg, fpm_all_pct) %>%
+  mutate(
+    fpm_all_pct = round(fpm_all_pct, 3)
+  ) %>%
+  print()
+
+cat("\n=== Temperature-Mortality Percentage Relationship ===\n")
+cat("At +0.91°C (2000 baseline):", round(global_totals_all$fpm_all_pct[1], 3), "% of all deaths\n")
+cat("At +1.80°C (2100 RCP4.5):", round(global_totals_all$fpm_all_pct[4], 3), "% of all deaths\n")
+cat("At +2.00°C (2050 RCP8.5):", round(global_totals_all$fpm_all_pct[3], 3), "% of all deaths\n")
+cat("At +3.70°C (2100 RCP8.5):", round(global_totals_all$fpm_all_pct[5], 3), "% of all deaths\n")
+cat("\nIncrease from +0.91°C to +3.70°C:", 
+    round(global_totals_all$fpm_all_pct[5] - global_totals_all$fpm_all_pct[1], 3), 
+    "percentage points (", 
+    round((global_totals_all$fpm_all_pct[5] / global_totals_all$fpm_all_pct[1] - 1) * 100, 1), 
+    "% increase)\n")
 
 
 #### THE END
