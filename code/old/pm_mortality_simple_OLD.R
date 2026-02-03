@@ -305,14 +305,14 @@ usa_total_pm_mort <- pop_pm_country_usa %>%
   pivot_longer(
     cols = everything(),
     names_to = "scenario",
-    values_to = "pm_deaths"
+    values_to = "total_deaths"
   ) %>%
   mutate(
     fire_scenario = if_else(str_detect(scenario, "_nf$"), "No Fire", "With Fire"),
     scenario_clean = str_remove(scenario, "^total_") %>% str_remove("_nf$")
   ) %>%
   separate(scenario_clean, into = c("year", "rcp"), sep = "_", fill = "right") %>%
-  select(year, rcp, fire_scenario, pm_deaths)
+  select(year, rcp, fire_scenario, total_deaths)
 
 print("Total PM Mortality (USA) - All Scenarios:")
 print(usa_total_pm_mort)
@@ -322,7 +322,7 @@ cat("\nLiterature Comparison (2000 baseline):\n")
 cat("Ford et al 2018 Table 3: 138,000 deaths (Method 1)\n")
 cat("Pierce et al 2017 Figure 13: ~165,000 deaths (Method 2)\n")
 cat("Our estimate (with fire):", 
-    round(usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(pm_deaths)), "\n")
+    round(usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(total_deaths)), "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Fire PM Mortality Analysis (USA) ###########################################
@@ -346,21 +346,21 @@ usa_fpm_mort <- pop_pm_country_usa %>%
   pivot_longer(
     cols = everything(),
     names_to = "scenario",
-    values_to = "fpm_deaths"
+    values_to = "fire_deaths"
   ) %>%
   mutate(
     method = if_else(str_detect(scenario, "_m2$"), "Method 2", "Method 1"),
     scenario_clean = str_remove(scenario, "^fpm_") %>% str_remove("_m[12]$")
   ) %>%
   separate(scenario_clean, into = c("year", "rcp"), sep = "_", fill = "right") %>%
-  select(year, rcp, method, fpm_deaths)
+  select(year, rcp, method, fire_deaths)
 
 print("\nFire PM Mortality (USA) - Both Methods:")
 print(usa_fpm_mort)
 
 # Side-by-side method comparison
 usa_fpm_comparison <- usa_fpm_mort %>%
-  pivot_wider(names_from = method, values_from = fpm_deaths) %>%
+  pivot_wider(names_from = method, values_from = fire_deaths) %>%
   mutate(
     difference = `Method 1` - `Method 2`,
     pct_difference = (difference / `Method 2`) * 100
@@ -372,8 +372,8 @@ print(usa_fpm_comparison)
 # Ford validation
 cat("\n=== Ford et al 2018 Validation (2000 baseline) ===\n")
 cat("Ford et al reported: 17,000 fire-attributable deaths\n")
-cat("Our Method 1:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fpm_deaths)), "\n")
-cat("Our Method 2:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 2") %>% pull(fpm_deaths)), "\n")
+cat("Our Method 1:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fire_deaths)), "\n")
+cat("Our Method 2:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 2") %>% pull(fire_deaths)), "\n")
 cat("Ford et al used Method 1 for main results\n")
 
 # Fire as percentage of total mortality
@@ -383,7 +383,7 @@ usa_fire_pct <- usa_fpm_mort %>%
     usa_total_pm_mort %>% filter(fire_scenario == "With Fire"),
     by = c("year", "rcp")
   ) %>%
-  mutate(fpm_pm_pct = (fpm_deaths / pm_deaths) * 100)
+  mutate(fire_pct = (fire_deaths / total_deaths) * 100)
 
 print("Fire as % of Total PM Mortality (Method 1):")
 print(usa_fire_pct)
@@ -394,15 +394,15 @@ print(usa_fire_pct)
 
 # Create summary tables for cleaner output
 temporal_trends <- usa_fpm_mort %>%
-  pivot_wider(names_from = method, values_from = fpm_deaths) %>%
+  pivot_wider(names_from = method, values_from = fire_deaths) %>%
   arrange(year, rcp)
 
 cat("\n=== Fire PM Mortality Trends ===\n")
 print(temporal_trends)
 
 # Calculate percent changes from 2000 baseline
-baseline_m1 <- usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fpm_deaths)
-baseline_m2 <- usa_fpm_mort %>% filter(year == "2000", method == "Method 2") %>% pull(fpm_deaths)
+baseline_m1 <- usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fire_deaths)
+baseline_m2 <- usa_fpm_mort %>% filter(year == "2000", method == "Method 2") %>% pull(fire_deaths)
 
 temporal_pct_change <- temporal_trends %>%
   mutate(
@@ -442,28 +442,28 @@ cat("\nFord et al 2018 used Method 1\n")
 
 # Create comparison object for Ford et al and Pierce et al benchmarking
 usa_ford_pierce_comp <- usa_fire_pct %>% # method 1 data
-  select(year, rcp, fpm_deaths, pm_deaths, fpm_pm_pct)
+  select(year, rcp, fire_deaths, total_deaths, fire_pct)
 
 # Literature results from Ford et al 2018 and Pierce et al 2017
 lit_results <- tibble(
   year = c(2000, 2050, 2050, 2100, 2100),
   rcp = c(NA, "45", "85", "45", "85"),
   # Ford et al 2018 results (Method 1)
-  fpm_ford = c(17000, 42000, 32000, 32000, 44000),
-  pm_ford = c(138000, 114000, 105000, 75000, 88000),
-  fpm_pm_pct_ford = c(0.12, 0.37, 0.30, 0.43, 0.50),
+  fire_ford = c(17000, 42000, 32000, 32000, 44000),
+  total_ford = c(138000, 114000, 105000, 75000, 88000),
+  fire_pct_ford = c(0.12, 0.37, 0.30, 0.43, 0.50),
   # Pierce et al 2017 results 
-  fpm_pierce = c(20000, NA, 47000, NA, 65000),
-  pm_pierce = c(165000, NA, 145000, NA, 125000),
-  fpm_pm_pct_pierce = c(0.12, NA, 0.32, NA, 0.52)
+  fire_pierce = c(20000, NA, 47000, NA, 65000),
+  total_pierce = c(165000, NA, 145000, NA, 125000),
+  fire_pct_pierce = c(0.12, NA, 0.32, NA, 0.52)
 )
 
 # join as cbind (rows align perfectly):
 usa_ford_pierce_comp <- usa_fire_pct %>%
-  select(year, rcp, fpm_deaths, pm_deaths, fpm_pm_pct) %>%
+  select(year, rcp, fire_deaths, total_deaths, fire_pct) %>%
   bind_cols(
-    lit_results %>% select(fpm_ford, pm_ford, fpm_pm_pct_ford, 
-                           fpm_pierce, pm_pierce, fpm_pm_pct_pierce)
+    lit_results %>% select(fire_ford, total_ford, fire_pct_ford, 
+                           fire_pierce, total_pierce, fire_pct_pierce)
   )
 
 print("\n=== USA vs Literature Comparison ===")
@@ -481,8 +481,8 @@ plot_data <- usa_ford_pierce_comp %>%
     scenario = factor(scenario, levels = c("2000", "2050\nRCP45", "2050\nRCP85", 
                                            "2100\nRCP45", "2100\nRCP85"))
   ) %>%
-  select(scenario, fpm_deaths, pm_deaths, fpm_ford, pm_ford, 
-         fpm_pierce, pm_pierce) %>%
+  select(scenario, fire_deaths, total_deaths, fire_ford, total_ford, 
+         fire_pierce, total_pierce) %>%
   # Reshape for plotting
   pivot_longer(
     cols = -scenario,
@@ -491,7 +491,7 @@ plot_data <- usa_ford_pierce_comp %>%
   ) %>%
   mutate(
     # Separate metric (fire vs total) and source (ours, ford, pierce)
-    metric = if_else(str_detect(variable, "^fpm"), "Fire PM", "Total PM"),
+    metric = if_else(str_detect(variable, "^fire"), "Fire PM", "Total PM"),
     source = case_when(
       str_detect(variable, "ford") ~ "Ford et al 2018",
       str_detect(variable, "pierce") ~ "Pierce et al 2017",
@@ -651,7 +651,7 @@ global_totals <- country_mortality %>%
   mutate(
     year = "2000",
     rcp = NA_character_,
-    fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
+    fire_pct = (fpm_deaths / pm_deaths) * 100
   )
 
 # Add future scenarios
@@ -663,7 +663,7 @@ global_totals_all <- bind_rows(
       rcp = "45",
       fpm_deaths = sum(fpm_2050_45_mort_m1),
       pm_deaths = sum(pm_2050_45_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
+      fire_pct = (fpm_deaths / pm_deaths) * 100
     ),
   country_mortality %>%
     summarise(
@@ -671,7 +671,7 @@ global_totals_all <- bind_rows(
       rcp = "85",
       fpm_deaths = sum(fpm_2050_85_mort_m1),
       pm_deaths = sum(pm_2050_85_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
+      fire_pct = (fpm_deaths / pm_deaths) * 100
     ),
   country_mortality %>%
     summarise(
@@ -679,7 +679,7 @@ global_totals_all <- bind_rows(
       rcp = "45",
       fpm_deaths = sum(fpm_2100_45_mort_m1),
       pm_deaths = sum(pm_2100_45_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
+      fire_pct = (fpm_deaths / pm_deaths) * 100
     ),
   country_mortality %>%
     summarise(
@@ -687,7 +687,7 @@ global_totals_all <- bind_rows(
       rcp = "85",
       fpm_deaths = sum(fpm_2100_85_mort_m1),
       pm_deaths = sum(pm_2100_85_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
+      fire_pct = (fpm_deaths / pm_deaths) * 100
     )
 )
 
@@ -764,19 +764,22 @@ print(p2_global)
 # Print summary comparison
 cat("\n=== Global vs USA Comparison (2000 baseline) ===\n")
 cat("Global total PM deaths:", round(global_totals_all$pm_deaths[1]), "\n")
-cat("USA total PM deaths:", round(usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(pm_deaths)), "\n")
+cat("USA total PM deaths:", round(usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(total_deaths)), "\n")
 cat("USA as % of global:", 
-    round((usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(pm_deaths)) / 
+    round((usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(total_deaths)) / 
             global_totals_all$pm_deaths[1] * 100, 1), "%\n")
 cat("\nGlobal fire PM deaths:", round(global_totals_all$fpm_deaths[1]), "\n")
-cat("USA fire PM deaths:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fpm_deaths)), "\n")
+cat("USA fire PM deaths:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fire_deaths)), "\n")
 cat("USA as % of global:", 
-    round((usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fpm_deaths)) / 
+    round((usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fire_deaths)) / 
             global_totals_all$fpm_deaths[1] * 100, 1), "%\n")
 
 
 
-#### THE END
+
+
+
+#### THE END 
 
 
 
