@@ -18,40 +18,8 @@ library(tibble)
 ############ Import #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Import combined data
-pop_pm_country <- read_csv(here("output", "pop_pm_with_countries.csv"))
-colnames(pop_pm_country)
 
-# Import world bank death rates (World Bank Death rate, crude (per 1,000 people)) skipping metadata rows
-wb_death_rate <- read_csv(
-  here("input", "WB_crude_death_rate", "API_SP.DYN.CDRT.IN_DS2_en_csv_v2_241.csv"),
-  skip = 4  # Skip the first 4 rows (metadata)
-)
 
-# Reshape from wide to long format and keep only country name, code, year, and death rate
-wb_death_rate <- wb_death_rate %>%
-  select(`Country Name`, `Country Code`, starts_with("19"), starts_with("20")) %>%
-  pivot_longer(
-    cols = starts_with("19") | starts_with("20"),
-    names_to = "year",
-    values_to = "death_rate"
-  ) %>%
-  mutate(year = as.numeric(year)) %>%
-  filter(!is.na(death_rate))  # Remove rows with missing death rates
-
-# Check the result
-head(wb_death_rate)
-colnames(wb_death_rate)
-
-# Rename columns
-wb_death_rate <- wb_death_rate %>%
-  rename(
-    country_name = `Country Name`,
-    country_code = `Country Code`
-  ) %>%
-  mutate(death_rate = death_rate / 1000)  # Convert to decimal form
-
-head(wb_death_rate)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Process death rate data and join to pm / pop ################################
