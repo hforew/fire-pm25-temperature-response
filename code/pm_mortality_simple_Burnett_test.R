@@ -155,7 +155,8 @@ cat("Grid cells missing Y_ct:", sum(is.na(grid$Y_ct)), "\n")
 ######################## 4) GEMM ATTRIBUTABLE FRACTION (WITH cf UNCERTAINTY) ####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-set.seed(123)                           # for reproducibility
+#only pick once for all, idealy should be once for each cell
+set.seed(123)                         # for reproducibility
 ndraw <- 300
 cf_draws <- runif(ndraw, 2.4, 5.9)    # draw cf once globally
 
