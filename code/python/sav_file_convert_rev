@@ -1,0 +1,77 @@
+from scipy.io import readsav
+import numpy as np
+import pandas as pd
+
+SAV_PATH = r"C:\Ford_BA_FPM25\input\temp\regionmasks-popgrid.sav"
+OUT_PATH = r"C:\Ford_BA_FPM25\input\temp\regionmask_FULL.csv"
+
+print("Reading sav file...")
+d = readsav(SAV_PATH, python_dict=True)
+
+print("Variables inside sav:")
+print(list(d.keys()))
+
+# ---------- 1. Read lat and lon ----------
+lat = np.array(d["lat"]).astype(float).ravel()
+lon = np.array(d["lon"]).astype(float).ravel()
+
+# Check lengths
+print("lat size:", len(lat))
+print("lon size:", len(lon))
+
+# Build grid indices
+rows = len(lat)
+cols = len(lon)
+
+rr, cc = np.indices((rows, cols))
+
+# Grid center coordinates
+LAT = lat[rr]
+LON = lon[cc]
+
+# ---------- 2. Decode function ----------
+def decode(x):
+    if isinstance(x, (bytes, bytearray, np.bytes_)):
+        return x.decode("utf-8", errors="replace")
+    return x
+
+vec_decode = np.vectorize(decode)
+
+# ---------- 3. Read all 2D variables ----------
+print("Processing grid variables...")
+
+def read_grid(name):
+    grid = np.array(d[name])
+    if grid.shape != (rows, cols):
+        raise ValueError(f"{name} shape {grid.shape} does not match lat/lon grid")
+    return vec_decode(grid)
+
+sm = read_grid("sm")
+epa = read_grid("epamask")
+nca4 = read_grid("nca4mask")
+mvm = read_grid("mvmmask")
+
+# ---------- 4. Assemble full table ----------
+print("Building dataframe...")
+
+df = pd.DataFrame({
+    "row": rr.ravel(),
+    "col": cc.ravel(),
+    "lat": LAT.ravel(),
+    "lon": LON.ravel(),
+    "state": sm.ravel(),
+    "epa_region": epa.ravel(),
+    "nca4_region": nca4.ravel(),
+    "mvm_region": mvm.ravel()
+})
+
+print("Rows:", len(df))
+print(df.head(10))
+
+# ---------- 5. Export ----------
+df.to_csv(OUT_PATH, index=False, encoding="utf-8")
+
+print("DONE.")
+print("CSV saved to:")
+print(OUT_PATH)
+
