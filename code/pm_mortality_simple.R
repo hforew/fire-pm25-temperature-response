@@ -936,6 +936,279 @@ cat("\nIncrease from +0.91°C to +3.70°C:",
     "% increase)\n")
 
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ USA Death and Temperature Change ##########################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Add additional columns to existing usa_fire_pct object (matching global_totals_all structure)
+usa_totals_all <- usa_fire_pct %>%
+  mutate(
+    all_death_usa_2009 = 2437163,  # Total USA deaths in 2009
+    gmt_chg = c(0.91, 1.4, 2, 1.8, 3.7),  # Global mean temperature change (°C) for each scenario
+    death_pct_chg = (fpm_deaths / all_death_usa_2009)  # Fire PM deaths as % of all USA deaths (decimal form)
+  )
+
+# Create plot of fire PM deaths vs global mean temperature change
+p_temp_usa <- usa_totals_all %>%
+  ggplot(aes(x = gmt_chg, y = fpm_deaths)) +
+  geom_smooth(method = "lm", se = TRUE, color = "#2E86AB", fill = "#2E86AB", alpha = 0.2) +
+  geom_point(size = 3, color = "#2E86AB") +
+  scale_y_continuous(labels = scales::comma) +
+  scale_x_continuous(breaks = c(0.91, 1.4, 1.8, 2, 3.7)) +
+  labs(
+    title = "Fire PM2.5 Mortality vs Global Mean Temperature Change",
+    subtitle = "USA Estimates",
+    x = "Global Mean Temperature Change (°C)",
+    y = "Annual Fire PM Deaths"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+# Display plot
+print(p_temp_usa)
+
+
+# Calculate and display linear regression statistics
+temp_model_usa <- lm(fpm_deaths ~ gmt_chg, data = usa_totals_all)
+cat("\n=== USA Linear Regression: Fire PM Deaths ~ Temperature Change ===\n")
+cat("Equation: Fire PM Deaths = ", round(coef(temp_model_usa)[1]), " + ", 
+    round(coef(temp_model_usa)[2]), " × GMT Change\n", sep = "")
+cat("R-squared:", round(summary(temp_model_usa)$r.squared, 3), "\n")
+cat("P-value:", format.pval(summary(temp_model_usa)$coefficients[2,4], digits = 3), "\n")
+cat("\nInterpretation: Each 1°C increase in global mean temperature is associated with\n")
+cat("approximately", round(coef(temp_model_usa)[2]), "additional fire PM deaths per year in the USA.\n")
+
+
+# Optional: Save plot
+# ggsave("fire_pm_mortality_vs_temperature_usa.png", p_temp_usa, width = 8, height = 6, dpi = 300)
+
+# Summary statistics
+cat("\n=== USA Fire PM Deaths by Temperature Scenario ===\n")
+usa_totals_all %>%
+  select(year, rcp, gmt_chg, fpm_deaths, death_pct_chg) %>%
+  mutate(
+    fpm_deaths = round(fpm_deaths),
+    death_pct_chg = round(death_pct_chg, 3)
+  ) %>%
+  print()
+
+cat("\n=== USA Temperature-Mortality Relationship ===\n")
+cat("At +0.91°C (2000 baseline):", round(usa_totals_all$fpm_deaths[1]), "deaths\n")
+cat("At +1.40°C (2050 RCP4.5):", round(usa_totals_all$fpm_deaths[2]), "deaths\n")
+cat("At +1.80°C (2100 RCP4.5):", round(usa_totals_all$fpm_deaths[4]), "deaths\n")
+cat("At +2.00°C (2050 RCP8.5):", round(usa_totals_all$fpm_deaths[3]), "deaths\n")
+cat("At +3.70°C (2100 RCP8.5):", round(usa_totals_all$fpm_deaths[5]), "deaths\n")
+cat("\nIncrease from +0.91°C to +3.70°C:", 
+    round(usa_totals_all$fpm_deaths[5] - usa_totals_all$fpm_deaths[1]), 
+    "deaths (", 
+    round((usa_totals_all$fpm_deaths[5] / usa_totals_all$fpm_deaths[1] - 1) * 100, 1), 
+    "% increase)\n")
+
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ USA All-cause death % chg due to FPM and Temperature Change #################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Calculate linear regression model first
+temp_pct_model_usa <- lm(death_pct_chg ~ gmt_chg, data = usa_totals_all)
+
+# Display regression statistics
+cat("\n=== USA Linear Regression: Fire PM % of All Deaths ~ Temperature Change ===\n")
+cat("Equation: Fire PM % = ", round(coef(temp_pct_model_usa)[1], 5), " + ", 
+    round(coef(temp_pct_model_usa)[2], 5), " × GMT Change\n", sep = "")
+cat("R-squared:", round(summary(temp_pct_model_usa)$r.squared, 3), "\n")
+cat("P-value:", format.pval(summary(temp_pct_model_usa)$coefficients[2,4], digits = 3), "\n")
+cat("\nInterpretation: Each 1°C increase in global mean temperature is associated with\n")
+cat("an increase of", round(coef(temp_pct_model_usa)[2], 5), "percentage points in the share of\n")
+cat("USA all-cause deaths attributable to fire PM.\n")
+cat("\nFor example, if fire PM deaths are currently 1% of all USA deaths, a 1°C warming would\n")
+cat("increase this to approximately", round(1 + coef(temp_pct_model_usa)[2], 5), "% of all deaths.\n")
+
+# Create plot of fire PM deaths as % of all deaths vs global mean temperature change
+# Add scenario labels to the data
+usa_totals_all <- usa_totals_all %>%
+  mutate(
+    scenario_label = case_when(
+      year == "2000" ~ "2000",
+      year == "2050" & rcp == "45" ~ "RCP4.5 2050",
+      year == "2050" & rcp == "85" ~ "RCP8.5 2050",
+      year == "2100" & rcp == "45" ~ "RCP4.5 2100",
+      year == "2100" & rcp == "85" ~ "RCP8.5 2100"
+    )
+  )
+
+
+p_temp_pct_usa <- usa_totals_all %>%
+  ggplot(aes(x = gmt_chg, y = death_pct_chg)) +
+  geom_smooth(method = "lm", se = FALSE, color = "#2E86AB") +
+  geom_text(aes(label = scenario_label), # Add RCP labels for each point
+            hjust = .5, vjust = -1, 
+            size = 3.5, color = "#A23B72") +
+  geom_point(size = 3, color = "#2E86AB") +
+  scale_x_continuous(breaks = c(0.91, 1.4, 1.8, 2.0, 3.7)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(
+    title = "USA All-cause death %Δ due to FPM vs Temperature Change",
+    subtitle = paste0("USA All-cause death %Δ = ", round(coef(temp_pct_model_usa)[1], 5), " + ", 
+                      round(coef(temp_pct_model_usa)[2], 5), " × GMT Change"),
+    x = "Global Mean Temperature Change (°C)",
+    y = "USA All-cause death %Δ due to FPM"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+# Display plot
+print(p_temp_pct_usa)
+
+# Optional: Save plot
+# ggsave("fire_pm_pct_vs_temperature_usa.png", p_temp_pct_usa, width = 8, height = 6, dpi = 300)
+
+# Summary statistics
+cat("\n=== USA Fire PM Deaths as % of All Deaths by Temperature Scenario ===\n")
+usa_totals_all %>%
+  select(year, rcp, gmt_chg, death_pct_chg) %>%
+  mutate(
+    death_pct_chg = round(death_pct_chg * 100, 3)
+  ) %>%
+  print()
+
+cat("\n=== USA Temperature-Mortality Percentage Relationship ===\n")
+cat("At +0.91°C (2000 baseline):", round(usa_totals_all$death_pct_chg[1] * 100, 3), "% of all deaths\n")
+cat("At +1.40°C (2050 RCP4.5):", round(usa_totals_all$death_pct_chg[2] * 100, 3), "% of all deaths\n")
+cat("At +2.00°C (2100 RCP4.5):", round(usa_totals_all$death_pct_chg[3] * 100, 3), "% of all deaths\n")
+cat("At +1.80°C (2050 RCP8.5):", round(usa_totals_all$death_pct_chg[4] * 100, 3), "% of all deaths\n")
+cat("At +3.70°C (2100 RCP8.5):", round(usa_totals_all$death_pct_chg[5] * 100, 3), "% of all deaths\n")
+cat("\nIncrease from +0.91°C to +3.70°C:", 
+    round((usa_totals_all$death_pct_chg[5] - usa_totals_all$death_pct_chg[1]) * 100, 3), 
+    "percentage points (", 
+    round((usa_totals_all$death_pct_chg[5] / usa_totals_all$death_pct_chg[1] - 1) * 100, 1), 
+    "% increase)\n")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ USA Zero-Intercept Model (for GIVE β_fire coefficient) ####################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Calculate zero-intercept linear regression model
+# This model forces the regression line through the origin (0,0)
+# Suitable for GIVE function: mortality_change[t,c] = β_fire[c] × temperature[t]
+# which assumes 0°C warming → 0 mortality change (no additive constant)
+temp_pct_model_usa_zero <- lm(
+  death_pct_chg ~ 0 + gmt_chg,  # Formula: death_pct_chg explained by gmt_chg
+  # "0" removes the intercept term, forcing line through origin
+  data = usa_totals_all          # Data source: usa_totals_all object with all scenarios
+)
+
+# Display regression statistics
+cat("\n=== USA Zero-Intercept Model: Fire PM % of All Deaths ~ Temperature Change ===\n")
+cat("Equation: Fire PM % = ", round(coef(temp_pct_model_usa_zero)[1], 5), " × GMT Change\n", sep = "")
+cat("(No intercept - forced through origin)\n")
+cat("R-squared:", round(summary(temp_pct_model_usa_zero)$r.squared, 3), "\n")
+cat("P-value:", format.pval(summary(temp_pct_model_usa_zero)$coefficients[1,4], digits = 3), "\n")
+cat("\nβ_fire coefficient for GIVE:", round(coef(temp_pct_model_usa_zero)[1], 5), "\n")
+cat("\nInterpretation: Each 1°C increase in global mean temperature is associated with\n")
+cat("an increase of", round(coef(temp_pct_model_usa_zero)[1], 5), "percentage points in the share of\n")
+cat("USA all-cause deaths attributable to fire PM (starting from 0°C baseline).\n")
+
+# Create comparison plot showing both models
+p_temp_pct_usa_comparison <- usa_totals_all %>%
+  ggplot(aes(x = gmt_chg, y = death_pct_chg)) +
+  # Zero-intercept model (blue)
+  geom_abline(intercept = 0, 
+              slope = coef(temp_pct_model_usa_zero)[1], 
+              color = "#2E86AB", 
+              linewidth = 1,
+              linetype = "solid") +
+  # Standard model with intercept (dashed gray for comparison)
+  geom_smooth(method = "lm", se = FALSE, 
+              color = "gray40", 
+              linewidth = 0.8,
+              linetype = "dashed") +
+  geom_text(aes(label = scenario_label), 
+            hjust = .5, vjust = -1, 
+            size = 3.5, color = "#A23B72") +
+  geom_point(size = 3, color = "#2E86AB") +
+  scale_x_continuous(breaks = c(0, 0.91, 1.4, 1.8, 2.0, 3.7), limits = c(0, 4)) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) +
+  labs(
+    title = "USA Fire PM % vs Temperature: Zero-Intercept Model",
+    subtitle = paste0("Fire PM % = ", round(coef(temp_pct_model_usa_zero)[1], 5), " × GMT Change (blue solid)\n",
+                      "Standard model with intercept shown as dashed gray"),
+    x = "Global Mean Temperature Change (°C)",
+    y = "USA All-cause death %Δ due to FPM"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    panel.grid.minor = element_blank()
+  )
+
+# Display plot
+print(p_temp_pct_usa_comparison)
+
+# Optional: Save plot
+# ggsave("fire_pm_pct_vs_temperature_usa_zero_intercept.png", p_temp_pct_usa_comparison, width = 8, height = 6, dpi = 300)
+
+# Model comparison table
+cat("\n=== Model Comparison: Standard vs Zero-Intercept ===\n")
+
+# Extract coefficients, standard errors, and p-values
+standard_summary <- summary(temp_pct_model_usa)
+zero_summary <- summary(temp_pct_model_usa_zero)
+
+# Create comparison table
+comparison_table <- data.frame(
+  Model = c("Standard (with intercept)", "Standard (with intercept)", "Zero-intercept"),
+  Parameter = c("Intercept", "Slope (β_fire)", "Slope (β_fire)"),
+  Coefficient = c(
+    round(coef(temp_pct_model_usa)[1], 5),
+    round(coef(temp_pct_model_usa)[2], 5),
+    round(coef(temp_pct_model_usa_zero)[1], 5)
+  ),
+  Std_Error = c(
+    round(standard_summary$coefficients[1, 2], 5),
+    round(standard_summary$coefficients[2, 2], 5),
+    round(zero_summary$coefficients[1, 2], 5)
+  ),
+  P_value = c(
+    format.pval(standard_summary$coefficients[1, 4], digits = 3),
+    format.pval(standard_summary$coefficients[2, 4], digits = 3),
+    format.pval(zero_summary$coefficients[1, 4], digits = 3)
+  ),
+  R_squared = c(
+    round(standard_summary$r.squared, 3),
+    "",  # Don't repeat R-squared for second row
+    round(zero_summary$r.squared, 3)
+  )
+)
+
+print(comparison_table, row.names = FALSE)
+
+cat("\nDifference in slope:", round(coef(temp_pct_model_usa_zero)[1] - coef(temp_pct_model_usa)[2], 5), "\n")
+cat("\nInterpretation:\n")
+cat("- Standard model: Not statistically significant (p=0.201 for slope)\n")
+cat("- Zero-intercept: Highly significant (p=0.004), better fit (R²=0.896)\n")
+cat("- For GIVE, use β_fire =", round(coef(temp_pct_model_usa_zero)[1], 5), "\n")
+
+# Predicted values comparison at key temperatures
+cat("\n=== Predicted Fire PM % at Key Temperatures ===\n")
+comparison_temps <- data.frame(temp = c(0, 0.91, 1.4, 2.0, 3.7))
+comparison_temps <- comparison_temps %>%
+  mutate(
+    standard_model = coef(temp_pct_model_usa)[1] + coef(temp_pct_model_usa)[2] * temp,
+    zero_intercept = coef(temp_pct_model_usa_zero)[1] * temp,
+    difference = zero_intercept - standard_model
+  )
+print(comparison_temps)
+
+
 #### THE END
 
 

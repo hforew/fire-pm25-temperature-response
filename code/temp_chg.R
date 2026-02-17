@@ -7,7 +7,6 @@
 # Remove all objects from the environment
 rm(list = ls())
 
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Packages #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -22,9 +21,17 @@ library(tidyverse)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 list.files(here("input/temperature"))
+list.files(here("input/landmask_area"))
+
 
 temp_45 <- nc_open(here("input/temperature", "af.tas.ccsm4.rcp45.2006-2300.nc"))
 print(temp_45)
+
+area_09x125 <- nc_open(here("input/landmask_area", "cesm130_clm5_firemodule_area_f09x125.nc"))
+print(area_09x125)
+
+
+
 
 # Primary Data Variable temp_45
 # ~~~~~~~~~~~~~
