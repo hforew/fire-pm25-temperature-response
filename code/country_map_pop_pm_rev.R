@@ -129,7 +129,7 @@ iso2_to_iso3 <- world_subset %>%
 cat("\n=== NEW: Decision rules from 0.1° grid to 0.5° cells ===\n")
 
 # Read 0.1° gridded product (country/land)
-nc_path <- here("input", "countries_gridded_0.1deg_v0.1.nc")
+nc_path <- here("input/landmask_area", "countries_gridded_0.1deg_v0.1.nc")
 nc <- nc_open(nc_path)
 
 cat("=== Method 2: Extent check ===\n")

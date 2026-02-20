@@ -11,7 +11,7 @@ library(ggplot2)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### read in countries_gridded_0.1deg_v0.1.nc #############################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-f <- here("input", "countries_gridded_0.1deg_v0.1.nc")
+f <- here("input/landmask_area", "countries_gridded_0.1deg_v0.1.nc")
 
 stopifnot(file.exists(f))
 cat("NetCDF path:\n", f, "\n\n")
