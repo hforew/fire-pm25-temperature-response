@@ -24,6 +24,11 @@ print(area_05_05)
 land_frac <- nc_open(here("input/landmask_area", "cesm130_clm5_firemodule_landfrac_f09x125.nc"))
 print(land_frac)
 
+country_cell <- nc_open(here("input/landmask_area", "countries_gridded_0.1deg_v0.1.nc"))
+print(country_cell)
+iso_codes <- ncvar_get(country_cell, "iso")
+print(iso_codes)
+
 # pop data
 pop_ssp1 <- nc_open(here("input", "SSP1_for_RCP45_2006-2100_population_density_c160701.nc"))
 pop_ssp3 <- nc_open(here("input", "SSP3_for_RCP85_2006-2100_population_density_c160701.nc"))
