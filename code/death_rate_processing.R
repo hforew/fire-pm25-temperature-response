@@ -172,7 +172,7 @@ print(flk_final)
 ############ save output ################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write_csv(wb_death_rate, here("output", "pop_pm_country_death.csv"))
+write_csv(pop_pm_country_death, here("output", "pop_pm_country_death.csv"))
 
 
 ## THE END 
