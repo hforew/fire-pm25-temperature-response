@@ -1,3 +1,4 @@
+#note: run time ~ 2 min
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Map data frame with latitude and longitude coordinates to countries ##########
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -10,7 +11,7 @@ rm(list = ls())
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 library(here)
 library(tidyverse)
-library(sf)              # Spatial data handling
+library(sf)           
 library(rnaturalearth)   # Country boundary data
 library(ncdf4)
 library(data.table)
@@ -80,6 +81,7 @@ iso_lookup <- world_subset %>%
   distinct(iso_a2, iso_a3, name) %>%
   filter(!is.na(iso_a3), iso_a3 != "")
 
+#fix missing countries or country name/code
 major_patch <- tibble::tribble(
   ~country_id_major, ~iso_a3_patch, ~name_patch,
   "FR", "FRA", "France",
@@ -99,9 +101,9 @@ major_patch <- tibble::tribble(
   # ZZ is "unknown/other"; keep it unmapped land
   "ZZ", NA_character_, "Unknown/Other (ZZ)"
 )
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############(NEW) Decision rules: 0.1° -> 0.5° (inserted between Step 3 and Step 5)############
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 cat("\n=== NEW: Decision rules from 0.1° grid to 0.5° cells ===\n")
 
 # Read 0.1° gridded product (country/land)
@@ -132,6 +134,7 @@ if ("iso" %in% names(nc$dim)) {
 
 nc_close(nc)
 
+#transfer to 0.1 cell CENTER
 lon_edge <- lon01
 lat_edge <- lat01
 
@@ -190,7 +193,7 @@ setkey(dt01, lon, lat)
 cat("0.1° CENTER cells in dt01:", nrow(dt01), "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ 0.5° -> 25 subcells via CENTER targets (no window/nearest)############
+############ 0.5° -> 25 subcells via CENTER targets (nearest)############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 dt05 <- as.data.table(pop_pm_combined)
 dt_base <- dt05[, .(lon05 = lon, lat05 = lat)]
@@ -257,7 +260,7 @@ cat("land_any TRUE count:", sum(pop_pm_combined$land_any, na.rm = TRUE), "\n")
 cat("majority country assigned count:", sum(!is.na(pop_pm_combined$country_id_major)), "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############Perform spatial join############
+############Perform spatial join#############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Match each grid cell point to country using point-in-polygon intersection
 # st_intersects() checks which country polygon each point falls within
@@ -292,7 +295,7 @@ cat("  Mapped cells:", mapped_count, "\n")
 cat("  Unmapped cells (ocean/disputes/other):", unmapped_count, "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############Visual check: Plot mapped countries############
+############Visual check: Plot mapped countries##############################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Create map showing which countries were successfully matched to grid cells
 # This helps identify any major gaps or mapping errors
@@ -459,15 +462,15 @@ cat("Total cells:", nrow(df), "\n")
 cat("Mapped (all non-NA):", sum(!is.na(df$country_code_iso3)), "\n")
 cat("Unmapped (NA or blank):", nrow(unmapped_df), "\n")
 cat("Invalid (-99):", nrow(invalid_df), "\n")
-cat("Mapped (NA only):", nrow(mapped_df), "\n")
+cat("Mapped (NorthAmerica only):", nrow(mapped_df), "\n")
 
 # ---- sample ONLY mapped for performance (safe) ----
-set.seed(1)
-if (nrow(mapped_df) > 40000) {
-  mapped_df <- mapped_df[sample(nrow(mapped_df), 100000), ]
-}
+#set.seed(1)
+#if (nrow(mapped_df) > 40000) {
+#  mapped_df <- mapped_df[sample(nrow(mapped_df), 100000), ]
+#}
 
-# build mapped polygons (NA only)
+# build mapped polygons (NorthAmerica only)
 mapped_polys <- mapply(make_cell_polygon, mapped_df$lon, mapped_df$lat, SIMPLIFY = FALSE)
 mapped_cells <- st_sf(mapped_df, geometry = st_sfc(mapped_polys, crs = 4326))
 
@@ -505,7 +508,7 @@ leaflet() %>%
     group = "Land boundary"
   ) %>%
   
-  # mapped NA cells
+  # mapped NorthAmerica cells
   addPolygons(
     data = mapped_cells,
     color = ~pal_na(country_code_iso3),
@@ -513,9 +516,9 @@ leaflet() %>%
     fillColor = ~pal_na(country_code_iso3),
     fillOpacity = 0.40,
     stroke = TRUE,
-    group = "Mapped cells (NA only)",
+    group = "Mapped cells (NorthAmerica only)",
     popup = ~paste0(
-      "<b>Mapped cell (NA only)</b><br>",
+      "<b>Mapped cell (NorthAmerica only)</b><br>",
       "ISO3: ", country_code_iso3, "<br>",
       "Country: ", country_name, "<br>",
       "Lon: ", round(lon, 2), "<br>",
@@ -558,12 +561,12 @@ leaflet() %>%
     position = "bottomright",
     pal = pal_na,
     values = mapped_cells$country_code_iso3,
-    title = "Mapped ISO3 (NA only)",
+    title = "Mapped ISO3 (NorthAmerica only)",
     opacity = 1
   ) %>%
   
   addLayersControl(
-    overlayGroups = c("Land boundary", "Mapped cells (NA only)", "Invalid cells (-99)", "Unmapped cells (NA/blank)"),
+    overlayGroups = c("Land boundary", "Mapped cells (NorthAmerica only)", "Invalid cells (-99)", "Unmapped cells (NA/blank)"),
     options = layersControlOptions(collapsed = FALSE)
   )
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
