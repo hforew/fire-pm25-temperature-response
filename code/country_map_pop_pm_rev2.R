@@ -1,3 +1,4 @@
+#note: run time ~ 5 min
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Map data frame with latitude and longitude coordinates to countries ##########
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -9,7 +10,7 @@ rm(list = ls())
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 library(here)
 library(tidyverse)
-library(sf)              # Spatial data handling
+library(sf)           
 library(rnaturalearth)   # Country boundary data
 library(data.table)
 library(dplyr)
@@ -37,7 +38,7 @@ world_subset <- world %>%
 world_subset <- st_buffer(world_subset, dist = 0)
 cat("Loaded country boundaries:", nrow(world_subset), "countries\n")
 
-# Keep ISO lookup (not essential anymore, but harmless to keep)
+# Keep ISO lookup
 iso2_to_iso3 <- world_subset %>%
   st_drop_geometry() %>%
   distinct(iso_a2, iso_a3, name) %>%
@@ -46,7 +47,7 @@ iso2_to_iso3 <- world_subset %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ NEW Decision rule (NO 0.1° netCDF) #############################
 ############ 0.5° cell assigned by MAX overlap area with country polygon ####
-############ land_any = TRUE if overlap exists, else FALSE (ocean) ###########
+############ land_any = TRUE (land) if overlap exists, else FALSE (ocean) ###
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 cat("\n=== NEW: Assign countries by 0.5° cell overlap area (Natural Earth) ===\n")
 
@@ -82,9 +83,7 @@ cells_sf <- st_sf(
 cells_ea <- st_transform(cells_sf, 6933)
 world_ea <- st_transform(world_subset %>% select(iso_a3, name), 6933)
 
-# --- IMPORTANT practical note ---
 # st_intersection on 259,200 polygons can be heavy; chunking by latitude bands
-# is the smallest change that keeps the same logic but avoids memory blowups.
 lat_breaks <- seq(-90, 90, by = 30)
 cells_ea$lat_band <- cut(cells_ea$lat, breaks = lat_breaks, include.lowest = TRUE)
 
@@ -127,7 +126,7 @@ assigned_df <- dt05 %>%
     land_any = if_else(is.na(land_any), FALSE, land_any),
     # keep a “major” column name for downstream compatibility (now ISO3 directly)
     country_id_major = iso_a3,
-    # optional: mark rare land cells still missing iso as -99 (should be near-zero)
+    # mark rare land cells still missing iso as -99 (should be near-zero)
     iso_a3 = if_else(is.na(iso_a3) & land_any, "-99", iso_a3),
     name   = if_else(is.na(name)   & land_any, "Unmapped land (area-overlap method)", name)
   )
@@ -136,12 +135,11 @@ cat("land_any TRUE count:", sum(assigned_df$land_any, na.rm = TRUE), "\n")
 cat("assigned country count:", sum(!is.na(assigned_df$iso_a3) & assigned_df$iso_a3 != "-99"), "\n")
 cat("invalid (-99) count:", sum(assigned_df$iso_a3 == "-99", na.rm = TRUE), "\n")
 
-# Recreate sf points for consistency with your downstream workflow
+# Recreate sf points for consistency with downstream workflow
 pop_pm_with_countries <- assigned_df %>%
   st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = FALSE)
 
-# NOTE: We DO NOT run st_join(pop_pm_sf, world_subset) anymore.
-# NOTE: ISO2->ISO3 patch is no longer needed because we assign ISO3 directly by polygons.
+# NOTE: we assign ISO3 directly by polygons.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Visual check: Plot matched countries ###########################
@@ -198,7 +196,7 @@ pop_pm_final %>%
   arrange(country_name) %>%
   print(n = 50)
 
-# Keep your manual fixes (harmless)
+# Keep manual fixes
 pop_pm_final <- pop_pm_final %>%
   mutate(
     country_code_iso3 = case_when(
@@ -208,7 +206,7 @@ pop_pm_final <- pop_pm_final %>%
     )
   )
 
-# Drop columns you said you want dropped (keep land_any for diagnostics)
+# Drop columns
 pop_pm_final <- pop_pm_final %>%
   select(-any_of(c("iso_a2", "country_id_major")))
 
@@ -244,7 +242,7 @@ pop_pm_final %>%
   print()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Interactive map (keep your structure) ##########################
+############ Interactive map ################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 make_cell_polygon <- function(lon, lat, half = 0.25) {
   coords <- matrix(c(
@@ -284,7 +282,7 @@ cat("Total cells:", nrow(df), "\n")
 cat("Mapped (all non-NA):", sum(!is.na(df$country_code_iso3)), "\n")
 cat("Unmapped (NA or blank):", nrow(unmapped_df), "\n")
 cat("Invalid (-99):", nrow(invalid_df), "\n")
-cat("Mapped (NA only):", nrow(mapped_df), "\n")
+cat("Mapped (NorthAmerica only):", nrow(mapped_df), "\n")
 
 
 mapped_polys <- mapply(make_cell_polygon, mapped_df$lon, mapped_df$lat, SIMPLIFY = FALSE)
@@ -322,9 +320,9 @@ leaflet() %>%
     fillColor = ~pal_na(country_code_iso3),
     fillOpacity = 0.40,
     stroke = TRUE,
-    group = "Mapped cells (NA only)",
+    group = "Mapped cells (NorthAmerica only)",
     popup = ~paste0(
-      "<b>Mapped cell (NA only)</b><br>",
+      "<b>Mapped cell (NorthAmerica only)</b><br>",
       "ISO3: ", country_code_iso3, "<br>",
       "Country: ", country_name, "<br>",
       "Lon: ", round(lon, 2), "<br>",
@@ -362,11 +360,11 @@ leaflet() %>%
     position = "bottomright",
     pal = pal_na,
     values = mapped_cells$country_code_iso3,
-    title = "Mapped ISO3 (NA only)",
+    title = "Mapped ISO3 (NorthAmerica only)",
     opacity = 1
   ) %>%
   addLayersControl(
-    overlayGroups = c("Land boundary", "Mapped cells (NA only)", "Invalid cells (-99)", "Unmapped cells (NA/blank)"),
+    overlayGroups = c("Land boundary", "Mapped cells (NorthAmerica only)", "Invalid cells (-99)", "Unmapped cells (NA/blank)"),
     options = layersControlOptions(collapsed = FALSE)
   )
 
