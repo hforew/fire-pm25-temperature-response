@@ -235,7 +235,7 @@ get_plurality <- function(country_id, land_flag) {
   winners <- sort(winners)   # tie-break: alphabetical
   winners[1]
 }
-# decision rules (keep your functions)
+# decision rules
 dt_rule <- dt_exp[, .(
   land_any = any(land == 1, na.rm = TRUE),
   country_id_major = {
@@ -272,7 +272,7 @@ pop_pm_with_countries <- pop_pm_with_countries %>%
 
 # (NEW) Patch: if st_join is NA but rules say land + majority ISO2 exists,
 # convert ISO2 -> ISO3 and fill iso_a3/name
-# This keeps your final output in ISO3.
+# This keeps final output in ISO3.
 pop_pm_with_countries <- pop_pm_with_countries %>%
   left_join(iso2_to_iso3, by = c("country_id_major" = "iso_a2"), suffix = c("", "_maj")) %>%
   mutate(
