@@ -45,7 +45,7 @@ get_var_vec10 <- function(nc, varname, axis_pref = c("lon","lat","none"), n = 10
   dnames <- sapply(v$dim, `[[`, "name")
   dlens  <- sapply(v$dim, `[[`, "len")
   
-  # helper: create slicing window
+  # create slicing window
   build_slice <- function(axis_regex) {
     i <- which(grepl(axis_regex, dnames, ignore.case = TRUE))[1]
     if (is.na(i)) return(NULL)
