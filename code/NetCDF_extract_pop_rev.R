@@ -7,11 +7,20 @@ library(ncdf4)
 library(here)
 library(dplyr)
 library(readr)
+library(data.table)
+library(tibble)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ################################# read in data #################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-clm_nc <- nc_open(here("input/google_drive/","clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc"))
+# tried:
+#SSP3_for_RCP85_2006-2100_population_density_c160701.nc/different/8951715907(2006-2010)
+#SSP1_for_RCP45_2006-2100_population_density_c160701.nc/different/8951715907 (2006-2010)
+#clmforc.Li_2018_SSP3_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc/different/7436984063
+#clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc/different/7436984063
+#clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc/same/1342428355
+#clmforc.Li_2012_hdm_0.5x0.5_AVHRR_simyr1850-2010_c130401.nc/different/8951715907
+clm_nc <- nc_open(here("input/google_drive/","clmforc.Li_2018_SSP3_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
 print(clm_nc)
 area_nc <- nc_open(here("input/google_drive/","gridcell_area_0.5deg.nc"))
 print(area_nc)
@@ -19,13 +28,19 @@ print(area_nc)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############## Extract Population data from NetCDF ###################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-lon <- ncvar_get(clm_nc, "LON")
-lat <- ncvar_get(clm_nc, "LAT")
+lon <- ncvar_get(clm_nc, "LONGXY")
+lat <- ncvar_get(clm_nc, "LATIXY")
+
+grid_df <- tibble(
+  lon = as.vector(lon),
+  lat = as.vector(lat)
+)
 
 years <- ncvar_get(clm_nc, "year")
 
 # select years
-target_years <- 2001:2010
+#target_years <- 2001:2010
+target_years <- 2006:2010
 year_indices <- match(target_years, years) 
 print(data.frame(target_years, year_indices, years_at_index = years[year_indices]))
 
@@ -73,23 +88,22 @@ for (i in seq_along(year_indices)) {
   
   pop_slice <- ncvar_get(
     clm_nc,
-    "hdm",                      # population density variable
-    start = c(1, 1, yr_index),   # lon, lat, time
+    "hdm",
+    start = c(1, 1, yr_index),
     count = c(-1, -1, 1)
   )
   
-  pop_list[[i]] <- expand.grid(
-    lon = lon,
-    lat = lat
-  ) %>%
+  stopifnot(length(pop_slice) == nrow(grid_df))
+  
+  pop_list[[i]] <- grid_df %>%
     mutate(
       pop_density = as.vector(pop_slice),
-      pop_year = as.integer(yr_value)
+      pop_year    = as.integer(yr_value)
     ) %>%
     select(lon, lat, pop_density, pop_year)
 }
 
-# pop density as dataframe
+#create dataframe
 pop_df <- bind_rows(pop_list)
 print(pop_df)
 
@@ -130,18 +144,18 @@ nc_close(area_nc)
 
 # make sure area grid matches population grid
 # check by comparing dimension lengths and coordinate values if available
-stopifnot(dim(area_m2)[1] == length(lon))
-stopifnot(dim(area_m2)[2] == length(lat))
+stopifnot(all(dim(area_m2) == dim(lon)))
+stopifnot(all(dim(area_m2) == dim(lat)))
 
 # Convert to km2
 area_km2 <- area_m2 / 1e6
 
 # Build area dataframe (one row per cell)
-area_df <- expand.grid(
-  lon = lon,
-  lat = lat
+area_df <- tibble(
+  lon = as.vector(lon),
+  lat = as.vector(lat),
+  cell_area_km2 = as.vector(area_km2)
 ) %>%
-  mutate(cell_area_km2 = as.vector(area_km2)) %>%
   select(lon, lat, cell_area_km2)
 
 # join area onto pop_df and compute pop total
@@ -191,6 +205,8 @@ pop_df_rev <- area_df %>%
 
 print(pop_df_rev)
 
+#check total polulation
+sum(pop_df_rev$pop_tot_2009)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############## output final data set ##################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
