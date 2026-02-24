@@ -13,6 +13,7 @@ library(tibble)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ################################# read in data #################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 # tried:
 #SSP3_for_RCP85_2006-2100_population_density_c160701.nc/different/8951715907(2006-2010)
 #SSP1_for_RCP45_2006-2100_population_density_c160701.nc/different/8951715907 (2006-2010)
@@ -20,9 +21,9 @@ library(tibble)
 #clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc/different/7436984063
 #clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc/same/1342428355
 #clmforc.Li_2012_hdm_0.5x0.5_AVHRR_simyr1850-2010_c130401.nc/different/8951715907
-clm_nc <- nc_open(here("input/google_drive/","clmforc.Li_2018_SSP3_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
+clm_nc <- nc_open(here("input/population/","clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc"))
 print(clm_nc)
-area_nc <- nc_open(here("input/google_drive/","gridcell_area_0.5deg.nc"))
+area_nc <- nc_open(here("input/landmask_area/","gridcell_area_0.5deg.nc"))
 print(area_nc)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
