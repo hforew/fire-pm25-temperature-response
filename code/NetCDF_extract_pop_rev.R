@@ -9,6 +9,9 @@ library(dplyr)
 library(readr)
 library(data.table)
 library(tibble)
+library(rnaturalearth)
+library(sf)
+library(tidyr)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ################################# read in data #################################
@@ -21,7 +24,7 @@ library(tibble)
 #clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc/different/7436984063
 #clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc/same/1342428355
 #clmforc.Li_2012_hdm_0.5x0.5_AVHRR_simyr1850-2010_c130401.nc/different/8951715907
-clm_nc <- nc_open(here("input/google_drive/","clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc"))
+clm_nc <- nc_open(here("input/google_drive/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
 print(clm_nc)
 area_nc <- nc_open(here("input/google_drive/","gridcell_area_0.5deg.nc"))
 print(area_nc)
@@ -41,7 +44,7 @@ years <- ncvar_get(clm_nc, "year")
 
 # select years
 #target_years <- 2001:2010
-target_years <- 2006:2010
+target_years <- 2001:2010
 year_indices <- match(target_years, years) 
 print(data.frame(target_years, year_indices, years_at_index = years[year_indices]))
 
@@ -206,8 +209,33 @@ pop_df_rev <- area_df %>%
 
 print(pop_df_rev)
 
-#check total polulation
+#check total polulation and check total USA pop
 sum(pop_df_rev$pop_tot_2009)
+
+#USA pop
+sf_use_s2(FALSE)
+
+usa <- ne_countries(scale = 50, returnclass = "sf") %>%
+  filter(iso_a3 == "USA") %>%
+  st_make_valid()
+
+pop_pts <- pop_df2 %>%
+  st_as_sf(coords = c("lon", "lat"), crs = 4326, remove = FALSE)
+
+usa_idx <- lengths(st_intersects(pop_pts, usa)) > 0
+pop_usa <- pop_pts[usa_idx, ]
+
+usa_pop_all_years <- pop_usa %>%
+  st_drop_geometry() %>%
+  group_by(pop_year) %>%
+  summarise(
+    usa_population = sum(pop_tot, na.rm = TRUE),
+    usa_pop_million = usa_population / 1e6,
+    .groups = "drop"
+  )
+
+print(usa_pop_all_years, n = Inf)
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############## output final data set ##################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
