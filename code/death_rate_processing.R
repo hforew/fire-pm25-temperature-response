@@ -17,7 +17,7 @@ library(tibble)
 ############ Import #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-pop_pm_country <- read_csv(here("output", "pop_pm_with_countries.csv"))
+pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_rev.csv")) #may use pop_pm_with_countries_rev.csv for latest version
 colnames(pop_pm_country)
 
 # Import world bank death rates (World Bank Death rate, crude (per 1,000 people)) skipping metadata rows
