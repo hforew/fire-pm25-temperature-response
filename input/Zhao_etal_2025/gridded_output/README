@@ -1,0 +1,10 @@
+README
+
+Global_BA.xlsx
+Contains global gridded burned area projections at 2° × 2.5° resolution, expressed in Mha per grid cell, averaged over 2095–2099 under the SSP2-4.5 and SSP5-8.5 scenarios.
+
+SSP245 (585)_with (without)_fire.csv
+Contain global gridded ambient surface PM₂.₅ concentrations at 0.1° × 0.1° resolution (µg m⁻³), averaged over 2095–2099 under the SSP2-4.5 and SSP5-8.5 scenarios, with and without fire emissions included.
+
+SSP245_mortality.csv and SSP585_mortality.csv
+Contain global gridded fire-induced PM₂.₅-related mortality at 0.1° × 0.1° resolution, reported as thousands of deaths per grid cell, averaged over 2095–2099 under the SSP2-4.5 and SSP5-8.5 scenarios.
