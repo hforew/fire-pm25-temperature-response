@@ -19,7 +19,7 @@ library(tidyverse)
 
 # Import annual average PM2.5 data and pop data (previously converted from NetCDF to dataframe)
 annual_ave <- read_csv(here("output", "annual_ave_pm25.csv"))
-pop <- read_csv(here("output", "pop_df.csv"))
+pop <- read_csv(here("output", "pop_df_rev.csv")) #may use pop_df_rev.csv here for the latest version
 
 # pm data dimension = (lon x lat) 288 x 192 = 55296
 # pop data dimension = (lon x lat) 720 × 360 = 259200
