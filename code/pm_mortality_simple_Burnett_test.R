@@ -90,10 +90,17 @@ for (yr in years) {
   grid[[fpm_out]] <- grid[[pm_out]] * if_else(grid$pm_2000 > 0, grid$fpm_2000 / grid$pm_2000, NA_real_)
 }
 
+# rename final dataset
+Burnett_mortality <- grid
+rm(grid)
+
+#=================================== save results===================================
+#write_csv(Burnett_mortality, here("output", "Burnett_mortality.csv"))
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ##########################6a) USA totals (2001–2010 sum)##########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-usa_total <- grid %>%
+usa_total <- Burnett_mortality %>%
   filter(country_code_iso3 == "USA") %>%
   summarise(
     total_PM_deaths_2001_2010 = sum(rowSums(across(all_of(paste0("pm_mort_",  years))),  na.rm = TRUE), na.rm = TRUE),
@@ -105,8 +112,7 @@ print(usa_total)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ##########################6b) USA totals BY YEAR##########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-usa_yearly <- grid %>%
+usa_yearly <- Burnett_mortality %>%
   filter(country_code_iso3 == "USA") %>%
   summarise(
     across(all_of(paste0("pm_mort_",  years)),  ~sum(.x, na.rm = TRUE)),
@@ -129,7 +135,7 @@ print(usa_yearly)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ##########################7) Is RR identical within each country?##########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-rr_check <- grid %>%
+rr_check <- Burnett_mortality %>%
   filter(!is.na(RR_2000), !is.na(country_code_iso3)) %>%
   group_by(country_code_iso3) %>%
   summarise(
@@ -150,8 +156,7 @@ print(rr_check %>% count(rr_same_within_country))
 # ##########################8) Are RR the same ACROSS countries?##########################
 #     (using country-level mean RR)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-rr_country_mean <- grid %>%
+rr_country_mean <- Burnett_mortality %>%
   filter(!is.na(RR_2000), !is.na(country_code_iso3)) %>%
   group_by(country_code_iso3) %>%
   summarise(
@@ -183,10 +188,9 @@ print(n_distinct(round(rr_country_mean$rr_mean, 8)))
 #     - plus 2001–2010 totals per country (numeric)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 options(scipen = 999)         # avoid scientific notation in printing
-library(countrycode)
 
 # 9a) country × year totals (deaths + rates)
-country_mortality_long <- grid %>%
+country_mortality_long <- Burnett_mortality %>%
   filter(!is.na(country_code_iso3), country_code_iso3 != "-99") %>%
   group_by(country_code_iso3) %>%
   summarise(
