@@ -131,6 +131,30 @@ usa_yearly <- Burnett_mortality %>%
   arrange(year, type)
 
 print(usa_yearly)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ##########################10) GLOBAL totals BY YEAR##########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+global_yearly <- Burnett_mortality %>%
+  filter(!is.na(country_code_iso3), country_code_iso3 != "-99") %>%
+  summarise(
+    across(all_of(paste0("pm_mort_",  years)),  ~sum(.x, na.rm = TRUE)),
+    across(all_of(paste0("fpm_mort_", years)), ~sum(.x, na.rm = TRUE))
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "variable",
+    values_to = "deaths"
+  ) %>%
+  mutate(
+    type = if_else(str_detect(variable, "fpm"), "Fire PM", "Total PM"),
+    year = as.integer(str_extract(variable, "\\d{4}"))
+  ) %>%
+  select(year, type, deaths) %>%
+  arrange(year, type)
+
+cat("\n================ GLOBAL YEARLY DEATHS (2001–2010) ================\n")
+print(global_yearly %>% mutate(deaths = round(deaths, 0)))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # ##########################7) Is RR identical within each country?##########################
