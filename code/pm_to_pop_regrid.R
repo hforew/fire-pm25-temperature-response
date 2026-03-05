@@ -127,3 +127,7 @@ write_csv(pm25_regridded, here("output", "pm25_regridded_0.5deg.csv"))
 write_csv(pop_pm_combined, here("output", "pop_pm_combined.csv"))
 
 cat("\nRegridding complete!\n")
+
+
+## THE END 
+
