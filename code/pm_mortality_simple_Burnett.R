@@ -248,3 +248,7 @@ country_mortality_long <- Burnett_mortality %>%
   arrange(country_code_iso3, year)
 
 print(country_mortality_long %>% mutate(across(where(is.numeric), ~round(.x, 2))))
+
+
+### THE END 
+
