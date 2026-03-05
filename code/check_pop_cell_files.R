@@ -1,3 +1,16 @@
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+########### Confirm if PM data grid cell centers or edges ##########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Remove all objects from the environment
+rm(list = ls())
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Packages #####################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 library(ncdf4)
 library(here)
 
@@ -153,10 +166,10 @@ check_nc_print10_allvars <- function(file, n = 10) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 files <- c(
-  here("input/google_drive/clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc"),
-  here("input/google_drive/clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"),
-  here("input/google_drive/sfcarea4popgrid.nc"),
-  here("input/google_drive/gridcell_area_0.5deg.nc")
+  here("input/population/clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc"),
+  here("input/population/clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"),
+  here("input/landmask_area/sfcarea4popgrid.nc"),
+  here("input/population/gridcell_area_0.5deg.nc")
 )
 
 lapply(files, check_nc_print10_allvars)

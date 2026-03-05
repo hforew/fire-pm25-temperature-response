@@ -28,7 +28,7 @@ library(tidyr)
 # decide to use: clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
 clm_nc <- nc_open(here("input/population/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
 print(clm_nc)
-area_nc <- nc_open(here("input/landmark_area/","gridcell_area_0.5deg.nc"))
+area_nc <- nc_open(here("input/landmask_area/","gridcell_area_0.5deg.nc"))
 print(area_nc)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
