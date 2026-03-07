@@ -32,9 +32,11 @@ cat("\n=== Starting country mapping ===\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 world <- ne_countries(scale = 10, returnclass = "sf")
 
+#Select necessary columns
 world_subset <- world %>%
   select(iso_a3, iso_a2, name, geometry)
 
+#Repairs invalid polygon geometries
 world_subset <- st_buffer(world_subset, dist = 0)
 cat("Loaded country boundaries:", nrow(world_subset), "countries\n")
 
@@ -105,7 +107,7 @@ for (b in bands) {
   best_b <- inter %>%
     st_drop_geometry() %>%
     group_by(row_id) %>%
-    slice_max(overlap_area, n = 1, with_ties = FALSE) %>%
+    slice_max(overlap_area, n = 1, with_ties = FALSE) %>% #Select the country with largest overlap
     ungroup() %>%
     transmute(
       row_id,
@@ -123,6 +125,7 @@ best <- bind_rows(best_list)
 assigned_df <- dt05 %>%
   left_join(best, by = "row_id") %>%
   mutate(
+    #Land vs ocean classification
     land_any = if_else(is.na(land_any), FALSE, land_any),
     # keep a “major” column name for downstream compatibility (now ISO3 directly)
     country_id_major = iso_a3,
@@ -144,6 +147,7 @@ pop_pm_with_countries <- assigned_df %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Visual check: Plot matched countries ###########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#nothing changed for this part of plot from old code
 matched_countries <- pop_pm_with_countries %>%
   st_drop_geometry() %>%
   filter(!is.na(iso_a3)) %>%
@@ -170,6 +174,7 @@ ggplot() +
     axis.title = element_blank()
   )
 
+#save plot
 ggsave(
   here("images", "country_mapping_check_rev.png"),
   width = 12,
@@ -178,7 +183,6 @@ ggsave(
 )
 
 cat("Map saved to: images/country_mapping_check_rev.png\n")
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Convert back to regular dataframe and clean ####################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -196,7 +200,7 @@ pop_pm_final %>%
   arrange(country_name) %>%
   print(n = 50)
 
-# Keep manual fixes
+# Keep manual fixes, same as old code
 pop_pm_final <- pop_pm_final %>%
   mutate(
     country_code_iso3 = case_when(
@@ -221,6 +225,7 @@ cat("Output saved to: output/pop_pm_with_countries_rev.csv\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Summary statistics #############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#nothing changed for this part of plot from old code
 cat("\n=== Summary by Country (top 10 by cell count) ===\n")
 pop_pm_final %>%
   filter(!is.na(country_code_iso3)) %>%
@@ -244,6 +249,14 @@ pop_pm_final %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Interactive map ################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#steps:
+#Grid cell centers
+#Create 0.5° polygons
+#Intersect with country polygons
+#Assign country with largest overlap
+#Produce dataset: grid cell → country
+
+#Build 0.5° cell polygons (again) for visualization
 make_cell_polygon <- function(lon, lat, half = 0.25) {
   coords <- matrix(c(
     lon - half, lat - half,
@@ -255,8 +268,10 @@ make_cell_polygon <- function(lon, lat, half = 0.25) {
   st_polygon(list(coords))
 }
 
+#Set a new working data
 df <- pop_pm_final
 
+#Define two classification helper functions
 is_invalid <- function(x) {
   !is.na(x) & x == "-99"
 }
@@ -264,16 +279,19 @@ is_unmapped <- function(x) {
   is.na(x) | x == ""
 }
 
+#Focus on North America (3 countries) for colored mapping
 na_iso3 <- c("USA", "CAN", "MEX")
 mapped_df <- df %>%
   filter(!is_unmapped(country_code_iso3),
          !is_invalid(country_code_iso3),
          country_code_iso3 %in% na_iso3)
 
+#“Invalid” land cells flagged as -99
 invalid_df <- df %>%
   filter(country_code_iso3 == "-99",
          !is.na(land_any), land_any == TRUE)
 
+#“Unmapped” cells (mostly ocean)
 unmapped_df <- df %>%
   filter(is_unmapped(country_code_iso3),
          is.na(land_any) | land_any == FALSE)
@@ -284,7 +302,7 @@ cat("Unmapped (NA or blank):", nrow(unmapped_df), "\n")
 cat("Invalid (-99):", nrow(invalid_df), "\n")
 cat("Mapped (NorthAmerica only):", nrow(mapped_df), "\n")
 
-
+#Convert each subset into sf polygons for Leaflet
 mapped_polys <- mapply(make_cell_polygon, mapped_df$lon, mapped_df$lat, SIMPLIFY = FALSE)
 mapped_cells <- st_sf(mapped_df, geometry = st_sfc(mapped_polys, crs = 4326))
 
@@ -294,17 +312,21 @@ invalid_cells <- st_sf(invalid_df, geometry = st_sfc(invalid_polys, crs = 4326))
 unmapped_polys <- mapply(make_cell_polygon, unmapped_df$lon, unmapped_df$lat, SIMPLIFY = FALSE)
 unmapped_cells <- st_sf(unmapped_df, geometry = st_sfc(unmapped_polys, crs = 4326))
 
+#Load land boundaries for a reference outline
 land <- ne_countries(scale = 10, returnclass = "sf") %>%
   st_transform(4326)
 
+#Define a color palette (for USA/CAN/MEX)
 pal_na <- colorFactor(
   palette = c("#1b7837", "#2166ac", "#b2182b"),
   domain = na_iso3
 )
 
+#Build the Leaflet interactive map
 leaflet() %>%
   addProviderTiles("CartoDB.Positron") %>%
   fitBounds(lng1 = -180, lat1 = -60, lng2 = 180, lat2 = 85) %>%
+  #Add the boundary overlay layer (red outlines)
   addPolylines(
     data = land,
     color = "red",
@@ -313,6 +335,7 @@ leaflet() %>%
     fill = FALSE,
     group = "Land boundary"
   ) %>%
+  #Add mapped NA cells layer (colored by ISO3)
   addPolygons(
     data = mapped_cells,
     color = ~pal_na(country_code_iso3),
@@ -329,6 +352,7 @@ leaflet() %>%
       "Lat: ", round(lat, 2)
     )
   ) %>%
+  #Add invalid cells layer (-99) in brown
   addPolygons(
     data = invalid_cells,
     color = "#5c3b1e",
@@ -343,6 +367,7 @@ leaflet() %>%
       "Lat: ", round(lat, 2)
     )
   ) %>%
+  #Add unmapped cells layer in yellow
   addPolygons(
     data = unmapped_cells,
     color = "black",
@@ -356,6 +381,7 @@ leaflet() %>%
       "Lat: ", round(lat, 2)
     )
   ) %>%
+  #Add legend (for NA mapped layer)
   addLegend(
     position = "bottomright",
     pal = pal_na,
@@ -363,10 +389,13 @@ leaflet() %>%
     title = "Mapped ISO3 (NorthAmerica only)",
     opacity = 1
   ) %>%
+  #Add layer controls (toggle on/off)
   addLayersControl(
     overlayGroups = c("Land boundary", "Mapped cells (NorthAmerica only)", "Invalid cells (-99)", "Unmapped cells (NA/blank)"),
     options = layersControlOptions(collapsed = FALSE)
   )
 
-
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ THE END ################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ THE END
