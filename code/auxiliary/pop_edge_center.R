@@ -173,3 +173,24 @@ files <- c(
 )
 
 lapply(files, check_nc_print10_allvars)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# RESULT: These NetCDF grids use CELL CENTER coordinates
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Files examined:
+# 1. clmforc.Li_2017_HYDEv3.2_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2016_c170828.nc
+# 2. clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
+# 3. sfcarea4popgrid.nc
+# 4. gridcell_area_0.5deg.nc
+#
+# Evidence:
+# 1. lon[1] = -179.75° (not -180°) --> offset by 0.25° from grid edge
+# 2. lat[1] = -89.75° (not -90°) --> offset by 0.25° from pole
+# 3. Grid resolution = 0.5°
+#    For a 0.5° grid:
+#       edge coordinates   → -180, -179.5, ...
+#       center coordinates → -179.75, -179.25, ...
+#    The observed coordinates match the center pattern.
+# 4. The CLM forcing files explicitly include boundary variables
+#       EDGEW, EDGEE, EDGES, EDGEN
+#    confirming that lon/lat represent cell centers.
