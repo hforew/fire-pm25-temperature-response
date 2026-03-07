@@ -26,7 +26,7 @@ library(tidyr)
 #clmforc.Li_2012_hdm_0.5x0.5_AVHRR_simyr1850-2010_c130401.nc/different/8951715907
 
 # decide to use: clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
-clm_nc <- nc_open(here("input/population/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
+clm_nc <- nc_open(here("input/google_drive/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
 print(clm_nc)
 area_nc <- nc_open(here("input/landmask_area/","gridcell_area_0.5deg.nc"))
 print(area_nc)
@@ -106,7 +106,7 @@ for (i in seq_along(year_indices)) {
       pop_density = as.vector(pop_slice),
       pop_year    = as.integer(yr_value)
     ) %>%
-    select(lon, lat, pop_density, pop_year)
+    dplyr::select(lon, lat, pop_density, pop_year)
 }
 
 #create dataframe
@@ -162,7 +162,7 @@ area_df <- tibble(
   lat = as.vector(lat),
   cell_area_km2 = as.vector(area_km2)
 ) %>%
-  select(lon, lat, cell_area_km2)
+  dplyr::select(lon, lat, cell_area_km2)
 
 # join area onto pop_df and compute pop total
 pop_df2 <- pop_df %>%
@@ -188,7 +188,7 @@ print(global_pop_check, n = Inf)
 
 # 1) pop density wide
 pop_dens_wide <- pop_df2 %>%
-  select(lon, lat, pop_year, pop_density) %>%
+  dplyr::select(lon, lat, pop_year, pop_density) %>%
   pivot_wider(
     names_from = pop_year,
     values_from = pop_density,
@@ -197,7 +197,7 @@ pop_dens_wide <- pop_df2 %>%
 
 # 2) pop total wide
 pop_tot_wide <- pop_df2 %>%
-  select(lon, lat, pop_year, pop_tot) %>%
+  dplyr::select(lon, lat, pop_year, pop_tot) %>%
   pivot_wider(
     names_from = pop_year,
     values_from = pop_tot,
