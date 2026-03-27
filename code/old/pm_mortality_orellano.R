@@ -79,100 +79,69 @@ threshold_orellano <- 0 # units μg/m^3. orellano state: "no evidence for a thre
 # population is held constant at the 2009 level.
 # ΔX varies
 
+
+# in computing future mortality, population and mortality rate is assume constant
+# only the PM exposure changes. this isolates the climate effect, without pop changes. 
+# pm_2000 refers to the annual average pm2.5 exposure in the 2000s decade from 2001-2010
+# pm_2050 refers to the annual average pm2.5 exposure in the 2040s decade from 2041-2050 (under rcp45 and 85)
+# pm_2100 refers to the annual average pm2.5 exposure in the 2090s decade from 2091-2100 (under rcp45 and 85)
+
 pop_pm_country <- pop_pm_country %>%
   mutate(
     # 2000 baseline (with fire)
-    delta_x_2000 = pmax(0, pm_2000 - threshold_crouse),
-    pm_2000_mort = pop_tot_2009 * (1 - exp(-beta_k * delta_x_2000)) * death_2011_20,
+    delta_x_2000 = pmax(0, pm_2000 - threshold_orellano),
+    pm_2001_mort = pop_tot_2001 * (1 - exp(-beta_k * delta_x_2000)) * death_rate_2001,
     
     # 2050 RCP 4.5 (with fire)
-    delta_x_2050_45 = pmax(0, pm_2050_45 - threshold_crouse),
-    pm_2050_45_mort = pop_tot_2009 * (1 - exp(-beta_k * delta_x_2050_45)) * death_2011_20,
+    delta_x_2050_45 = pmax(0, pm_2050_45 - threshold_orellano),
+    pm_2041_45_mort = pop_tot_2001 * (1 - exp(-beta_k * delta_x_2050_45)) * death_rate_2001,
 
     # 2050 RCP 8.5 (with fire)
-    delta_x_2050_85 = pmax(0, pm_2050_85 - threshold_crouse),
-    pm_2050_85_mort = pop_tot_2009 * (1 - exp(-beta_k * delta_x_2050_85)) * death_2011_20,
+    delta_x_2050_85 = pmax(0, pm_2050_85 - threshold_orellano),
+    pm_2041_85_mort = pop_tot_2001 * (1 - exp(-beta_k * delta_x_2050_85)) * death_rate_2001,
     
     # 2100 RCP 4.5 (with fire)
-    delta_x_2100_45 = pmax(0, pm_2100_45 - threshold_crouse),
-    pm_2100_45_mort = pop_tot_2009 * (1 - exp(-beta_k * delta_x_2100_45)) * death_2011_20,
+    delta_x_2100_45 = pmax(0, pm_2100_45 - threshold_orellano),
+    pm_2091_45_mort = pop_tot_2001 * (1 - exp(-beta_k * delta_x_2100_45)) * death_rate_2001,
 
     # 2100 RCP 8.5 (with fire)
-    delta_x_2100_85 = pmax(0, pm_2100_85 - threshold_crouse),
-    pm_2100_85_mort = pop_tot_2009 * (1 - exp(-beta_k * delta_x_2100_85)) * death_2011_20,
-    
-    # 2100 RCP 8.5 (no fire)
-    delta_x_2100_85_nf = pmax(0, pm_2100_85_nf - threshold_crouse),
-    pm_2100_85_nf_mort = pop_tot_2009 * (1 - exp(-beta_k * delta_x_2100_85_nf)) * death_2011_20
+    delta_x_2100_85 = pmax(0, pm_2100_85 - threshold_orellano),
+    pm_2091_85_mort = pop_tot_2001 * (1 - exp(-beta_k * delta_x_2100_85)) * death_rate_2001,
   )
 
 # Check results for 2000 baseline
-summary(pop_pm_country$pm_2000_mort)
+summary(pop_pm_country$pm_2001_mort)
 
 # View sample of results
 pop_pm_country %>%
-  select(lon, lat, country_name, pop_tot_2009, pm_2000, delta_x_2000, pm_2000_mort) %>%
-  filter(!is.na(pm_2000_mort) & pm_2000_mort > 0) %>%
-  arrange(desc(pm_2000_mort)) %>%
+  select(lon, lat, country_name.x, pop_tot_2001, pm_2000, delta_x_2000, pm_2001_mort) %>%
+  filter(!is.na(pm_2001_mort) & pm_2001_mort > 0) %>%
+  arrange(desc(pm_2001_mort)) %>%
   head(10)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Calculate Fire PM Mortality (Method 1: fraction) #################
+############ Calculate Fire PM Mortality  #################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Method 1: fpm_mortality = pm_total_mortality x (fpm/ pm_total)
+# fpm_mortality = pm_total_mortality x (fpm/ pm_total)
 
 pop_pm_country <- pop_pm_country %>%
   mutate(
-    # 2000 baseline
-    fpm_2000_mort_m1 = pm_2000_mort * (fpm_2000 / pm_2000),
+    # 2001 baseline
+    fpm_2001_mort_m1 = pm_2001_mort * (fpm_2000 / pm_2000),
     
-    # 2050 RCP 4.5
-    fpm_2050_45_mort_m1 = pm_2050_45_mort * (fpm_2050_45 / pm_2050_45),
+    # 2041 RCP 4.5
+    fpm_2041_45_mort_m1 = pm_2041_45_mort * (fpm_2050_45 / pm_2050_45),
     
-    # 2050 RCP 8.5
-    fpm_2050_85_mort_m1 = pm_2050_85_mort * (fpm_2050_85 / pm_2050_85),
+    # 2041 RCP 8.5
+    fpm_2041_85_mort_m1 = pm_2041_85_mort * (fpm_2050_85 / pm_2050_85),
     
-    # 2100 RCP 4.5
-    fpm_2100_45_mort_m1 = pm_2100_45_mort * (fpm_2100_45 / pm_2100_45),
+    # 2091 RCP 4.5
+    fpm_2091_45_mort_m1 = pm_2091_45_mort * (fpm_2100_45 / pm_2100_45),
     
-    # 2100 RCP 8.5
-    fpm_2100_85_mort_m1 = pm_2100_85_mort * (fpm_2100_85 / pm_2100_85)
+    # 2091 RCP 8.5
+    fpm_2091_85_mort_m1 = pm_2091_85_mort * (fpm_2100_85 / pm_2100_85)
   )
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Calculate Fire PM Mortality (Method 2: Direct Difference) #################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Method 2: Fire PM mortality = Total PM mortality - No Fire PM mortality
-
-pop_pm_country <- pop_pm_country %>%
-  mutate(
-    # 2000 baseline
-    fpm_2000_mort_m2 = pm_2000_mort - pm_2000_nf_mort,
-    
-    # 2050 RCP 4.5
-    fpm_2050_45_mort_m2 = pm_2050_45_mort - pm_2050_45_nf_mort,
-    
-    # 2050 RCP 8.5
-    fpm_2050_85_mort_m2 = pm_2050_85_mort - pm_2050_85_nf_mort,
-    
-    # 2100 RCP 4.5
-    fpm_2100_45_mort_m2 = pm_2100_45_mort - pm_2100_45_nf_mort,
-    
-    # 2100 RCP 8.5
-    fpm_2100_85_mort_m2 = pm_2100_85_mort - pm_2100_85_nf_mort
-  )
-
-# Check fire PM mortality results
-summary(pop_pm_country$fpm_2000_mort_m2)
-
-# View top fire mortality grid cells for 2000
-pop_pm_country %>%
-  select(lon, lat, country_name, fpm_2000, pm_2000_mort, pm_2000_nf_mort, fpm_2000_mort_m2) %>%
-  filter(!is.na(fpm_2000_mort_m2) & fpm_2000_mort_m2 > 0) %>%
-  arrange(desc(fpm_2000_mort_m2)) %>%
-  head(10)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Filter Data to USA ONLY #####################################################
@@ -192,16 +161,16 @@ nrow(pop_pm_country_usa)
 # Calculate total deaths across all USA grid cells for each scenario
 usa_total_pm_mort <- pop_pm_country_usa %>%
   summarise(
-    total_2000 = sum(pm_2000_mort, na.rm = TRUE),
-    total_2000_nf = sum(pm_2000_nf_mort, na.rm = TRUE),
-    total_2050_45 = sum(pm_2050_45_mort, na.rm = TRUE),
-    total_2050_45_nf = sum(pm_2050_45_nf_mort, na.rm = TRUE),
-    total_2050_85 = sum(pm_2050_85_mort, na.rm = TRUE),
-    total_2050_85_nf = sum(pm_2050_85_nf_mort, na.rm = TRUE),
-    total_2100_45 = sum(pm_2100_45_mort, na.rm = TRUE),
-    total_2100_45_nf = sum(pm_2100_45_nf_mort, na.rm = TRUE),
-    total_2100_85 = sum(pm_2100_85_mort, na.rm = TRUE),
-    total_2100_85_nf = sum(pm_2100_85_nf_mort, na.rm = TRUE)
+    total_2001 = sum(pm_2001_mort, na.rm = TRUE),
+    # total_2000_nf = sum(pm_2000_nf_mort, na.rm = TRUE),
+    total_2041_45 = sum(pm_2041_45_mort, na.rm = TRUE),
+    # total_2050_45_nf = sum(pm_2050_45_nf_mort, na.rm = TRUE),
+    total_2041_85 = sum(pm_2041_85_mort, na.rm = TRUE),
+    # total_2050_85_nf = sum(pm_2050_85_nf_mort, na.rm = TRUE),
+    total_2091_45 = sum(pm_2091_45_mort, na.rm = TRUE),
+    # total_2100_45_nf = sum(pm_2100_45_nf_mort, na.rm = TRUE),
+    total_2091_85 = sum(pm_2091_85_mort, na.rm = TRUE),
+    # total_2100_85_nf = sum(pm_2100_85_nf_mort, na.rm = TRUE)
   ) %>%
   # Reshape to long format immediately
   pivot_longer(
@@ -221,10 +190,10 @@ print(usa_total_pm_mort)
 
 # Literature comparison
 cat("\nLiterature Comparison (2000 baseline):\n")
-cat("Ford et al 2018 Table 3: 138,000 deaths (Method 1)\n")
-cat("Pierce et al 2017 Figure 13: ~165,000 deaths (Method 2)\n")
+cat("Ford et al 2018 Table 3: 138,000 deaths \n")
+cat("Pierce et al 2017 Figure 13: ~165,000 deaths \n")
 cat("Our estimate (with fire):", 
-    round(usa_total_pm_mort %>% filter(year == "2000", fire_scenario == "With Fire") %>% pull(pm_deaths)), "\n")
+    round(usa_total_pm_mort %>% filter(year == "2001", fire_scenario == "With Fire") %>% pull(pm_deaths)), "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Fire PM Mortality Analysis (USA) ###########################################
