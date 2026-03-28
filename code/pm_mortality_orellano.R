@@ -80,7 +80,9 @@ threshold_orellano <- 0 # units μg/m^3. orellano state: "no evidence for a thre
 # ΔX varies
 
 
-# in computing future mortality, population and mortality rate is assume constant
+# in computing future mortality, population and mortality rate is assumed constant
+# e.g. 2001 pop and rate is applied to 2041 and 2091. 2002 to 2042 and 2092, etc. 
+# the decade average is take after computing the yearly values
 # only the PM exposure changes. this isolates the climate effect, without pop changes. 
 # pm_2000 refers to the annual average pm2.5 exposure in the 2000s decade from 2001-2010
 # pm_2050 refers to the annual average pm2.5 exposure in the 2040s decade from 2041-2050 (under rcp45 and 85)
@@ -119,28 +121,157 @@ pop_pm_country %>%
   arrange(desc(pm_2001_mort)) %>%
   head(10)
 
+
+### loop thru other years 
+
+# Loop over base years 2002-2010 (the 2000s decade, excluding 2001 which is already computed)
+for (yr in 2002:2010) {
+  
+  # Build dynamic column name strings for pop and death rate for this base year
+  # e.g. yr=2002 -> "pop_tot_2002", "death_rate_2002"
+  pop_col   <- paste0("pop_tot_", yr)
+  death_col <- paste0("death_rate_", yr)
+  
+  # Compute the corresponding future years for the 2050 and 2100 PM decades
+  # 2042 corresponds to 2002 pop/death, 2043 to 2003, etc.
+  yr_50  <- yr + 40  # 2042:2050 (2050s PM decade)
+  yr_100 <- yr + 90  # 2092:2100 (2100s PM decade)
+  
+  pop_pm_country <- pop_pm_country %>%
+    mutate(
+      
+      # --- 200x BASELINE ---
+      # Uses this year's pop and death rate, with 2000s PM exposure (delta_x_2000)
+      # delta_x_2000 already computed above: pmax(0, pm_2000 - threshold_orellano)
+      !!paste0("pm_", yr, "_mort")        := .data[[pop_col]] * (1 - exp(-beta_k * delta_x_2000))    * .data[[death_col]],
+      
+      # --- 204x RCP 4.5 ---
+      # Same pop/death as base year (e.g. 2002), but 2050s PM under RCP 4.5
+      # delta_x_2050_45 already computed above: pmax(0, pm_2050_45 - threshold_orellano)
+      !!paste0("pm_", yr_50,  "_45_mort") := .data[[pop_col]] * (1 - exp(-beta_k * delta_x_2050_45)) * .data[[death_col]],
+      
+      # --- 204x RCP 8.5 ---
+      # Same pop/death as base year, but 2050s PM under RCP 8.5
+      # delta_x_2050_85 already computed above: pmax(0, pm_2050_85 - threshold_orellano)
+      !!paste0("pm_", yr_50,  "_85_mort") := .data[[pop_col]] * (1 - exp(-beta_k * delta_x_2050_85)) * .data[[death_col]],
+      
+      # --- 209x RCP 4.5 ---
+      # Same pop/death as base year (e.g. 2002), but 2100s PM under RCP 4.5
+      # delta_x_2100_45 already computed above: pmax(0, pm_2100_45 - threshold_orellano)
+      !!paste0("pm_", yr_100, "_45_mort") := .data[[pop_col]] * (1 - exp(-beta_k * delta_x_2100_45)) * .data[[death_col]],
+      
+      # --- 209x RCP 8.5 ---
+      # Same pop/death as base year, but 2100s PM under RCP 8.5
+      # delta_x_2100_85 already computed above: pmax(0, pm_2100_85 - threshold_orellano)
+      !!paste0("pm_", yr_100, "_85_mort") := .data[[pop_col]] * (1 - exp(-beta_k * delta_x_2100_85)) * .data[[death_col]]
+    )
+}
+# Result: 45 new columns added (9 years x 5 scenarios)
+# e.g. pm_2002_mort, pm_2042_45_mort, pm_2042_85_mort, pm_2092_45_mort, pm_2092_85_mort ... through yr=2010
+
+
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Calculate Fire PM Mortality  #################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # fpm_mortality = pm_total_mortality x (fpm/ pm_total)
-
+# This isolates the fire-attributable share of total PM mortality
 pop_pm_country <- pop_pm_country %>%
   mutate(
     # 2001 baseline
-    fpm_2001_mort_m1 = pm_2001_mort * (fpm_2000 / pm_2000),
+    fpm_2001_mort = pm_2001_mort * (fpm_2000 / pm_2000),
     
     # 2041 RCP 4.5
-    fpm_2041_45_mort_m1 = pm_2041_45_mort * (fpm_2050_45 / pm_2050_45),
+    fpm_2041_45_mort = pm_2041_45_mort * (fpm_2050_45 / pm_2050_45),
     
     # 2041 RCP 8.5
-    fpm_2041_85_mort_m1 = pm_2041_85_mort * (fpm_2050_85 / pm_2050_85),
+    fpm_2041_85_mort = pm_2041_85_mort * (fpm_2050_85 / pm_2050_85),
     
     # 2091 RCP 4.5
-    fpm_2091_45_mort_m1 = pm_2091_45_mort * (fpm_2100_45 / pm_2100_45),
+    fpm_2091_45_mort = pm_2091_45_mort * (fpm_2100_45 / pm_2100_45),
     
     # 2091 RCP 8.5
-    fpm_2091_85_mort_m1 = pm_2091_85_mort * (fpm_2100_85 / pm_2100_85)
+    fpm_2091_85_mort = pm_2091_85_mort * (fpm_2100_85 / pm_2100_85)
+  )
+
+# Loop over base years 2002-2010 to compute fire PM mortality
+for (yr in 2002:2010) {
+  
+  # Corresponding future years (same offset logic as pm_ loop above)
+  yr_50  <- yr + 40  # 2042:2050
+  yr_100 <- yr + 90  # 2092:2100
+  
+  pop_pm_country <- pop_pm_country %>%
+    mutate(
+      
+      # --- 200x BASELINE ---
+      # Fire share of 2000s PM mortality for this base year
+      # fpm_2000 / pm_2000 = fraction of total PM that is fire PM (from 2000s decade)
+      !!paste0("fpm_", yr, "_mort")        := .data[[paste0("pm_", yr, "_mort")]]        * (fpm_2000    / pm_2000),
+      
+      # --- 204x RCP 4.5 ---
+      # Fire share of 2050s RCP 4.5 PM mortality for this base year's pop/death
+      !!paste0("fpm_", yr_50,  "_45_mort") := .data[[paste0("pm_", yr_50,  "_45_mort")]] * (fpm_2050_45 / pm_2050_45),
+      
+      # --- 204x RCP 8.5 ---
+      !!paste0("fpm_", yr_50,  "_85_mort") := .data[[paste0("pm_", yr_50,  "_85_mort")]] * (fpm_2050_85 / pm_2050_85),
+      
+      # --- 209x RCP 4.5 ---
+      # Fire share of 2100s RCP 4.5 PM mortality for this base year's pop/death
+      !!paste0("fpm_", yr_100, "_45_mort") := .data[[paste0("pm_", yr_100, "_45_mort")]] * (fpm_2100_45 / pm_2100_45),
+      
+      # --- 209x RCP 8.5 ---
+      !!paste0("fpm_", yr_100, "_85_mort") := .data[[paste0("pm_", yr_100, "_85_mort")]] * (fpm_2100_85 / pm_2100_85)
+    )
+}
+# Result: 45 new columns (9 years x 5 scenarios)
+# e.g. fpm_2002_mort, fpm_2042_45_mort, fpm_2042_85_mort, fpm_2092_45_mort, fpm_2092_85_mort ... through yr=2010
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Decade Average  #################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+pop_pm_country <- pop_pm_country %>%
+  mutate(
+    
+    # --- DECADE AVERAGE: Total PM Mortality ---
+    # Each cell gets the mean mortality across all 10 years in the decade
+    # pick() selects columns by name dynamically; paste0() builds the column name vector
+    
+    # 2000s baseline (average of pm_2001_mort through pm_2010_mort)
+    pm_2000s_mort = rowMeans(pick(all_of(paste0("pm_", 2001:2010, "_mort"))),       na.rm = TRUE),
+    
+    # 2040s RCP 4.5 (average of pm_2041_45_mort through pm_2050_45_mort)
+    pm_2040s_45_mort = rowMeans(pick(all_of(paste0("pm_", 2041:2050, "_45_mort"))), na.rm = TRUE),
+    
+    # 2040s RCP 8.5 (average of pm_2041_85_mort through pm_2050_85_mort)
+    pm_2040s_85_mort = rowMeans(pick(all_of(paste0("pm_", 2041:2050, "_85_mort"))), na.rm = TRUE),
+    
+    # 2090s RCP 4.5 (average of pm_2091_45_mort through pm_2100_45_mort)
+    pm_2090s_45_mort = rowMeans(pick(all_of(paste0("pm_", 2091:2100, "_45_mort"))), na.rm = TRUE),
+    
+    # 2090s RCP 8.5 (average of pm_2091_85_mort through pm_2100_85_mort)
+    pm_2090s_85_mort = rowMeans(pick(all_of(paste0("pm_", 2091:2100, "_85_mort"))), na.rm = TRUE),
+    
+    # --- DECADE AVERAGE: Fire PM Mortality ---
+    # Same logic as above but for fire-attributable mortality columns
+    
+    # 2000s baseline (average of fpm_2001_mort through fpm_2010_mort)
+    fpm_2000s_mort = rowMeans(pick(all_of(paste0("fpm_", 2001:2010, "_mort"))),       na.rm = TRUE),
+    
+    # 2040s RCP 4.5 (average of fpm_2041_45_mort through fpm_2050_45_mort)
+    fpm_2040s_45_mort = rowMeans(pick(all_of(paste0("fpm_", 2041:2050, "_45_mort"))), na.rm = TRUE),
+    
+    # 2040s RCP 8.5 (average of fpm_2041_85_mort through fpm_2050_85_mort)
+    fpm_2040s_85_mort = rowMeans(pick(all_of(paste0("fpm_", 2041:2050, "_85_mort"))), na.rm = TRUE),
+    
+    # 2090s RCP 4.5 (average of fpm_2091_45_mort through fpm_2100_45_mort)
+    fpm_2090s_45_mort = rowMeans(pick(all_of(paste0("fpm_", 2091:2100, "_45_mort"))), na.rm = TRUE),
+    
+    # 2090s RCP 8.5 (average of fpm_2091_85_mort through fpm_2100_85_mort)
+    fpm_2090s_85_mort = rowMeans(pick(all_of(paste0("fpm_", 2091:2100, "_85_mort"))), na.rm = TRUE)
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -161,99 +292,158 @@ nrow(pop_pm_country_usa)
 # Calculate total deaths across all USA grid cells for each scenario
 usa_total_pm_mort <- pop_pm_country_usa %>%
   summarise(
-    total_2001 = sum(pm_2001_mort, na.rm = TRUE),
-    # total_2000_nf = sum(pm_2000_nf_mort, na.rm = TRUE),
+    total_2001    = sum(pm_2001_mort,    na.rm = TRUE),
     total_2041_45 = sum(pm_2041_45_mort, na.rm = TRUE),
-    # total_2050_45_nf = sum(pm_2050_45_nf_mort, na.rm = TRUE),
     total_2041_85 = sum(pm_2041_85_mort, na.rm = TRUE),
-    # total_2050_85_nf = sum(pm_2050_85_nf_mort, na.rm = TRUE),
     total_2091_45 = sum(pm_2091_45_mort, na.rm = TRUE),
-    # total_2100_45_nf = sum(pm_2100_45_nf_mort, na.rm = TRUE),
-    total_2091_85 = sum(pm_2091_85_mort, na.rm = TRUE),
-    # total_2100_85_nf = sum(pm_2100_85_nf_mort, na.rm = TRUE)
+    total_2091_85 = sum(pm_2091_85_mort, na.rm = TRUE)
   ) %>%
-  # Reshape to long format immediately
+  # Reshape from wide (one column per scenario) to long (one row per scenario)
   pivot_longer(
     cols = everything(),
-    names_to = "scenario",
-    values_to = "pm_deaths"
+    names_to = "scenario",   # column names (e.g. "total_2041_45") become values in a new "scenario" column
+    values_to = "pm_deaths"  # summed deaths become values in "pm_deaths"
   ) %>%
-  mutate(
-    fire_scenario = if_else(str_detect(scenario, "_nf$"), "No Fire", "With Fire"),
-    scenario_clean = str_remove(scenario, "^total_") %>% str_remove("_nf$")
-  ) %>%
-  separate(scenario_clean, into = c("year", "rcp"), sep = "_", fill = "right") %>%
-  select(year, rcp, fire_scenario, pm_deaths)
+  # Strip the "total_" prefix so "total_2041_45" becomes "2041_45"
+  mutate(scenario = str_remove(scenario, "^total_")) %>%
+  # Split "2041_45" into two columns: year = "2041", rcp = "45"
+  # fill = "right" handles the 2001 baseline which has no RCP (rcp will be NA)
+  separate(scenario, into = c("year", "rcp"), sep = "_", fill = "right") %>%
+  select(year, rcp, pm_deaths)
 
-print("Total PM Mortality (USA) - All Scenarios:")
+print("Total PM Mortality (USA), 2001, 2041, 2091")
 print(usa_total_pm_mort)
+
+
+# usa_total_pm_mort <- pop_pm_country_usa %>%
+#   summarise(
+#     total_2001 = sum(pm_2001_mort, na.rm = TRUE),
+#     # total_2000_nf = sum(pm_2000_nf_mort, na.rm = TRUE),
+#     total_2041_45 = sum(pm_2041_45_mort, na.rm = TRUE),
+#     # total_2050_45_nf = sum(pm_2050_45_nf_mort, na.rm = TRUE),
+#     total_2041_85 = sum(pm_2041_85_mort, na.rm = TRUE),
+#     # total_2050_85_nf = sum(pm_2050_85_nf_mort, na.rm = TRUE),
+#     total_2091_45 = sum(pm_2091_45_mort, na.rm = TRUE),
+#     # total_2100_45_nf = sum(pm_2100_45_nf_mort, na.rm = TRUE),
+#     total_2091_85 = sum(pm_2091_85_mort, na.rm = TRUE),
+#     # total_2100_85_nf = sum(pm_2100_85_nf_mort, na.rm = TRUE)
+#   ) %>%
+#   # Reshape to long format immediately
+#   pivot_longer(
+#     cols = everything(),
+#     names_to = "scenario",
+#     values_to = "pm_deaths"
+#   ) %>%
+#   mutate(
+#     fire_scenario = if_else(str_detect(scenario, "_nf$"), "No Fire", "With Fire"),
+#     scenario_clean = str_remove(scenario, "^total_") %>% str_remove("_nf$")
+#   ) %>%
+#   separate(scenario_clean, into = c("year", "rcp"), sep = "_", fill = "right") %>%
+#   select(year, rcp, fire_scenario, pm_deaths)
+
+usa_total_pm_mort_avg <- pop_pm_country_usa %>%
+  summarise(
+    total_2000s    = sum(pm_2000s_mort,    na.rm = TRUE),
+    total_2040s_45 = sum(pm_2040s_45_mort, na.rm = TRUE),
+    total_2040s_85 = sum(pm_2040s_85_mort, na.rm = TRUE),
+    total_2090s_45 = sum(pm_2090s_45_mort, na.rm = TRUE),
+    total_2090s_85 = sum(pm_2090s_85_mort, na.rm = TRUE)
+  ) %>%
+  # Reshape from wide (one column per scenario) to long (one row per scenario)
+  pivot_longer(
+    cols = everything(),
+    names_to = "scenario",   # column names (e.g. "total_2040s_45") become values in a new "scenario" column
+    values_to = "pm_deaths"  # summed deaths become values in "pm_deaths"
+  ) %>%
+  # Strip the "total_" prefix so "total_2040s_45" becomes "2040s_45"
+  mutate(scenario = str_remove(scenario, "^total_")) %>%
+  # Split "2040s_45" into two columns: year = "2040s", rcp = "45"
+  # fill = "right" handles the 2000s baseline which has no RCP (rcp will be NA)
+  separate(scenario, into = c("year", "rcp"), sep = "_", fill = "right") %>%
+  select(year, rcp, pm_deaths)
+
+print("Total PM Mortality Decade Averages (USA)")
+print(usa_total_pm_mort_avg)
 
 # Literature comparison
 cat("\nLiterature Comparison (2000 baseline):\n")
 cat("Ford et al 2018 Table 3: 138,000 deaths \n")
 cat("Pierce et al 2017 Figure 13: ~165,000 deaths \n")
-cat("Our estimate (with fire):", 
-    round(usa_total_pm_mort %>% filter(year == "2001", fire_scenario == "With Fire") %>% pull(pm_deaths)), "\n")
+cat("Our estimate (2000s decade avg):", 
+    round(usa_total_pm_mort_avg %>% filter(year == "2000s") %>% pull(pm_deaths)), "\n")
+
+# our result is higher because of 1) higher RR from Orellano and 2) not using a threshold, per Orellano
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Fire PM Mortality Analysis (USA) ###########################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Calculate fire-attributable deaths for both methods
-usa_fpm_mort <- pop_pm_country_usa %>%
+usa_fpm_mort_avg <- pop_pm_country_usa %>%
   summarise(
-    fpm_2000_m1 = sum(fpm_2000_mort_m1, na.rm = TRUE),
-    fpm_2000_m2 = sum(fpm_2000_mort_m2, na.rm = TRUE),
-    fpm_2050_45_m1 = sum(fpm_2050_45_mort_m1, na.rm = TRUE),
-    fpm_2050_45_m2 = sum(fpm_2050_45_mort_m2, na.rm = TRUE),
-    fpm_2050_85_m1 = sum(fpm_2050_85_mort_m1, na.rm = TRUE),
-    fpm_2050_85_m2 = sum(fpm_2050_85_mort_m2, na.rm = TRUE),
-    fpm_2100_45_m1 = sum(fpm_2100_45_mort_m1, na.rm = TRUE),
-    fpm_2100_45_m2 = sum(fpm_2100_45_mort_m2, na.rm = TRUE),
-    fpm_2100_85_m1 = sum(fpm_2100_85_mort_m1, na.rm = TRUE),
-    fpm_2100_85_m2 = sum(fpm_2100_85_mort_m2, na.rm = TRUE)
+    fpm_2000s    = sum(fpm_2000s_mort,    na.rm = TRUE),
+    fpm_2040s_45 = sum(fpm_2040s_45_mort, na.rm = TRUE),
+    fpm_2040s_85 = sum(fpm_2040s_85_mort, na.rm = TRUE),
+    fpm_2090s_45 = sum(fpm_2090s_45_mort, na.rm = TRUE),
+    fpm_2090s_85 = sum(fpm_2090s_85_mort, na.rm = TRUE)
   ) %>%
-  # Reshape to long format immediately
   pivot_longer(
     cols = everything(),
-    names_to = "scenario",
-    values_to = "fpm_deaths"
+    names_to = "scenario",    # column names (e.g. "fpm_2040s_45") become values in "scenario"
+    values_to = "fpm_deaths"  # summed deaths become values in "fpm_deaths"
   ) %>%
-  mutate(
-    method = if_else(str_detect(scenario, "_m2$"), "Method 2", "Method 1"),
-    scenario_clean = str_remove(scenario, "^fpm_") %>% str_remove("_m[12]$")
-  ) %>%
-  separate(scenario_clean, into = c("year", "rcp"), sep = "_", fill = "right") %>%
-  select(year, rcp, method, fpm_deaths)
+  # Strip "fpm_" prefix so "fpm_2040s_45" becomes "2040s_45"
+  mutate(scenario = str_remove(scenario, "^fpm_")) %>%
+  # Split "2040s_45" into year = "2040s", rcp = "45"; 2000s baseline gets rcp = NA
+  separate(scenario, into = c("year", "rcp"), sep = "_", fill = "right") %>%
+  select(year, rcp, fpm_deaths)
 
-print("\nFire PM Mortality (USA) - Both Methods:")
-print(usa_fpm_mort)
+# usa_fpm_mort <- pop_pm_country_usa %>%
+#   summarise(
+#     fpm_2001 = sum(fpm_2001_mort, na.rm = TRUE),
+#     # fpm_2000_m2 = sum(fpm_2000_mort_m2, na.rm = TRUE),
+#     fpm_2041_45 = sum(fpm_2041_45_mort, na.rm = TRUE),
+#     # fpm_2050_45_m2 = sum(fpm_2050_45_mort_m2, na.rm = TRUE),
+#     fpm_2041_85 = sum(fpm_2041_85_mort, na.rm = TRUE),
+#     # fpm_2050_85_m2 = sum(fpm_2050_85_mort_m2, na.rm = TRUE),
+#     fpm_2091_45 = sum(fpm_2091_45_mort, na.rm = TRUE),
+#     # fpm_2100_45_m2 = sum(fpm_2100_45_mort_m2, na.rm = TRUE),
+#     fpm_2091_85 = sum(fpm_2091_85_mort, na.rm = TRUE),
+#     # fpm_2100_85_m2 = sum(fpm_2100_85_mort_m2, na.rm = TRUE)
+#   ) %>%
+#   # Reshape to long format immediately
+#   pivot_longer(
+#     cols = everything(),
+#     names_to = "scenario",
+#     values_to = "fpm_deaths"
+#   ) %>%
+#   mutate(
+#     method = if_else(str_detect(scenario, "_m2$"), "Method 2", "Method 1"),
+#     scenario_clean = str_remove(scenario, "^fpm_") %>% str_remove("_m[12]$")
+#   ) %>%
+#   separate(scenario_clean, into = c("year", "rcp"), sep = "_", fill = "right") %>%
+#   select(year, rcp, method, fpm_deaths)
 
-# Side-by-side method comparison
-usa_fpm_comparison <- usa_fpm_mort %>%
-  pivot_wider(names_from = method, values_from = fpm_deaths) %>%
-  mutate(
-    difference = `Method 1` - `Method 2`,
-    pct_difference = (difference / `Method 2`) * 100
-  )
-
-print("\nMethod 1 vs Method 2 Comparison:")
-print(usa_fpm_comparison)
+print("\nFire PM Mortality (USA):")
+print(usa_fpm_mort_avg)
 
 # Ford validation
-cat("\n=== Ford et al 2018 Validation (2000 baseline) ===\n")
+cat("\n=== Ford et al 2018 Validation (2001 baseline) ===\n")
 cat("Ford et al reported: 17,000 fire-attributable deaths\n")
-cat("Our Method 1:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fpm_deaths)), "\n")
-cat("Our Method 2:", round(usa_fpm_mort %>% filter(year == "2000", method == "Method 2") %>% pull(fpm_deaths)), "\n")
-cat("Ford et al used Method 1 for main results\n")
+cat("Our estimate (2000s decade avg):", round(usa_fpm_mort_avg %>% filter(year == "2000s") %>% pull(fpm_deaths)), "\n")
+# our result is higher because of 1) higher RR from Orellano and 2) not using a threshold, per Orellano
 
 # Fire as percentage of total mortality
-usa_fire_pct <- usa_fpm_mort %>%
-  filter(method == "Method 1") %>%
-  left_join(
-    usa_total_pm_mort %>% filter(fire_scenario == "With Fire"),
-    by = c("year", "rcp")
-  ) %>%
+# usa_fire_pct <- usa_fpm_mort %>%
+#   filter(method == "Method 1") %>%
+#   left_join(
+#     usa_total_pm_mort %>% filter(fire_scenario == "With Fire"),
+#     by = c("year", "rcp")
+#   ) %>%
+#   mutate(fpm_pm_pct = (fpm_deaths / pm_deaths) * 100)
+
+usa_fire_pct <- usa_fpm_mort_avg %>%
+  left_join(usa_total_pm_mort_avg, by = c("year", "rcp")) %>%
   mutate(fpm_pm_pct = (fpm_deaths / pm_deaths) * 100)
 
 print("Fire as % of Total PM Mortality (Method 1):")
@@ -264,21 +454,19 @@ print(usa_fire_pct)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Create summary tables for cleaner output
-temporal_trends <- usa_fpm_mort %>%
-  pivot_wider(names_from = method, values_from = fpm_deaths) %>%
+temporal_trends <- usa_fpm_mort_avg %>%
   arrange(year, rcp)
+
 
 cat("\n=== Fire PM Mortality Trends ===\n")
 print(temporal_trends)
 
 # Calculate percent changes from 2000 baseline
-baseline_m1 <- usa_fpm_mort %>% filter(year == "2000", method == "Method 1") %>% pull(fpm_deaths)
-baseline_m2 <- usa_fpm_mort %>% filter(year == "2000", method == "Method 2") %>% pull(fpm_deaths)
+baseline <- usa_fpm_mort %>% filter(year == "2001", method == "Method 1") %>% pull(fpm_deaths)
 
 temporal_pct_change <- temporal_trends %>%
   mutate(
-    m1_pct_change = (`Method 1` / baseline_m1 - 1) * 100,
-    m2_pct_change = (`Method 2` / baseline_m2 - 1) * 100
+    m1_pct_change = (`Method 1` / baseline - 1) * 100
   )
 
 cat("\n=== Percent Change from 2000 Baseline ===\n")
@@ -286,29 +474,22 @@ print(temporal_pct_change)
 
 # RCP comparisons
 rcp_comparison <- temporal_trends %>%
-  filter(year %in% c("2050", "2100")) %>%
+  filter(year %in% c("2041", "2091")) %>%
   group_by(year) %>%
   summarise(
     m1_rcp45 = `Method 1`[rcp == "45"],
     m1_rcp85 = `Method 1`[rcp == "85"],
-    m1_rcp_diff_pct = (m1_rcp85 / m1_rcp45 - 1) * 100,
-    m2_rcp45 = `Method 2`[rcp == "45"],
-    m2_rcp85 = `Method 2`[rcp == "85"],
-    m2_rcp_diff_pct = (m2_rcp85 / m2_rcp45 - 1) * 100
+    m1_rcp_diff_pct = (m1_rcp85 / m1_rcp45 - 1) * 100
+    # m2_rcp45 = `Method 2`[rcp == "45"],
+    # m2_rcp85 = `Method 2`[rcp == "85"],
+    # m2_rcp_diff_pct = (m2_rcp85 / m2_rcp45 - 1) * 100
   )
 
 cat("\n=== RCP 8.5 vs RCP 4.5 Comparison ===\n")
 print(rcp_comparison)
 
-cat("\n=== Method Comparison Summary ===\n")
-cat("Method 1 (Fractional): fpm_mort = pm_total_mort × (fpm / pm_total)\n")
-cat("Method 2 (Difference): fpm_mort = pm_total_mort - pm_noFire_mort\n")
-cat("\nMethod 2 gives HIGHER estimates\n")
-cat("\nFord et al 2018 used Method 1\n")
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Comparison with Pierce and Ford (method 1 ref only) ######################################################
+############ Comparison with Pierce and Ford ######################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Create comparison object for Ford et al and Pierce et al benchmarking
