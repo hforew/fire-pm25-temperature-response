@@ -457,16 +457,15 @@ print(usa_fire_pct)
 temporal_trends <- usa_fpm_mort_avg %>%
   arrange(year, rcp)
 
-
 cat("\n=== Fire PM Mortality Trends ===\n")
 print(temporal_trends)
 
 # Calculate percent changes from 2000 baseline
-baseline <- usa_fpm_mort %>% filter(year == "2001", method == "Method 1") %>% pull(fpm_deaths)
+baseline <- usa_fpm_mort_avg %>% filter(year == "2000s") %>% pull(fpm_deaths)
 
 temporal_pct_change <- temporal_trends %>%
   mutate(
-    m1_pct_change = (`Method 1` / baseline - 1) * 100
+    pct_change = (fpm_deaths / baseline - 1) * 100
   )
 
 cat("\n=== Percent Change from 2000 Baseline ===\n")
@@ -474,15 +473,12 @@ print(temporal_pct_change)
 
 # RCP comparisons
 rcp_comparison <- temporal_trends %>%
-  filter(year %in% c("2041", "2091")) %>%
+  filter(year %in% c("2040s", "2090s")) %>%
   group_by(year) %>%
   summarise(
-    m1_rcp45 = `Method 1`[rcp == "45"],
-    m1_rcp85 = `Method 1`[rcp == "85"],
-    m1_rcp_diff_pct = (m1_rcp85 / m1_rcp45 - 1) * 100
-    # m2_rcp45 = `Method 2`[rcp == "45"],
-    # m2_rcp85 = `Method 2`[rcp == "85"],
-    # m2_rcp_diff_pct = (m2_rcp85 / m2_rcp45 - 1) * 100
+    rcp45        = fpm_deaths[rcp == "45"],
+    rcp85        = fpm_deaths[rcp == "85"],
+    rcp_diff_pct = (rcp85 / rcp45 - 1) * 100
   )
 
 cat("\n=== RCP 8.5 vs RCP 4.5 Comparison ===\n")
@@ -493,64 +489,142 @@ print(rcp_comparison)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Create comparison object for Ford et al and Pierce et al benchmarking
-usa_ford_pierce_comp <- usa_fire_pct %>% # method 1 data
+usa_lit_comp <- usa_fire_pct %>% 
   select(year, rcp, fpm_deaths, pm_deaths, fpm_pm_pct)
 
 # Literature results from Ford et al 2018 and Pierce et al 2017
+# lit_results <- tibble(
+#   year = c(2000, 2050, 2050, 2100, 2100),
+#   rcp = c(NA, "45", "85", "45", "85"),
+#   # Ford et al 2018 results (Method 1)
+#   fpm_ford = c(17000, 42000, 32000, 32000, 44000),
+#   pm_ford = c(138000, 114000, 105000, 75000, 88000),
+#   fpm_pm_pct_ford = c(0.12, 0.37, 0.30, 0.43, 0.50),
+#   # Pierce et al 2017 results 
+#   fpm_pierce = c(20000, NA, 47000, NA, 65000),
+#   pm_pierce = c(165000, NA, 145000, NA, 125000),
+#   fpm_pm_pct_pierce = c(0.12, NA, 0.32, NA, 0.52)
+# )
+# 
+# # join as cbind (rows align perfectly):
+# usa_lit_comp <- usa_fire_pct %>%
+#   select(year, rcp, fpm_deaths, pm_deaths, fpm_pm_pct) %>%
+#   bind_cols(
+#     lit_results %>% select(fpm_ford, pm_ford, fpm_pm_pct_ford, 
+#                            fpm_pierce, pm_pierce, fpm_pm_pct_pierce)
+#   )
+
+# Create comparison object for Ford et al and Pierce et al benchmarking
+# lit_results <- tibble(
+#   year = c("2000s", "2040s", "2040s", "2090s", "2090s"),
+#   rcp  = c(NA, "45", "85", "45", "85"),
+#   # Ford et al 2018 results
+#   fpm_ford         = c(17000,  42000,  32000,  32000,  44000),
+#   pm_ford          = c(138000, 114000, 105000, 75000,  88000),
+#   fpm_pm_pct_ford  = c(0.12,   0.37,   0.30,   0.43,   0.50),
+#   # Pierce et al 2017 results
+#   fpm_pierce        = c(20000,  NA,     47000,  NA,     65000),
+#   pm_pierce         = c(165000, NA,     145000, NA,     125000),
+#   fpm_pm_pct_pierce = c(0.12,   NA,     0.32,   NA,     0.52)
+# )
+
 lit_results <- tibble(
-  year = c(2000, 2050, 2050, 2100, 2100),
-  rcp = c(NA, "45", "85", "45", "85"),
-  # Ford et al 2018 results (Method 1)
-  fpm_ford = c(17000, 42000, 32000, 32000, 44000),
-  pm_ford = c(138000, 114000, 105000, 75000, 88000),
-  fpm_pm_pct_ford = c(0.12, 0.37, 0.30, 0.43, 0.50),
-  # Pierce et al 2017 results 
-  fpm_pierce = c(20000, NA, 47000, NA, 65000),
-  pm_pierce = c(165000, NA, 145000, NA, 125000),
-  fpm_pm_pct_pierce = c(0.12, NA, 0.32, NA, 0.52)
+  year = c("2000s", "2010s", "2040s", "2046-2055", "2040s", "2090s", "2090s"),
+  rcp  = c(NA,      NA,      "45", "2-4.5",    "85",    "45",    "85"),
+  # Ford et al 2018 results
+  fpm_ford              = c(17000,  NA, NA,     42000,  32000,  32000,  44000),
+  pm_ford               = c(138000, NA, NA,     114000, 105000, 75000,  88000),
+  fpm_pm_pct_ford       = c(0.12,   NA, NA,     0.37,   0.30,   0.43,   0.50),
+  # Pierce et al 2017 results
+  fpm_pierce            = c(20000,  NA, NA,     47000,  NA,     65000,  NA),
+  pm_pierce             = c(165000, NA, NA,     145000, NA,     125000, NA),
+  fpm_pm_pct_pierce     = c(0.12,   NA, NA,     0.32,   NA,     0.52,   NA),
+  # Qiu et al 2024 EarthArXiv results
+  fpm_qiu2024_EarthArXiv = c(NA,    15800,  NA, 25000,     NA,     NA,     NA),
+  # Qiu et al 2025 Nature results
+  fpm_qiu2025_nature     = c(NA,    41380,  NA, 70279,     NA,     NA,     NA)
 )
 
-# join as cbind (rows align perfectly):
-usa_ford_pierce_comp <- usa_fire_pct %>%
+# Join on year and rcp 
+# usa_lit_comp <- usa_fire_pct %>%
+#   select(year, rcp, fpm_deaths, pm_deaths, fpm_pm_pct) %>%
+#   left_join(lit_results, by = c("year", "rcp"))
+
+usa_lit_comp <- usa_fire_pct %>%
   select(year, rcp, fpm_deaths, pm_deaths, fpm_pm_pct) %>%
-  bind_cols(
-    lit_results %>% select(fpm_ford, pm_ford, fpm_pm_pct_ford, 
-                           fpm_pierce, pm_pierce, fpm_pm_pct_pierce)
-  )
+  full_join(lit_results, by = c("year", "rcp"))
+
+usa_lit_comp <- usa_lit_comp %>% # custom row order
+  slice(1, 6, 2, 3, 7, 4, 5)
 
 print("\n=== USA vs Literature Comparison ===")
-print(usa_ford_pierce_comp)
+print(usa_lit_comp)
 
 # Prepare data for plotting
-plot_data <- usa_ford_pierce_comp %>%
+# plot_data <- usa_lit_comp %>%
+#   mutate(
+#     # Create x-axis label: baseline stays "2000s", future scenarios get "2040s\nRCP45" etc.
+#     scenario = case_when(
+#       year == "2000s" ~ "2000s",
+#       TRUE ~ paste0(year, "\nRCP", rcp)
+#     ),
+#     # Set display order of scenarios on x-axis
+#     scenario = factor(scenario, levels = c("2000s", "2040s\nRCP45", "2040s\nRCP85",
+#                                            "2090s\nRCP45", "2090s\nRCP85"))
+#   ) %>%
+#   # Keep only columns needed for plotting (drop rcp, year, pct columns)
+#   select(scenario, fpm_deaths, pm_deaths, fpm_ford, pm_ford, 
+#          fpm_pierce, pm_pierce) %>%
+#   # Reshape from wide (one column per source/metric) to long (one row per source/metric)
+#   pivot_longer(
+#     cols = -scenario,       # pivot all columns except scenario
+#     names_to = "variable",  # column names (e.g. "fpm_ford") become values in "variable"
+#     values_to = "deaths"    # death counts become values in "deaths"
+#   ) %>%
+#   mutate(
+#     # Classify each row as Fire PM or Total PM based on column name prefix
+#     metric = if_else(str_detect(variable, "^fpm"), "Fire PM", "Total PM"),
+#     # Classify each row by data source based on column name suffix
+#     source = case_when(
+#       str_detect(variable, "ford")   ~ "Ford et al 2018",
+#       str_detect(variable, "pierce") ~ "Pierce et al 2017",
+#       TRUE                           ~ "Our Estimate"       # fpm_deaths and pm_deaths
+#     )
+#   )
+
+plot_data <- usa_lit_comp %>%
   mutate(
-    # Create a combined x-axis label
+    # Create x-axis label: baseline stays "2000s", future scenarios get "2040s\nRCP45" etc.
     scenario = case_when(
-      year == "2000" ~ "2000",
+      year == "2000s" ~ "2000s",
+      year == "2010s" ~ "2010s",
       TRUE ~ paste0(year, "\nRCP", rcp)
     ),
-    # Order scenarios chronologically
-    scenario = factor(scenario, levels = c("2000", "2050\nRCP45", "2050\nRCP85", 
-                                           "2100\nRCP45", "2100\nRCP85"))
+    # Set display order of scenarios on x-axis
+    scenario = factor(scenario, levels = c("2000s", "2010s", "2040s\nRCP45", "2040s\nRCP85",
+                                           "2090s\nRCP45", "2090s\nRCP85"))
   ) %>%
-  select(scenario, fpm_deaths, pm_deaths, fpm_ford, pm_ford, 
-         fpm_pierce, pm_pierce) %>%
-  # Reshape for plotting
+  # Keep only columns needed for plotting (drop rcp, year, pct columns)
+  select(scenario, fpm_deaths, pm_deaths, fpm_ford, pm_ford,
+         fpm_pierce, pm_pierce, fpm_qiu2024_EarthArXiv, fpm_qiu2025_nature) %>%
+  # Reshape from wide (one column per source/metric) to long (one row per source/metric)
   pivot_longer(
-    cols = -scenario,
-    names_to = "variable",
-    values_to = "deaths"
+    cols = -scenario,       # pivot all columns except scenario
+    names_to = "variable",  # column names (e.g. "fpm_ford") become values in "variable"
+    values_to = "deaths"    # death counts become values in "deaths"
   ) %>%
   mutate(
-    # Separate metric (fire vs total) and source (ours, ford, pierce)
+    # Classify each row as Fire PM or Total PM based on column name prefix
     metric = if_else(str_detect(variable, "^fpm"), "Fire PM", "Total PM"),
+    # Classify each row by data source based on column name suffix
     source = case_when(
-      str_detect(variable, "ford") ~ "Ford et al 2018",
-      str_detect(variable, "pierce") ~ "Pierce et al 2017",
-      TRUE ~ "Our Estimate"
+      str_detect(variable, "ford")              ~ "Ford et al 2018",
+      str_detect(variable, "pierce")            ~ "Pierce et al 2017",
+      str_detect(variable, "qiu2024_EarthArXiv") ~ "Qiu et al 2024 EarthArXiv",
+      str_detect(variable, "qiu2025_nature")    ~ "Qiu et al 2025 Nature",
+      TRUE                                      ~ "Our Estimate"
     )
   )
-
 
 # Plot 1: Total PM Deaths 
 p1 <- plot_data %>%
@@ -578,14 +652,39 @@ p1 <- plot_data %>%
   )
 
 # Plot 2: Fire PM Deaths 
+# p2 <- plot_data %>%
+#   filter(metric == "Fire PM") %>%
+#   ggplot(aes(x = scenario, y = deaths, color = source)) +
+#   geom_point(size = 3) +
+#   scale_color_manual(
+#     values = c("Our Estimate" = "#2E86AB", 
+#                "Ford et al 2018" = "#A23B72", 
+#                "Pierce et al 2017" = "#F18F01")
+#   ) +
+#   scale_y_continuous(labels = scales::comma) +
+#   labs(
+#     title = "Fire PM2.5 Mortality - USA",
+#     subtitle = "Comparison with Literature",
+#     x = "Scenario",
+#     y = "Annual Deaths",
+#     color = "Source"
+#   ) +
+#   theme_minimal(base_size = 12) +
+#   theme(
+#     legend.position = "bottom",
+#     plot.title = element_text(face = "bold"),
+#     panel.grid.minor = element_blank()
+#   )
 p2 <- plot_data %>%
   filter(metric == "Fire PM") %>%
   ggplot(aes(x = scenario, y = deaths, color = source)) +
   geom_point(size = 3) +
   scale_color_manual(
-    values = c("Our Estimate" = "#2E86AB", 
-               "Ford et al 2018" = "#A23B72", 
-               "Pierce et al 2017" = "#F18F01")
+    values = c("Our Estimate"              = "#2E86AB", 
+               "Ford et al 2018"           = "#A23B72", 
+               "Pierce et al 2017"         = "#F18F01",
+               "Qiu et al 2024 EarthArXiv" = "#44BBA4",
+               "Qiu et al 2025 Nature"     = "#E94F37")
   ) +
   scale_y_continuous(labels = scales::comma) +
   labs(
@@ -602,6 +701,7 @@ p2 <- plot_data %>%
     panel.grid.minor = element_blank()
   )
 
+
 # Display plots
 print(p1)
 print(p2)
@@ -610,39 +710,60 @@ print(p2)
 ############ Mortality by Country Analysis ##############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Aggregate mortality by country (Method 1 only, excluding no-fire scenarios)
+# Aggregate mortality by country (excluding no-fire scenarios)
+# country_mortality <- pop_pm_country %>%
+#   # Exclude disputed territories (-99) and unmapped (NA)
+#   filter(!is.na(country_code_iso3) & country_code_iso3 != "-99") %>%
+#   group_by(country_code_iso3, country_name) %>%
+#   summarise(
+#     # Population
+#     total_pop = sum(pop_tot_2009, na.rm = TRUE),
+#     
+#     # Total PM mortality (with fire)
+#     pm_2000_mort = sum(pm_2000_mort, na.rm = TRUE),
+#     pm_2050_45_mort = sum(pm_2050_45_mort, na.rm = TRUE),
+#     pm_2050_85_mort = sum(pm_2050_85_mort, na.rm = TRUE),
+#     pm_2100_45_mort = sum(pm_2100_45_mort, na.rm = TRUE),
+#     pm_2100_85_mort = sum(pm_2100_85_mort, na.rm = TRUE),
+#     
+#     # Fire PM mortality (Method 1)
+#     fpm_2000_mort_m1 = sum(fpm_2000_mort_m1, na.rm = TRUE),
+#     fpm_2050_45_mort_m1 = sum(fpm_2050_45_mort_m1, na.rm = TRUE),
+#     fpm_2050_85_mort_m1 = sum(fpm_2050_85_mort_m1, na.rm = TRUE),
+#     fpm_2100_45_mort_m1 = sum(fpm_2100_45_mort_m1, na.rm = TRUE),
+#     fpm_2100_85_mort_m1 = sum(fpm_2100_85_mort_m1, na.rm = TRUE),
+#     
+#     .groups = "drop"
+#   ) %>%
+#   # Filter out countries with no population
+#   filter(total_pop > 0) %>%
+#   # Calculate fire as % of total for 2000 baseline
+#   mutate(
+#     fire_pct_2000 = (fpm_2000_mort_m1 / pm_2000_mort) * 100
+#   ) %>%
+#   # Sort by total PM mortality in 2000
+#   arrange(desc(pm_2000_mort))
+
 country_mortality <- pop_pm_country %>%
-  # Exclude disputed territories (-99) and unmapped (NA)
   filter(!is.na(country_code_iso3) & country_code_iso3 != "-99") %>%
-  group_by(country_code_iso3, country_name) %>%
+  group_by(country_code_iso3, country_name.x) %>%
   summarise(
-    # Population
-    total_pop = sum(pop_tot_2009, na.rm = TRUE),
-    
-    # Total PM mortality (with fire)
-    pm_2000_mort = sum(pm_2000_mort, na.rm = TRUE),
-    pm_2050_45_mort = sum(pm_2050_45_mort, na.rm = TRUE),
-    pm_2050_85_mort = sum(pm_2050_85_mort, na.rm = TRUE),
-    pm_2100_45_mort = sum(pm_2100_45_mort, na.rm = TRUE),
-    pm_2100_85_mort = sum(pm_2100_85_mort, na.rm = TRUE),
-    
-    # Fire PM mortality (Method 1)
-    fpm_2000_mort_m1 = sum(fpm_2000_mort_m1, na.rm = TRUE),
-    fpm_2050_45_mort_m1 = sum(fpm_2050_45_mort_m1, na.rm = TRUE),
-    fpm_2050_85_mort_m1 = sum(fpm_2050_85_mort_m1, na.rm = TRUE),
-    fpm_2100_45_mort_m1 = sum(fpm_2100_45_mort_m1, na.rm = TRUE),
-    fpm_2100_85_mort_m1 = sum(fpm_2100_85_mort_m1, na.rm = TRUE),
-    
+    total_pop            = sum(pop_tot_2001,       na.rm = TRUE),
+    pm_2000s_mort        = sum(pm_2000s_mort,      na.rm = TRUE),
+    pm_2040s_45_mort     = sum(pm_2040s_45_mort,   na.rm = TRUE),
+    pm_2040s_85_mort     = sum(pm_2040s_85_mort,   na.rm = TRUE),
+    pm_2090s_45_mort     = sum(pm_2090s_45_mort,   na.rm = TRUE),
+    pm_2090s_85_mort     = sum(pm_2090s_85_mort,   na.rm = TRUE),
+    fpm_2000s_mort       = sum(fpm_2000s_mort,     na.rm = TRUE),
+    fpm_2040s_45_mort    = sum(fpm_2040s_45_mort,  na.rm = TRUE),
+    fpm_2040s_85_mort    = sum(fpm_2040s_85_mort,  na.rm = TRUE),
+    fpm_2090s_45_mort    = sum(fpm_2090s_45_mort,  na.rm = TRUE),
+    fpm_2090s_85_mort    = sum(fpm_2090s_85_mort,  na.rm = TRUE),
     .groups = "drop"
   ) %>%
-  # Filter out countries with no population
   filter(total_pop > 0) %>%
-  # Calculate fire as % of total for 2000 baseline
-  mutate(
-    fire_pct_2000 = (fpm_2000_mort_m1 / pm_2000_mort) * 100
-  ) %>%
-  # Sort by total PM mortality in 2000
-  arrange(desc(pm_2000_mort))
+  mutate(fire_pct_2000s = (fpm_2000s_mort / pm_2000s_mort) * 100) %>%
+  arrange(desc(pm_2000s_mort))
 
 print("\n=== Top 20 Countries by Total PM Mortality (2000) ===")
 print(country_mortality %>% head(20))
@@ -1144,6 +1265,12 @@ cat("\nIncrease from +", round(gmt_baseline, 2), "°C to +", round(gmt_2100_85, 
 
 
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ SAVE OUTPUTS #################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+write_csv(country_mortality, here("output", "country_mortality.csv")) # save death all countries / scenarios
+write_csv(usa_fire_pct, here("output", "usa_fire_pct.csv")) # save death USA for scenarios 
 
 #### THE END
 
