@@ -30,16 +30,16 @@ print(gmt_chg)
 # Extract GMT scalars for each PM scenario period (pre-industrial baseline)
 gmt_baseline <- mean(c(gmt_chg$mean_gmt_45[gmt_chg$period == "2006-2010"],
                        gmt_chg$mean_gmt_85[gmt_chg$period == "2006-2010"]))
-gmt_2050_45  <- gmt_chg$mean_gmt_45[gmt_chg$period == "2041-2050"]
-gmt_2050_85  <- gmt_chg$mean_gmt_85[gmt_chg$period == "2041-2050"]
-gmt_2100_45  <- gmt_chg$mean_gmt_45[gmt_chg$period == "2091-2100"]
-gmt_2100_85  <- gmt_chg$mean_gmt_85[gmt_chg$period == "2091-2100"]
+gmt_2040s_45  <- gmt_chg$mean_gmt_45[gmt_chg$period == "2041-2050"]
+gmt_2040s_85  <- gmt_chg$mean_gmt_85[gmt_chg$period == "2041-2050"]
+gmt_2090s_45  <- gmt_chg$mean_gmt_45[gmt_chg$period == "2091-2100"]
+gmt_2090s_85  <- gmt_chg$mean_gmt_85[gmt_chg$period == "2091-2100"]
 
 gmt_baseline
-gmt_2050_45
-gmt_2050_85
-gmt_2100_45
-gmt_2100_85
+gmt_2040s_45
+gmt_2040s_85
+gmt_2090s_45
+gmt_2090s_85
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Mortality Equation Setup #####################################################
@@ -587,44 +587,43 @@ print(country_mortality %>% head(20))
 cat("\n=== Global Totals (All Countries) ===\n")
 country_mortality %>%
   summarise(
-    total_population = sum(total_pop),
-    pm_2000 = sum(pm_2000_mort),
-    pm_2050_45 = sum(pm_2050_45_mort),
-    pm_2050_85 = sum(pm_2050_85_mort),
-    pm_2100_45 = sum(pm_2100_45_mort),
-    pm_2100_85 = sum(pm_2100_85_mort),
-    fpm_2000_m1 = sum(fpm_2000_mort_m1),
-    fpm_2050_45_m1 = sum(fpm_2050_45_mort_m1),
-    fpm_2050_85_m1 = sum(fpm_2050_85_mort_m1),
-    fpm_2100_45_m1 = sum(fpm_2100_45_mort_m1),
-    fpm_2100_85_m1 = sum(fpm_2100_85_mort_m1)
+    total_pop_2001 = sum(total_pop_2001),
+    pm_2000s    = sum(pm_2000s_mort),
+    pm_2040s_45 = sum(pm_2040s_45_mort),
+    pm_2040s_85 = sum(pm_2040s_85_mort),
+    pm_2090s_45 = sum(pm_2090s_45_mort),
+    pm_2090s_85 = sum(pm_2090s_85_mort),
+    fpm_2000s    = sum(fpm_2000s_mort),
+    fpm_2040s_45 = sum(fpm_2040s_45_mort),
+    fpm_2040s_85 = sum(fpm_2040s_85_mort),
+    fpm_2090s_45 = sum(fpm_2090s_45_mort),
+    fpm_2090s_85 = sum(fpm_2090s_85_mort)
   ) %>%
   print()
 
 # Top 10 countries by fire PM mortality
-print("\n=== Top 10 Countries by Fire PM Mortality (2000, Method 1) ===")
+print("\n=== Top 10 Countries by Fire PM Mortality (2000s) ===")
 country_mortality %>%
-  select(country_name, country_code_iso3, fpm_2000_mort_m1, pm_2000_mort, fire_pct_2000) %>%
-  arrange(desc(fpm_2000_mort_m1)) %>%
+  select(country_name.x, country_code_iso3, fpm_2000s_mort, pm_2000s_mort, fire_pct_2000s) %>%
+  arrange(desc(fpm_2000s_mort)) %>%
   head(10) %>%
   print()
 
 # Countries with highest fire mortality as % of total
-print("\n=== Top 10 Countries by Fire as % of Total PM Mortality (2000) ===")
+print("\n=== Top 10 Countries by Fire as % of Total PM Mortality (2000s) ===")
 country_mortality %>%
-  filter(pm_2000_mort > 100) %>%  # Filter to countries with meaningful mortality
-  select(country_name, country_code_iso3, fpm_2000_mort_m1, pm_2000_mort, fire_pct_2000) %>%
-  arrange(desc(fire_pct_2000)) %>%
+  filter(pm_2000s_mort > 100) %>%
+  select(country_name.x, country_code_iso3, fpm_2000s_mort, pm_2000s_mort, fire_pct_2000s) %>%
+  arrange(desc(fire_pct_2000s)) %>%
   head(10) %>%
   print()
 
 # Temporal trends for top countries
 print("\n=== Fire PM Mortality Trends for Top 5 Countries ===")
 country_mortality %>%
-  select(country_name, starts_with("fpm_")) %>%
+  select(country_name.x, starts_with("fpm_")) %>%
   head(5) %>%
   print()
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Global Mortality Comparison Plots ##########################################
@@ -633,50 +632,35 @@ country_mortality %>%
 # Get global totals from country_mortality
 global_totals <- country_mortality %>%
   summarise(
-    fpm_deaths = sum(fpm_2000_mort_m1),
-    pm_deaths = sum(pm_2000_mort)
+    fpm_deaths = sum(fpm_2000s_mort),
+    pm_deaths  = sum(pm_2000s_mort)
   ) %>%
   mutate(
-    year = "2000",
+    year = "2000s",
     rcp = NA_character_,
     fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
   )
+
 
 # Add future scenarios
 global_totals_all <- bind_rows(
   global_totals,
   country_mortality %>%
-    summarise(
-      year = "2050",
-      rcp = "45",
-      fpm_deaths = sum(fpm_2050_45_mort_m1),
-      pm_deaths = sum(pm_2050_45_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
-    ),
+    summarise(year = "2040s", rcp = "45",
+              fpm_deaths = sum(fpm_2040s_45_mort), pm_deaths = sum(pm_2040s_45_mort),
+              fpm_pm_pct = (fpm_deaths / pm_deaths) * 100),
   country_mortality %>%
-    summarise(
-      year = "2050",
-      rcp = "85",
-      fpm_deaths = sum(fpm_2050_85_mort_m1),
-      pm_deaths = sum(pm_2050_85_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
-    ),
+    summarise(year = "2040s", rcp = "85",
+              fpm_deaths = sum(fpm_2040s_85_mort), pm_deaths = sum(pm_2040s_85_mort),
+              fpm_pm_pct = (fpm_deaths / pm_deaths) * 100),
   country_mortality %>%
-    summarise(
-      year = "2100",
-      rcp = "45",
-      fpm_deaths = sum(fpm_2100_45_mort_m1),
-      pm_deaths = sum(pm_2100_45_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
-    ),
+    summarise(year = "2090s", rcp = "45",
+              fpm_deaths = sum(fpm_2090s_45_mort), pm_deaths = sum(pm_2090s_45_mort),
+              fpm_pm_pct = (fpm_deaths / pm_deaths) * 100),
   country_mortality %>%
-    summarise(
-      year = "2100",
-      rcp = "85",
-      fpm_deaths = sum(fpm_2100_85_mort_m1),
-      pm_deaths = sum(pm_2100_85_mort),
-      fpm_pm_pct = (fpm_deaths / pm_deaths) * 100
-    )
+    summarise(year = "2090s", rcp = "85",
+              fpm_deaths = sum(fpm_2090s_85_mort), pm_deaths = sum(pm_2090s_85_mort),
+              fpm_pm_pct = (fpm_deaths / pm_deaths) * 100)
 )
 
 print("\n=== Global Mortality Totals ===")
