@@ -47,7 +47,7 @@ iso2_to_iso3 <- world_subset %>%
   filter(!is.na(iso_a2), iso_a2 != "", !is.na(iso_a3), iso_a3 != "")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ NEW Decision rule (NO 0.1° netCDF) #############################
+############ Decision rule (NO 0.1° netCDF) #############################
 ############ 0.5° cell assigned by MAX overlap area with country polygon ####
 ############ land_any = TRUE (land) if overlap exists, else FALSE (ocean) ###
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
