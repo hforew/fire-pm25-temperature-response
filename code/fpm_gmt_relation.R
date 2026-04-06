@@ -1,0 +1,192 @@
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## FPM–GMT RELATIONSHIP: Estimate alpha_c2 (per-capita fire PM2.5 change per 1°C GMT)
+##
+## Goal: For each country c, estimate the linear regression:
+##   exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps
+##
+## where T_ps is GMT change in period p under scenario s (°C relative to 1850–1900),
+## and alpha_c2 is the key damage function parameter: the change in per-capita fire
+## PM2.5 exposure (µg/m³/person/year) per 1°C increase in GMT.
+##
+## Data spans: baseline (~2001–2010), 2041–2050, and 2091–2100 under RCP4.5 and RCP8.5,
+## giving 5 (period × scenario) observations per country for the regression.
+##
+## Reference: writeup_GIVE_fPM_damage Section 2
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Remove all objects from the environment to start fresh
+rm(list = ls())
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Packages #####################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+library(here)       # for portable file paths relative to project root
+library(tidyverse)  # for data manipulation (dplyr, tidyr, purrr) and ggplot2
+library(tibble)     # for tidy data frames (part of tidyverse, loaded explicitly for clarity)
+library(broom)      # for tidy() and glance() to extract regression coefficients cleanly
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Import #####################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Import country-level per-capita fire PM2.5 exposure (µg/m³/person/year).
+# Each row is a country; columns include per-capita exposure for each period × scenario:
+#   exposure_percap_fpm_2000         --> baseline period (~2001–2010)
+#   exposure_percap_fpm_2050_45/85   --> 2041–2050 under RCP4.5 / RCP8.5
+#   exposure_percap_fpm_2100_45/85   --> 2091–2100 under RCP4.5 / RCP8.5
+pop_wght <- read_csv(here("output", "pop_wght_pm_cntry.csv"))
+
+# Import decadal mean GMT anomaly (°C relative to 1850–1900 pre-industrial baseline)
+# for each period × scenario combination.
+# Rows: "2006-2010" (baseline), "2041-2050", "2091-2100"
+# Columns: mean_gmt_45 (RCP4.5), mean_gmt_85 (RCP8.5)
+gmt_chg <- read_csv(here("output", "gmt_periods_pi.csv"))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Extract scalar GMT values for each period × scenario #######################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Baseline GMT: average of RCP4.5 and RCP8.5 for 2006–2010.
+# At this early period the two scenarios have not yet diverged, so we average them
+# to get a single baseline T value to pair with the observed baseline exposure.
+gmt_baseline <- mean(c(gmt_chg$mean_gmt_45[gmt_chg$period == "2006-2010"],
+                       gmt_chg$mean_gmt_85[gmt_chg$period == "2006-2010"]))
+
+# Future GMT values for each period × scenario (used as regressors T_ps)
+gmt_2040s_45 <- gmt_chg$mean_gmt_45[gmt_chg$period == "2041-2050"]
+gmt_2040s_85 <- gmt_chg$mean_gmt_85[gmt_chg$period == "2041-2050"]
+gmt_2090s_45 <- gmt_chg$mean_gmt_45[gmt_chg$period == "2091-2100"]
+gmt_2090s_85 <- gmt_chg$mean_gmt_85[gmt_chg$period == "2091-2100"]
+
+# Print GMT values to verify correct import
+cat("GMT baseline (2006-2010 avg):", gmt_baseline, "\n")
+cat("GMT 2040s RCP4.5:", gmt_2040s_45, "  RCP8.5:", gmt_2040s_85, "\n")
+cat("GMT 2090s RCP4.5:", gmt_2090s_45, "  RCP8.5:", gmt_2090s_85, "\n")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Reshape to long format for regression ######################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# We need one row per (country, period, scenario) with columns:
+#   country_code_iso3, country_name, T_ps (GMT), exposure_percap (µg/m³/person/yr)
+#
+# This long format lets us run a single lm() call per country across all 5 data points.
+
+# Step 1: Select only the identifier columns and the five per-capita exposure columns.
+#         Drop rows where all exposure values are NA (e.g., uninhabited territories).
+reg_data_wide <- pop_wght %>%
+  select(country_code_iso3,
+         country_name,
+         exposure_percap_fpm_2000,      # baseline period exposure
+         exposure_percap_fpm_2050_45,   # 2040s RCP4.5 exposure
+         exposure_percap_fpm_2050_85,   # 2040s RCP8.5 exposure
+         exposure_percap_fpm_2100_45,   # 2090s RCP4.5 exposure
+         exposure_percap_fpm_2100_85)   # 2090s RCP8.5 exposure
+
+# Step 2: Pivot to long format so each row is one (country, period×scenario) observation.
+#         The column name encodes which GMT value applies to that row.
+reg_data_long <- reg_data_wide %>%
+  pivot_longer(
+    cols      = starts_with("exposure_percap_fpm_"),  # the five exposure columns
+    names_to  = "period_scenario",                    # new column holding the column name
+    values_to = "exposure_percap"                     # new column holding the exposure value
+  ) %>%
+  # Step 3: Map each period×scenario label to its corresponding GMT value (T_ps).
+  #         This is the regressor in the country-level linear regression.
+  mutate(T_ps = case_when(
+    period_scenario == "exposure_percap_fpm_2000"    ~ gmt_baseline,   # baseline: avg of 45/85
+    period_scenario == "exposure_percap_fpm_2050_45" ~ gmt_2040s_45,   # 2040s RCP4.5
+    period_scenario == "exposure_percap_fpm_2050_85" ~ gmt_2040s_85,   # 2040s RCP8.5
+    period_scenario == "exposure_percap_fpm_2100_45" ~ gmt_2090s_45,   # 2090s RCP4.5
+    period_scenario == "exposure_percap_fpm_2100_85" ~ gmt_2090s_85    # 2090s RCP8.5
+  )) %>%
+  # Drop rows with missing exposure (uninhabited territories or missing data).
+  # Countries with NA exposure cannot contribute to the regression.
+  filter(!is.na(exposure_percap))
+
+# Inspect the reshaped data to confirm structure (5 rows per country)
+print(head(reg_data_long, 15))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Run country-level linear regression ########################################
+##
+## Model: exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps
+##
+## For each country c, we regress per-capita fire PM2.5 exposure on GMT (T_ps)
+## across the 5 (period × scenario) data points.
+##
+## alpha_c2 (slope) = change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase.
+## alpha_c1 (intercept) = predicted exposure at T_ps = 0 (pre-industrial GMT).
+##
+## Countries with fewer than 2 valid observations are dropped (cannot fit a line).
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Group by country and run one lm() per group using purrr::map inside nest().
+# The result is a list-column of tidy regression coefficient tables.
+reg_results <- reg_data_long %>%
+  group_by(country_code_iso3, country_name) %>%
+  # Keep only countries with at least 2 non-NA observations (minimum to fit a line)
+  filter(n() >= 2) %>%
+  # Nest all observations for each country into a sub-dataframe
+  nest() %>%
+  mutate(
+    # Fit OLS: exposure_percap ~ T_ps  (intercept + slope on GMT)
+    model = map(data, ~ lm(exposure_percap ~ T_ps, data = .x)),
+
+    # Extract tidy coefficient table (term, estimate, std.error, statistic, p.value)
+    tidied = map(model, tidy),
+
+    # Extract model-level fit statistics (r.squared, adj.r.squared, p.value, etc.)
+    glanced = map(model, glance)
+  )
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Extract alpha_c1 and alpha_c2 ############################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Unnest the tidy coefficient table and pivot so alpha_c1 and alpha_c2 are columns.
+# 'term' will be "(Intercept)" for alpha_c1 and "T_ps" for alpha_c2.
+reg_coefs <- reg_results %>%
+  select(country_code_iso3, country_name, tidied) %>%
+  unnest(tidied) %>%
+  # Rename the regression terms to the paper's notation for clarity
+  mutate(param = case_when(
+    term == "(Intercept)" ~ "alpha_c1",  # intercept: predicted exposure at T=0 (pre-industrial)
+    term == "T_ps"        ~ "alpha_c2"   # slope: exposure change per 1°C GMT (the key parameter)
+  )) %>%
+  select(country_code_iso3, country_name, param, estimate, std.error, statistic, p.value) %>%
+  # Pivot wide so each country has one row with columns alpha_c1 and alpha_c2
+  pivot_wider(
+    id_cols     = c(country_code_iso3, country_name),
+    names_from  = param,
+    values_from = c(estimate, std.error, statistic, p.value)
+  )
+
+# Inspect coefficient table
+print(head(reg_coefs, 10))
+cat("\nDimensions of regression coefficient table:", nrow(reg_coefs), "countries\n")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Summarise alpha_c2 distribution ##########################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Print summary statistics for alpha_c2 across all countries.
+# alpha_c2 > 0 means higher GMT → more fire PM2.5 exposure (expected for most countries).
+cat("\n--- Summary of alpha_c2 (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
+summary(reg_coefs$estimate_alpha_c2)
+
+# Count countries with positive vs. negative alpha_c2
+cat("\nCountries with positive alpha_c2 (more fire PM with warming):",
+    sum(reg_coefs$estimate_alpha_c2 > 0, na.rm = TRUE), "\n")
+cat("Countries with negative alpha_c2 (less fire PM with warming):",
+    sum(reg_coefs$estimate_alpha_c2 < 0, na.rm = TRUE), "\n")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Save output ##############################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Save the full coefficient table (alpha_c1, alpha_c2 with SEs and p-values) to CSV.
+# This is the primary output used downstream in the GIVE damage function.
+write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs.csv"))
+cat("\nSaved regression coefficients to output/fpm_gmt_regression_coefs.csv\n")

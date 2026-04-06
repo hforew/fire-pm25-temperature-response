@@ -115,9 +115,13 @@ pop_pm_country_death <- pop_pm_country %>%
     by = "country_code_iso3"  # Match on ISO3 country code
   )
 
+pop_pm_country_death <- pop_pm_country_death %>%
+  select(-country_name.y) %>%
+  rename(country_name = country_name.x)
+
 # Check for grid cells with missing death rates
 missing_death_rates <- pop_pm_country_death %>%
-  filter(is.na(death_rate_2001) & !is.na(country_name.x))  # Grid cells with country but no death rate
+  filter(is.na(death_rate_2001) & !is.na(country_name))  # Grid cells with country but no death rate
 
 cat("Grid cells with missing death rates:", nrow(missing_death_rates), "\n")
 
@@ -131,7 +135,7 @@ pop_pm_country_death <- pop_pm_country_death %>%
   mutate(across(
     .cols = starts_with("death_rate_"),  # Apply to all death_rate_YYYY columns
     .fns = ~ if_else(
-      is.na(.) & !is.na(country_name.x),  # If death rate is NA AND country name exists
+      is.na(.) & !is.na(country_name),  # If death rate is NA AND country name exists
       world_death_rates[[cur_column()]],  # Assign world rate for this year (cur_column() gets current column name)
       .  # Otherwise keep existing value
     )
@@ -139,7 +143,7 @@ pop_pm_country_death <- pop_pm_country_death %>%
 
 # Verify no missing death rates remain for grid cells with countries
 remaining_missing <- pop_pm_country_death %>%
-  filter(is.na(death_rate_2001) & !is.na(country_name.x))
+  filter(is.na(death_rate_2001) & !is.na(country_name))
 
 cat("Grid cells with missing death rates after world assignment:", nrow(remaining_missing), "\n")
 
@@ -157,14 +161,14 @@ print(world_wb)
 cat("\n=== Death rates in pop_pm_country_death ===\n")
 
 somaliland_final <- pop_pm_country_death %>%
-  filter(country_code_iso3 == "-99" & country_name.x == "Somaliland") %>%
-  distinct(country_code_iso3, country_name.x, death_rate_2001)
+  filter(country_code_iso3 == "-99" & country_name == "Somaliland") %>%
+  distinct(country_code_iso3, country_name, death_rate_2001)
 cat("Somaliland:\n")
 print(somaliland_final)
 
 flk_final <- pop_pm_country_death %>%
   filter(country_code_iso3 == "FLK") %>%
-  distinct(country_code_iso3, country_name.x, death_rate_2001)
+  distinct(country_code_iso3, country_name, death_rate_2001)
 cat("\nFalkland Islands:\n")
 print(flk_final)
 

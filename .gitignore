@@ -10,3 +10,4 @@
 .DS_Store
 code/python/regionmasks-popgrid.sav
 *.zip
+input/Zhao_etal_2025/gridded_output_EM/pop_0.1x0.1_2010.npz
