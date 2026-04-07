@@ -349,7 +349,13 @@ print(pop_wght_cntry_mort_summary %>% head(20))
 # Export country-level decade-average mortality
 write_csv(
   pop_wght_cntry_mort_summary,
-  here("output", "fpm_mort_pop_wght.csv")
+  here("output", "fpm_mort_pop_wght_summ.csv")
+)
+
+# Export country-level detailed data
+write_csv(
+  pop_wght_cntry_mort,
+  here("output", "pop_wght_cntry_mort.csv")
 )
 
 glimpse(pop_wght_cntry_mort_summary)
