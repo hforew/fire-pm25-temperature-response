@@ -81,7 +81,84 @@ pop_wght_pm_cntry <- pop_pm_country %>%
     .groups = "drop"
   )
 
-# exposure_percap_fpm_2000 = X_c^baseline (used in Section 5 excess mortality formula)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Join Death Rate and Compute Baseline Death Country Level ########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Extract one death_rate per country per year
+# death_rate is constant within country — take first non-NA row
+country_death_rate <- pop_pm_country %>%
+  filter(!is.na(country_code_iso3)) %>%
+  group_by(country_code_iso3, country_name) %>%
+  slice(1) %>%
+  ungroup() %>%
+  select(country_code_iso3, country_name,
+         all_of(paste0("death_rate_", 2001:2010)))
+
+# Join death rates to country-level pop-weighted PM
+pop_wght_pm_cntry <- pop_wght_pm_cntry %>%
+  left_join(country_death_rate, by = c("country_code_iso3", "country_name"))
+
+# Compute baseline expected deaths: base_death_yr = pop_tot_yr * death_rate_yr
+for (yr in 2001:2010) {
+  pop_col <- paste0("pop_tot_",    yr)
+  dr_col  <- paste0("death_rate_", yr)
+  bd_col  <- paste0("base_death_", yr)
+
+  pop_wght_pm_cntry <- pop_wght_pm_cntry %>%
+    # .data refers to the current dataframe; [[col]] selects the column whose name is stored in the string variable col
+    mutate(!!bd_col := .data[[pop_col]] * .data[[dr_col]])  # base_death_yr = pop_tot_yr * death_rate_yr
+}
+
+# Average baseline deaths across 2001-2010
+pop_wght_pm_cntry <- pop_wght_pm_cntry %>%
+  mutate(base_death_ave_2001_10 = rowMeans(
+    across(all_of(paste0("base_death_", 2001:2010))), na.rm = TRUE
+  ))
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Add Global Row #############################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+fpm_suffixes <- c("2000", "2050_45", "2050_85", "2100_45", "2100_85")
+
+# Extract Somaliland death rates as global death rate (assigned earlier in death rate data)
+somaliland_dr <- pop_pm_country %>%
+  filter(country_code_iso3 == "-99" & country_name == "Somaliland") %>%
+  slice(1) %>%
+  select(all_of(paste0("death_rate_", 2001:2010)))
+
+# Step 1: sum population, exposure, and base_death columns
+global_row <- pop_wght_pm_cntry %>%
+  summarise(
+    country_code_iso3 = "global",
+    country_name      = "global",
+    pop_bar_c         = sum(pop_bar_c,  na.rm = TRUE),
+    across(all_of(paste0("pop_tot_",      2001:2010)),    ~ sum(.x, na.rm = TRUE)),
+    across(all_of(paste0("exposure_fpm_", fpm_suffixes)), ~ sum(.x, na.rm = TRUE)),
+    across(all_of(paste0("base_death_",   2001:2010)),    ~ sum(.x, na.rm = TRUE))
+  )
+
+# Step 2: per-capita exposure = global total exposure / global pop_bar_c
+for (s in fpm_suffixes) {
+  global_row[[paste0("exposure_percap_fpm_", s)]] <-
+    global_row[[paste0("exposure_fpm_", s)]] / global_row$pop_bar_c
+}
+
+# Step 3: assign Somaliland death rates to global row
+for (yr in 2001:2010) {
+  dr_col <- paste0("death_rate_", yr)
+  global_row[[dr_col]] <- somaliland_dr[[dr_col]]
+}
+
+# Step 4: average baseline deaths across 2001-2010
+global_row$base_death_ave_2001_10 <- mean(
+  unlist(global_row[paste0("base_death_", 2001:2010)]), na.rm = TRUE
+)
+
+# Append global row
+pop_wght_pm_cntry <- bind_rows(pop_wght_pm_cntry, global_row)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Export #############################################################

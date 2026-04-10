@@ -11,7 +11,6 @@
 ## Data spans: baseline (~2001–2010), 2041–2050, and 2091–2100 under RCP4.5 and RCP8.5,
 ## giving 5 (period × scenario) observations per country for the regression.
 ##
-## Reference: writeup_GIVE_fPM_damage Section 2
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Remove all objects from the environment to start fresh
@@ -59,7 +58,7 @@ gmt_2040s_85 <- gmt_chg$mean_gmt_85[gmt_chg$period == "2041-2050"]
 gmt_2090s_45 <- gmt_chg$mean_gmt_45[gmt_chg$period == "2091-2100"]
 gmt_2090s_85 <- gmt_chg$mean_gmt_85[gmt_chg$period == "2091-2100"]
 
-# Print GMT values to verify correct import
+# Print GMT values 
 cat("GMT baseline (2006-2010 avg):", gmt_baseline, "\n")
 cat("GMT 2040s RCP4.5:", gmt_2040s_45, "  RCP8.5:", gmt_2040s_85, "\n")
 cat("GMT 2090s RCP4.5:", gmt_2090s_45, "  RCP8.5:", gmt_2090s_85, "\n")
@@ -117,9 +116,91 @@ print(head(reg_data_long, 15))
 ## across the 5 (period × scenario) data points.
 ##
 ## alpha_c2 (slope) = change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase.
-## alpha_c1 (intercept) = predicted exposure at T_ps = 0 (pre-industrial GMT).
+## alpha_c1 (intercept) = OLS-fitted y-intercept; a mathematical artefact of the line fit,
+##   not a meaningful estimate of exposure at pre-industrial temperatures. All observed
+##   T_ps values are ~1°C or higher, so T=0 lies outside the data range.
 ##
 ## Countries with fewer than 2 valid observations are dropped (cannot fit a line).
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ USA-only regression (diagnostic / inspection) ############################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Filter the long-format data to the United States only.
+# ISO3 code for the USA is "USA".
+usa_data <- reg_data_long %>%
+  filter(country_code_iso3 == "USA")
+
+# Print the USA data to inspect the 5 (period × scenario) observations and GMT values
+# that will serve as inputs to the regression.
+cat("\n--- USA regression input data ---\n")
+print(usa_data %>% select(period_scenario, T_ps, exposure_percap))
+
+# Fit the OLS regression for the USA:
+#   exposure_percap ~ T_ps
+#
+# lm() fits an ordinary least squares (OLS) linear model.
+#   - The first argument is a formula: response ~ predictor(s).
+#     Here, exposure_percap is the dependent variable (y) and T_ps is the independent
+#     variable (x). lm() automatically includes an intercept unless suppressed with -1.
+#   - The second argument, data =, specifies the data frame containing those variables.
+#   - lm() returns an object of class "lm" containing fitted coefficients, residuals,
+#     the model matrix, and metadata needed for summary(), predict(), and other methods.
+#   - With one predictor, the model is: y = beta_0 + beta_1 * x + epsilon,
+#     where beta_0 is the intercept (alpha_c1) and beta_1 is the slope (alpha_c2).
+#   - OLS minimises the sum of squared residuals to find beta_0 and beta_1.
+usa_model <- lm(exposure_percap ~ T_ps, data = usa_data)
+
+# summary() on an lm object prints:
+#   - Residuals: min, Q1, median, Q3, max of the fitted residuals
+#   - Coefficients table: estimate, standard error, t-statistic, p-value for each term
+#   - Residual standard error (RSE): average magnitude of residuals on the response scale
+#   - R-squared and adjusted R-squared: fraction of variance in y explained by the model
+#   - F-statistic and its p-value: tests whether the model explains significant variance
+#     relative to an intercept-only baseline
+cat("\n--- USA lm() summary ---\n")
+print(summary(usa_model))
+
+# Extract and label the two key coefficients explicitly for readability.
+# Note: alpha_c1 is the OLS y-intercept — the value the fitted line takes at T_ps = 0.
+# All observed T_ps values are ~1°C or above, so this is an extrapolation outside the
+# data range and should not be interpreted as a meaningful exposure estimate.
+usa_alpha_c1 <- coef(usa_model)[["(Intercept)"]]  # alpha_c1: OLS y-intercept (extrapolated)
+usa_alpha_c2 <- coef(usa_model)[["T_ps"]]          # alpha_c2: slope (µg/m³/yr per 1°C GMT)
+
+cat("\nUSA alpha_c1 (OLS intercept, extrapolated outside data range):", round(usa_alpha_c1, 6), "µg/m³/yr\n")
+cat("USA alpha_c2 (slope, fPM change per 1°C GMT):", round(usa_alpha_c2, 6), "µg/m³/yr per °C\n")
+
+# Extract R-squared to assess how well GMT explains USA per-capita fPM variation
+# across the 5 period × scenario data points.
+usa_r2 <- summary(usa_model)$r.squared
+cat("USA R-squared:", round(usa_r2, 4), "\n")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Global regression (diagnostic / inspection) ##############################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+global_data <- reg_data_long %>%
+  filter(country_name == "global")
+
+cat("\n--- Global regression input data ---\n")
+print(global_data %>% select(period_scenario, T_ps, exposure_percap))
+
+global_model <- lm(exposure_percap ~ T_ps, data = global_data)
+
+cat("\n--- Global lm() summary ---\n")
+print(summary(global_model))
+
+global_alpha_c1 <- coef(global_model)[["(Intercept)"]]
+global_alpha_c2 <- coef(global_model)[["T_ps"]]
+
+cat("\nGlobal alpha_c1 (OLS intercept, extrapolated outside data range):", round(global_alpha_c1, 6), "µg/m³/yr\n")
+cat("Global alpha_c2 (slope, fPM change per 1°C GMT):", round(global_alpha_c2, 6), "µg/m³/yr per °C\n")
+
+global_r2 <- summary(global_model)$r.squared
+cat("Global R-squared:", round(global_r2, 4), "\n")
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Group by country and run one lm() per group using purrr::map inside nest().
@@ -132,13 +213,13 @@ reg_results <- reg_data_long %>%
   nest() %>%
   mutate(
     # Fit OLS: exposure_percap ~ T_ps  (intercept + slope on GMT)
-    model = map(data, ~ lm(exposure_percap ~ T_ps, data = .x)),
+    model = purrr::map(data, ~ lm(exposure_percap ~ T_ps, data = .x)),
 
     # Extract tidy coefficient table (term, estimate, std.error, statistic, p.value)
-    tidied = map(model, tidy),
+    tidied = purrr::map(model, tidy),
 
     # Extract model-level fit statistics (r.squared, adj.r.squared, p.value, etc.)
-    glanced = map(model, glance)
+    glanced = purrr::map(model, glance)
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -152,7 +233,7 @@ reg_coefs <- reg_results %>%
   unnest(tidied) %>%
   # Rename the regression terms to the paper's notation for clarity
   mutate(param = case_when(
-    term == "(Intercept)" ~ "alpha_c1",  # intercept: predicted exposure at T=0 (pre-industrial)
+    term == "(Intercept)" ~ "alpha_c1",  # OLS y-intercept (extrapolated; T=0 outside data range)
     term == "T_ps"        ~ "alpha_c2"   # slope: exposure change per 1°C GMT (the key parameter)
   )) %>%
   select(country_code_iso3, country_name, param, estimate, std.error, statistic, p.value) %>%
@@ -190,3 +271,6 @@ cat("Countries with negative alpha_c2 (less fire PM with warming):",
 # This is the primary output used downstream in the GIVE damage function.
 write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs.csv"))
 cat("\nSaved regression coefficients to output/fpm_gmt_regression_coefs.csv\n")
+
+
+# THE END 
