@@ -1,453 +1,381 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-########### Import Park et al. 2024 PM2.5 Data by Model & Scenario ##########
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+########### Extract Year, Longitude, Latitude, and PM2.5 from NetCDF Files ##################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Remove all objects from the environment
 rm(list = ls())
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Packages #######################################################
+############ Packages #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-library(ncdf4)
 library(here)
 library(tidyverse)
+library(ncdf4)
+library(R.matlab)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Import Population Data #########################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-cat("=== Importing population data ===\n\n")
-
-pop_pm_combined <- read_csv(here("output", "pop_pm_combined.csv"))
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Function: Extract PM2.5 from NetCDF ############################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-extract_pm25 <- function(model, scenario, year) {
-  
-  file_path <- here("input", "Park_etal_2024", model, scenario,
-                    paste0("05x05_CEDS_", year, "_on_off_pm25_Surface_Re_yearavg.nc4"))
-  
-  nc <- nc_open(file_path)
-  lon <- ncvar_get(nc, "lon")
-  lat <- ncvar_get(nc, "lat")
-  pm25_var <- names(nc$var)[grep("pm25", names(nc$var), ignore.case = TRUE)][1]
-  pm25 <- ncvar_get(nc, pm25_var)
-  nc_close(nc)
-  
-  expand.grid(lon = lon, lat = lat) %>%
-    mutate(pm25 = as.vector(pm25), year = year)
-}
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Import All 6 Datasets ##########################################
+############ File Paths for All Scenarios ##################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 years <- c(1965, 1975, 1985, 1995, 2005, 2015)
 
-# Dataset 1: classic_counterclim
-classic_counterclim <- map_dfr(years, ~extract_pm25("classic", "counterclim", .x))
+# Scenario 1: withoutfire
+file_paths_withoutfire <- c(
+  here("input", "Park_etal_2024", "GEOSChem_output", "withoutfire", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "withoutfire", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "withoutfire", "05x05_CEDS_1985_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "withoutfire", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "withoutfire", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "withoutfire", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
+)
 
-# Dataset 2: classic_obsclim
-classic_obsclim <- map_dfr(years, ~extract_pm25("classic", "obsclim", .x))
+# Scenario 2: classic
+file_paths_classic <- c(
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_1985_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
+)
 
-# Dataset 3: jules_counterclim
-jules_counterclim <- map_dfr(years, ~extract_pm25("jules", "counterclim", .x))
+# Scenario 3: jules
+file_paths_jules <- c(
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_1985_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
+)
 
-# Dataset 4: jules_obsclim
-jules_obsclim <- map_dfr(years, ~extract_pm25("jules", "obsclim", .x))
-
-# Dataset 5: ssib4_counterclim
-ssib4_counterclim <- map_dfr(years, ~extract_pm25("ssib4", "counterclim", .x))
-
-# Dataset 6: ssib4_obsclim
-ssib4_obsclim <- map_dfr(years, ~extract_pm25("ssib4", "obsclim", .x))
+# Scenario 4: ssib4
+file_paths_ssib4 <- c(
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_1985_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
+)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Check if Coordinates are Cell Edges or Centers #################
+############ Function to Convert Grid Edge to Grid Center ##################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-cat("=== Checking Coordinate Type ===\n\n")
-
-# Extract unique lon and lat values
-lon_vals <- sort(unique(classic_counterclim$lon))
-lat_vals <- sort(unique(classic_counterclim$lat))
-
-# Calculate grid spacing
-lon_spacing <- diff(lon_vals)[1]
-lat_spacing <- diff(lat_vals)[1]
-
-cat("Longitude range:", min(lon_vals), "to", max(lon_vals), "\n")
-cat("Latitude range:", min(lat_vals), "to", max(lat_vals), "\n")
-cat("Longitude spacing:", lon_spacing, "degrees\n")
-cat("Latitude spacing:", lat_spacing, "degrees\n\n")
-
-# Check if coordinates align with cell edges or centers
-# For 0.5° resolution:
-# - Cell edges: -180, -179.5, -179, ... (starts at -180)
-# - Cell centers: -179.75, -179.25, -178.75, ... (offset by 0.25)
-
-cat("First longitude value:", lon_vals[1], "\n")
-cat("Last longitude value:", tail(lon_vals, 1), "\n")
-cat("First latitude value:", lat_vals[1], "\n")
-cat("Last latitude value:", tail(lat_vals, 1), "\n\n")
-
-# Determine if edges or centers
-if (min(lon_vals) == -180 || max(lon_vals) == 180) {
-  cat("DIAGNOSIS: Coordinates are CELL EDGES\n")
-  cat("Converting to CELL CENTERS by adding half grid spacing...\n\n")
-  is_edge <- TRUE
-} else {
-  cat("DIAGNOSIS: Coordinates are already CELL CENTERS\n")
-  is_edge <- FALSE
+convert_edge_to_center <- function(coords) {
+  # Check if coordinates are grid edges or centers
+  # Grid edges: start at exact values like -180, 0, etc.
+  # Grid centers: start at offset values like -179.75, 0.25, etc.
+  
+  # Get the first few values
+  first_val <- coords[1]
+  resolution <- mean(diff(coords))
+  
+  # Check if first value is a multiple of resolution (edge) or offset (center)
+  # For 0.5 degree grid:
+  # Edge starts at -180, -179.5, -179, ...
+  # Center starts at -179.75, -179.25, -178.75, ...
+  
+  # If coordinates are already at center, return as is
+  # If at edge, shift by half resolution
+  
+  # Simple check: if first value modulo resolution is close to 0, it's edge
+  remainder <- abs(first_val %% resolution)
+  
+  if (remainder < 0.01 || abs(remainder - resolution) < 0.01) {
+    # Grid edge detected - convert to center
+    coords_center <- coords + (resolution / 2)
+    return(coords_center)
+  } else {
+    # Already at grid center
+    return(coords)
+  }
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Convert Longitude from Edge to Center ##########################
+############ Function to Extract Data #######################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-cat("=== Checking Longitude Coordinates ===\n\n")
-
-# Check current longitude values
-lon_vals <- sort(unique(classic_counterclim$lon))
-lon_spacing <- diff(lon_vals)[1]
-
-cat("Current longitude range:", min(lon_vals), "to", max(lon_vals), "\n")
-cat("Longitude spacing:", lon_spacing, "degrees\n")
-cat("First few lon values:", head(lon_vals, 5), "\n\n")
-
-# Target: -179.75, -179.25, -178.75, ... (cell centers)
-# Current: -179.5, -179.0, -178.5, ... (cell edges)
-
-cat("Converting longitude from cell edges to cell centers...\n")
-cat("Shifting longitude by -0.25 degrees\n\n")
+extract_pm25_data <- function(file_paths, years, scenario_name) {
+  
+  pm25_list <- list()
+  
+  for (i in 1:length(file_paths)) {
+    
+    # Open NetCDF file
+    nc <- nc_open(file_paths[i])
+    
+    # Extract coordinates - use seq to ensure correct grid
+    # For 0.5 degree resolution: -179.75 to 179.75
+    lon <- seq(-179.75, 179.75, by = 0.5)  # 720 values
+    lat <- seq(-89.75, 89.75, by = 0.5)    # 360 values
+    
+    # Extract PM2.5 data
+    pm25_raw <- ncvar_get(nc, "PM25")
+    
+    # Check dimensions and extract surface data accordingly
+    dims <- dim(pm25_raw)
+    
+    if (length(dims) == 4) {
+      # 4D array: [lon, lat, lev, time]
+      pm25_surface <- pm25_raw[, , 1, 1]
+    } else if (length(dims) == 3) {
+      # 3D array: could be [lon, lat, time] or [lon, lat, lev]
+      pm25_surface <- pm25_raw[, , 1]
+    } else if (length(dims) == 2) {
+      # 2D array: [lon, lat]
+      pm25_surface <- pm25_raw
+    } else {
+      stop("Unexpected PM25 dimensions: ", paste(dims, collapse = " x "))
+    }
+    
+    # Close NetCDF file
+    nc_close(nc)
+    
+    # Create data frame with lon varying first
+    df <- expand.grid(
+      lon = lon,
+      lat = lat,
+      KEEP.OUT.ATTRS = FALSE,
+      stringsAsFactors = FALSE
+    )
+    
+    # Add PM2.5 - transpose if needed to match grid order
+    df$pm25 <- as.vector(pm25_surface)
+    df$year <- years[i]
+    
+    # Reorder columns
+    df <- df %>%
+      select(year, lon, lat, pm25)
+    
+    # Store in list
+    pm25_list[[i]] <- df
+  }
+  
+  # Combine all years
+  pm25_data <- bind_rows(pm25_list)
+  
+  # Rename pm25 column to include scenario name
+  pm25_data <- pm25_data %>%
+    rename(!!paste0("pm25_", scenario_name) := pm25)
+  
+  return(pm25_data)
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Apply Conversion to All 6 Datasets #############################
+############ Extract Data for All Scenarios #################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-classic_counterclim <- classic_counterclim %>%
-  mutate(lon = lon - 0.25)
-
-classic_obsclim <- classic_obsclim %>%
-  mutate(lon = lon - 0.25)
-
-jules_counterclim <- jules_counterclim %>%
-  mutate(lon = lon - 0.25)
-
-jules_obsclim <- jules_obsclim %>%
-  mutate(lon = lon - 0.25)
-
-ssib4_counterclim <- ssib4_counterclim %>%
-  mutate(lon = lon - 0.25)
-
-ssib4_obsclim <- ssib4_obsclim %>%
-  mutate(lon = lon - 0.25)
+# Extract data for each scenario
+withoutfire <- extract_pm25_data(file_paths_withoutfire, years, "withoutfire")
+classic <- extract_pm25_data(file_paths_classic, years, "classic")
+jules <- extract_pm25_data(file_paths_jules, years, "jules")
+ssib4 <- extract_pm25_data(file_paths_ssib4, years, "ssib4")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Verify Conversion ##############################################
+############ Merge All Scenarios by Year, Lon, Lat #########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-cat("=== Conversion Complete ===\n\n")
-
-new_lon_vals <- sort(unique(classic_counterclim$lon))
-cat("New longitude range:", min(new_lon_vals), "to", max(new_lon_vals), "\n")
-cat("First few lon values:", head(new_lon_vals, 5), "\n\n")
-
-cat("Sample data after conversion:\n")
-print(head(classic_counterclim, 10))
+# Merge all four datasets by year, lon, lat
+pm25_all <- withoutfire %>%
+  left_join(classic, by = c("year", "lon", "lat")) %>%
+  left_join(jules, by = c("year", "lon", "lat")) %>%
+  left_join(ssib4, by = c("year", "lon", "lat"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Merge Counterclim and Obsclim to Calculate Fire PM2.5 ##########
+############ Calculate Fire PM (Difference from Without Fire) ##############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-cat("=== Merging scenarios and calculating fire PM2.5 ===\n\n")
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Merge and Calculate fpm for Classic Model ######################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-classic <- classic_obsclim %>%
-  rename(pm25_obsclim = pm25) %>%                      # Rename pm25 to pm25_obsclim
-  left_join(
-    classic_counterclim %>% 
-      rename(pm25_counterclim = pm25),                 # Rename pm25 to pm25_counterclim
-    by = c("lon", "lat", "year")                       # Join on coordinates and year
-  ) %>%
+# Calculate fire PM for each model by subtracting withoutfire PM
+# Fire PM = Model PM - Without Fire PM
+pm25_all <- pm25_all %>%
   mutate(
-    fpm25 = pm25_obsclim - pm25_counterclim            # Fire PM2.5 = observed - counterfactual
-  ) %>%
-  select(lon, lat, year, pm25_counterclim, pm25_obsclim, fpm25)  # Reorder columns
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Merge and Calculate fpm for JULES Model ########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-jules <- jules_obsclim %>%
-  rename(pm25_obsclim = pm25) %>%
-  left_join(
-    jules_counterclim %>% 
-      rename(pm25_counterclim = pm25),
-    by = c("lon", "lat", "year")
-  ) %>%
-  mutate(
-    fpm25 = pm25_obsclim - pm25_counterclim
-  ) %>%
-  select(lon, lat, year, pm25_counterclim, pm25_obsclim, fpm25)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Merge and Calculate fpm for SSIB4 Model ########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-ssib4 <- ssib4_obsclim %>%
-  rename(pm25_obsclim = pm25) %>%
-  left_join(
-    ssib4_counterclim %>% 
-      rename(pm25_counterclim = pm25),
-    by = c("lon", "lat", "year")
-  ) %>%
-  mutate(
-    fpm25 = pm25_obsclim - pm25_counterclim
-  ) %>%
-  select(lon, lat, year, pm25_counterclim, pm25_obsclim, fpm25)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Verify Merged Datasets #########################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-cat("Classic dataset dimensions:", nrow(classic), "rows\n")
-cat("JULES dataset dimensions:", nrow(jules), "rows\n")
-cat("SSIB4 dataset dimensions:", nrow(ssib4), "rows\n\n")
-
-cat("Sample of classic dataset:\n")
-print(head(classic, 10))
-
-cat("\n\nSummary of fire PM2.5 (fpm25) for each model:\n")
-cat("\nClassic:\n")
-print(summary(classic$fpm25))
-
-cat("\nJULES:\n")
-print(summary(jules$fpm25))
-
-cat("\nSSIB4:\n")
-print(summary(ssib4$fpm25))
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Clean Up Individual Scenario Datasets ##########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Remove individual scenario datasets to save memory
-rm(classic_counterclim, classic_obsclim, 
-   jules_counterclim, jules_obsclim, 
-   ssib4_counterclim, ssib4_obsclim)
-
-cat("\n\n=== Merge complete! ===\n")
-cat("3 final datasets: classic, jules, ssib4\n")
-cat("Each contains: lon, lat, year, pm25_counterclim, pm25_obsclim, fpm25\n")
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Reshape Data from Long to Wide Format by Year ##################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-cat("=== Reshaping datasets from long to wide format ===\n\n")
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Reshape Classic Dataset ########################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-classic_wide <- classic %>%
-  pivot_wider(
-    id_cols = c(lon, lat),                             # Keep lon and lat as identifiers
-    names_from = year,                                 # Create columns for each year
-    values_from = c(pm25_counterclim, pm25_obsclim, fpm25),  # Spread these variables
-    names_glue = "{.value}_{year}_classic"             # Column naming: variable_year_classic
+    classic_fpm = pm25_classic - pm25_withoutfire,
+    jules_fpm = pm25_jules - pm25_withoutfire,
+    ssib4_fpm = pm25_ssib4 - pm25_withoutfire
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Reshape JULES Dataset ##########################################
+############ Create Final Two Datasets ######################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-jules_wide <- jules %>%
+# Dataset 1: Complete dataset with all PM columns and fire PM columns
+# Columns: year, lon, lat, pm25_withoutfire, pm25_classic, pm25_jules, pm25_ssib4, 
+#          classic_fpm, jules_fpm, ssib4_fpm
+pm25_all_complete <- pm25_all
+
+# Dataset 2: Dataset with only fire PM columns (removed all pm25_* columns)
+# Columns: year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm
+pm25_fpm_only <- pm25_all %>%
+  select(year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Convert Fire PM to Wide Format by Year ########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Convert pm25_fpm_only from long to wide format
+# Each model x year combination becomes a separate column
+# Example: classic_1965_fpm, classic_1975_fpm, ..., jules_1965_fpm, etc.
+
+pm25_fpm_wide <- pm25_fpm_only %>%
+  pivot_longer(
+    cols = c(classic_fpm, jules_fpm, ssib4_fpm),
+    names_to = "model",
+    values_to = "fpm"
+  ) %>%
+  mutate(
+    # Create column name: model_year_fpm (e.g., classic_1965_fpm)
+    model_year = paste0(gsub("_fpm", "", model), "_", year, "_fpm")
+  ) %>%
+  select(-model, -year) %>%
   pivot_wider(
-    id_cols = c(lon, lat),
-    names_from = year,
-    values_from = c(pm25_counterclim, pm25_obsclim, fpm25),
-    names_glue = "{.value}_{year}_jules"               # Column naming: variable_year_jules
-  )
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Reshape SSIB4 Dataset ##########################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-ssib4_wide <- ssib4 %>%
-  pivot_wider(
-    id_cols = c(lon, lat),
-    names_from = year,
-    values_from = c(pm25_counterclim, pm25_obsclim, fpm25),
-    names_glue = "{.value}_{year}_ssib4"               # Column naming: variable_year_ssib4
-  )
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Verify Wide Format #############################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-cat("Classic wide dimensions:", nrow(classic_wide), "rows x", ncol(classic_wide), "columns\n")
-cat("JULES wide dimensions:", nrow(jules_wide), "rows x", ncol(jules_wide), "columns\n")
-cat("SSIB4 wide dimensions:", nrow(ssib4_wide), "rows x", ncol(ssib4_wide), "columns\n\n")
-
-cat("Expected rows per dataset:", 720 * 360, "(720 lon × 360 lat)\n")
-cat("Expected columns per dataset:", 2 + 3*6, "(lon, lat + 18 variables)\n\n")
-
-cat("Column names in classic_wide:\n")
-print(colnames(classic_wide))
-
-cat("\n\nSample of classic_wide:\n")
-print(head(classic_wide))
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Clean Up Long Format Datasets ##################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Remove long format datasets to save memory
-rm(classic, jules, ssib4)
-
-cat("\n\n=== Reshape complete! ===\n")
-cat("3 wide datasets created: classic_wide, jules_wide, ssib4_wide\n")
-cat("Each contains:\n")
-cat("  - lon, lat (identifiers)\n")
-cat("  - pm25_counterclim_YEAR_MODEL (6 columns)\n")
-cat("  - pm25_obsclim_YEAR_MODEL (6 columns)\n")
-cat("  - fpm25_YEAR_MODEL (6 columns)\n")
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Merge Three Models and Rename Variables ########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-cat("=== Merging three models into single dataset ===\n\n")
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Step 1: Merge Classic, JULES, and SSIB4 ########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-pm_regrid_park <- classic_wide %>%
-  left_join(jules_wide, by = c("lon", "lat")) %>%      # Add JULES columns
-  left_join(ssib4_wide, by = c("lon", "lat"))          # Add SSIB4 columns
-
-cat("Merged dimensions:", nrow(pm_regrid_park), "rows x", ncol(pm_regrid_park), "columns\n\n")
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Step 2: Remove pm25_obsclim Variables ##########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-pm_regrid_park <- pm_regrid_park %>%
-  select(-starts_with("pm25_obsclim"))                 # Drop all obsclim columns
-
-cat("After removing obsclim:", ncol(pm_regrid_park), "columns\n\n")
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Step 3: Rename pm25_counterclim to pm25 ########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# Rename pm25_counterclim_YEAR_MODEL to pm25_YEAR_MODEL
-pm_regrid_park <- pm_regrid_park %>%
+    names_from = model_year,
+    values_from = fpm
+  ) %>%
+  # Add "park_" prefix to all columns except lon and lat
   rename_with(
-    ~ str_replace(.x, "pm25_counterclim_", "pm25_"),   # Remove "counterclim" from name
-    starts_with("pm25_counterclim")                    # Only for counterclim columns
+    ~ paste0("park_", .x),
+    .cols = -c(lon, lat)
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Step 4: Add _Park Suffix to All Variables ######################
+############ merge with pop_regrid_park_2024 and our master data ############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pop_pm_combined <- read.csv(here("output", "pop_pm_combined.csv"))
+pop_park <- read.csv(here("output", "pop_regrid_park_2024.csv"))
 
-pm_regrid_park <- pm_regrid_park %>%
-  rename_with(
-    ~ paste0(.x, "_Park"),                             # Add _Park suffix
-    -c(lon, lat)                                       # Except lon and lat
-  )
+# Merge pop_wide with pm25_fpm_wide by lon and lat
+pm25_pop_merged <- pm25_fpm_wide %>%
+  left_join(pop_park, by = c("lon", "lat"))
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Verify Final Dataset ###########################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Merge pm25_pop_merged with pop_pm_combined by lon and lat
+combined_data <- pop_pm_combined %>%
+  left_join(pm25_pop_merged, by = c("lon", "lat"))
 
-cat("\n=== Final dataset structure ===\n\n")
-cat("Dataset name: pm_regrid_park\n")
-cat("Dimensions:", nrow(pm_regrid_park), "rows x", ncol(pm_regrid_park), "columns\n\n")
+# Check the results
+dim(combined_data)  # Check dimensions
+head(combined_data)  # View first few rows
+summary(combined_data)  # Summary statistics
 
-cat("Column names:\n")
-print(colnames(pm_regrid_park))
+# Check for missing values after merge (indicates non-matching rows)
+sum(is.na(combined_data))  # Total NA count
 
-cat("\n\nSample data:\n")
-print(head(pm_regrid_park))
-
-cat("\n\nVariable count:\n")
-cat("  lon, lat: 2 columns\n")
-cat("  pm25_YEAR_MODEL_Park: 18 columns (6 years × 3 models)\n")
-cat("  fpm25_YEAR_MODEL_Park: 18 columns (6 years × 3 models)\n")
-cat("  Total: 38 columns\n")
+# Check if coordinates match perfectly
+anti_join(pop_pm_combined, pm25_pop_merged, by = c("lon", "lat"))  # Rows in pop_pm_combined not in pm25_pop_merged
+anti_join(pm25_pop_merged, pop_pm_combined, by = c("lon", "lat"))  # Rows in pm25_pop_merged not in pop_pm_combined
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Clean Up Individual Model Datasets #############################
+############ Validation: Convert Back to Matrix ############################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-rm(classic_wide, jules_wide, ssib4_wide)
+# Select park_classic_2015_fpm for validation
+fpm_vector <- combined_data$park_classic_2015_fpm
 
-cat("\n=== Merge and rename complete! ===\n")
+# Convert back to matrix format (720 lon x 360 lat)
+fpm_matrix <- matrix(fpm_vector, nrow = 720, ncol = 360)
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Join Park Data to Population Data ##############################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-cat("=== Joining Park et al. 2024 data to population data ===\n\n")
-
-# Check dimensions before join
-cat("Before join:\n")
-cat("  pop_pm_combined:", nrow(pop_pm_combined), "rows\n")
-cat("  pm_regrid_park:", nrow(pm_regrid_park), "rows\n\n")
-
-# Perform left join
-pop_pm_combined_withPark <- pop_pm_combined %>%
-  left_join(pm_regrid_park, by = c("lon", "lat"))      # Join on coordinates
+# Check results
+cat("\n=== Validation: Converted to Matrix ===\n")
+cat("Matrix dimensions:", dim(fpm_matrix), "\n")
+cat("\nFirst 5x5 corner:\n")
+print(fpm_matrix[1:5, 1:5])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Verify Join ####################################################
+############ Validation: Compare with Original MAT File ####################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-cat("After join:\n")
-cat("  pop_pm_combined_withPark:", nrow(pop_pm_combined_withPark), "rows x", 
-    ncol(pop_pm_combined_withPark), "columns\n\n")
+# Read the MAT file
+mat_data <- readMat(here("input", "Park_etal_2024", "results1206.mat"))
 
-# Check for missing values (indicates join issues)
-park_vars <- colnames(pop_pm_combined_withPark)[grep("_Park$", colnames(pop_pm_combined_withPark))]
-missing_count <- sum(is.na(pop_pm_combined_withPark[[park_vars[1]]]))
+# Extract Classic model data
+PMfire_classic <- mat_data$PMfire[[1]][[1]]  # Classic model: 360(lat) x 720(lon) x 6(years) x 2(scenarios)
 
-cat("Missing values in Park data:", missing_count, "\n")
-cat("Join success rate:", 
-    round((1 - missing_count/nrow(pop_pm_combined_withPark)) * 100, 2), "%\n\n")
+cat("\n=== Original MAT File ===\n")
+cat("PMfire_classic dimensions:", dim(PMfire_classic), "\n")
 
-cat("Sample of joined data:\n")
-print(head(pop_pm_combined_withPark))
+# Extract 2015 data (year 6, scenario 1)
+PMfire_classic_2015 <- PMfire_classic[, , 6, 1]  # 360 x 720
 
-cat("\n\nColumn names:\n")
-print(colnames(pop_pm_combined_withPark))
+# Convert our data to matrix and transpose to match
+fpm_vector <- combined_data$park_classic_2015_fpm
+fpm_matrix <- matrix(fpm_vector, nrow = 720, ncol = 360)
+fpm_matrix_t <- t(fpm_matrix)  # Now 360 x 720
 
-cat("\n=== Join complete! ===\n")
+# Round to some decimal places for comparison
+PMfire_rounded <- round(PMfire_classic_2015, 6)
+fpm_rounded <- round(fpm_matrix_t, 6)
+
+# Compare
+max_diff <- max(abs(fpm_rounded - PMfire_rounded))
+mean_diff <- mean(abs(fpm_rounded - PMfire_rounded))
+
+cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
+cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
+cat("Maximum difference:", max_diff, "\n")
+cat("Mean difference:", mean_diff, "\n")
+
+cat("\nFirst 5x5 from MAT file (rounded):\n")
+print(PMfire_rounded[1:5, 1:5])
+
+cat("\nFirst 5x5 from our data (rounded):\n")
+print(fpm_rounded[1:5, 1:5])
+
+if (max_diff == 0) {
+  cat("\n✓ SUCCESS: Matrices are identical at 4 decimal precision!\n")
+} else {
+  cat("\n✗ WARNING: Matrices differ at 4 decimal precision!\n")
+}
+
+
+# Truncate to some decimal places (keep only some digits after decimal)
+PMfire_truncated <- trunc(PMfire_classic_2015 * 1e6) / 1e6
+fpm_truncated <- trunc(fpm_matrix_t * 1e6) / 1e6
+
+# Compare
+max_diff <- max(abs(fpm_truncated - PMfire_truncated))
+mean_diff <- mean(abs(fpm_truncated - PMfire_truncated))
+
+cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
+cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
+cat("Maximum difference:", max_diff, "\n")
+cat("Mean difference:", mean_diff, "\n")
+
+cat("\nFirst 5x5 from MAT file (truncated):\n")
+print(PMfire_truncated[1:5, 1:5])
+
+cat("\nFirst 5x5 from our data (truncated):\n")
+print(fpm_truncated[1:5, 1:5])
+
+if (max_diff == 0) {
+  cat("\n✓ SUCCESS: Matrices are identical after truncation!\n")
+} else {
+  cat("\n✗ Difference remains:", max_diff, "\n")
+}
+
+# Find different cells
+diff_matrix <- fpm_matrix_t - PMfire_classic_2015
+diff_indices <- which(abs(diff_matrix) > 0, arr.ind = TRUE)
+
+cat("\nNumber of different cells:", nrow(diff_indices), "\n")
+if (nrow(diff_indices) > 0) {
+  cat("\nFirst 10 different cells:\n")
+  for (i in 1:min(20, nrow(diff_indices))) {
+    row <- diff_indices[i, 1]
+    col <- diff_indices[i, 2]
+    cat(sprintf("Position[%d,%d]: MAT=%.10f, Ours=%.10f, Diff=%.10e\n", 
+                row, col, PMfire_classic_2015[row, col], fpm_matrix_t[row, col], diff_matrix[row, col]))
+  }
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Save Final Dataset #############################################
+######################## save final master data to local ####################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-cat("=== Saving pop_pm_combined_withPark to output folder ===\n\n")
-
-# Save as CSV
-write_csv(pop_pm_combined_withPark, 
-          here("output", "pop_pm_combined_withPark.csv"))
-
-cat("File saved to:", here("output", "pop_pm_combined_withPark.csv"), "\n")
-cat("File size:", 
-    round(file.size(here("output", "pop_pm_combined_withPark.csv")) / 1024^2, 2), 
-    "MB\n\n")
-
-cat("=== Save complete! ===\n")
-
+write.csv(combined_data, here("output", "pop_pm_combined_with_park2024.csv"), row.names = FALSE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-######################### THE END############################################
+############ THE END ########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# THE END
