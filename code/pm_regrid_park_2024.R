@@ -12,6 +12,7 @@ rm(list = ls())
 library(here)
 library(tidyverse)
 library(ncdf4)
+library(R.matlab)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ File Paths for All Scenarios ##################################
@@ -264,6 +265,109 @@ sum(is.na(combined_data))  # Total NA count
 # Check if coordinates match perfectly
 anti_join(pop_pm_combined, pm25_pop_merged, by = c("lon", "lat"))  # Rows in pop_pm_combined not in pm25_pop_merged
 anti_join(pm25_pop_merged, pop_pm_combined, by = c("lon", "lat"))  # Rows in pm25_pop_merged not in pop_pm_combined
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Validation: Convert Back to Matrix ############################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Select park_classic_2015_fpm for validation
+fpm_vector <- combined_data$park_classic_2015_fpm
+
+# Convert back to matrix format (720 lon x 360 lat)
+fpm_matrix <- matrix(fpm_vector, nrow = 720, ncol = 360)
+
+# Check results
+cat("\n=== Validation: Converted to Matrix ===\n")
+cat("Matrix dimensions:", dim(fpm_matrix), "\n")
+cat("\nFirst 5x5 corner:\n")
+print(fpm_matrix[1:5, 1:5])
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Validation: Compare with Original MAT File ####################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Read the MAT file
+mat_data <- readMat(here("input", "Park_etal_2024", "results1206.mat"))
+
+# Extract Classic model data
+PMfire_classic <- mat_data$PMfire[[1]][[1]]  # Classic model: 360(lat) x 720(lon) x 6(years) x 2(scenarios)
+
+cat("\n=== Original MAT File ===\n")
+cat("PMfire_classic dimensions:", dim(PMfire_classic), "\n")
+
+# Extract 2015 data (year 6, scenario 1)
+PMfire_classic_2015 <- PMfire_classic[, , 6, 1]  # 360 x 720
+
+# Convert our data to matrix and transpose to match
+fpm_vector <- combined_data$park_classic_2015_fpm
+fpm_matrix <- matrix(fpm_vector, nrow = 720, ncol = 360)
+fpm_matrix_t <- t(fpm_matrix)  # Now 360 x 720
+
+# Round to some decimal places for comparison
+PMfire_rounded <- round(PMfire_classic_2015, 6)
+fpm_rounded <- round(fpm_matrix_t, 6)
+
+# Compare
+max_diff <- max(abs(fpm_rounded - PMfire_rounded))
+mean_diff <- mean(abs(fpm_rounded - PMfire_rounded))
+
+cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
+cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
+cat("Maximum difference:", max_diff, "\n")
+cat("Mean difference:", mean_diff, "\n")
+
+cat("\nFirst 5x5 from MAT file (rounded):\n")
+print(PMfire_rounded[1:5, 1:5])
+
+cat("\nFirst 5x5 from our data (rounded):\n")
+print(fpm_rounded[1:5, 1:5])
+
+if (max_diff == 0) {
+  cat("\n✓ SUCCESS: Matrices are identical at 4 decimal precision!\n")
+} else {
+  cat("\n✗ WARNING: Matrices differ at 4 decimal precision!\n")
+}
+
+
+# Truncate to some decimal places (keep only some digits after decimal)
+PMfire_truncated <- trunc(PMfire_classic_2015 * 1e6) / 1e6
+fpm_truncated <- trunc(fpm_matrix_t * 1e6) / 1e6
+
+# Compare
+max_diff <- max(abs(fpm_truncated - PMfire_truncated))
+mean_diff <- mean(abs(fpm_truncated - PMfire_truncated))
+
+cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
+cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
+cat("Maximum difference:", max_diff, "\n")
+cat("Mean difference:", mean_diff, "\n")
+
+cat("\nFirst 5x5 from MAT file (truncated):\n")
+print(PMfire_truncated[1:5, 1:5])
+
+cat("\nFirst 5x5 from our data (truncated):\n")
+print(fpm_truncated[1:5, 1:5])
+
+if (max_diff == 0) {
+  cat("\n✓ SUCCESS: Matrices are identical after truncation!\n")
+} else {
+  cat("\n✗ Difference remains:", max_diff, "\n")
+}
+
+# Find different cells
+diff_matrix <- fpm_matrix_t - PMfire_classic_2015
+diff_indices <- which(abs(diff_matrix) > 0, arr.ind = TRUE)
+
+cat("\nNumber of different cells:", nrow(diff_indices), "\n")
+if (nrow(diff_indices) > 0) {
+  cat("\nFirst 10 different cells:\n")
+  for (i in 1:min(20, nrow(diff_indices))) {
+    row <- diff_indices[i, 1]
+    col <- diff_indices[i, 2]
+    cat(sprintf("Position[%d,%d]: MAT=%.10f, Ours=%.10f, Diff=%.10e\n", 
+                row, col, PMfire_classic_2015[row, col], fpm_matrix_t[row, col], diff_matrix[row, col]))
+  }
+}
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ######################## save final master data to local ####################
