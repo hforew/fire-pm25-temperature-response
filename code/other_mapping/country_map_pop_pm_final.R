@@ -21,7 +21,8 @@ sf_use_s2(FALSE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Import #########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pop_pm_combined <- read_csv(here("output", "pop_pm_combined.csv"))
+#pop_pm_combined <- read_csv(here("output", "pop_pm_combined.csv"))
+pop_pm_combined <- read_csv(here("output", "pop_pm_combined_with_park2024.csv"))
 nrow(pop_pm_combined)
 colnames(pop_pm_combined)
 
@@ -217,7 +218,9 @@ pop_pm_final <- pop_pm_final %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Save final output ##############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-write_csv(pop_pm_final, here("output", "pop_pm_with_countries_rev.csv"))
+# write_csv(pop_pm_final, here("output", "pop_pm_with_countries_rev.csv"))
+write_csv(pop_pm_final, here("output", "pop_pm_with_countries_park.csv"))
+
 
 cat("\nCountry mapping complete!\n")
 cat("Output saved to: output/pop_pm_with_countries_rev.csv\n")

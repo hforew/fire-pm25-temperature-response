@@ -18,14 +18,16 @@ library(ncdf4)
 library(here)
 library(tidyverse)
 
-
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ File import #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 list.files(here("input/temperature"))
 
+temp_anom <- read_csv(
+  here("input/temperature/temperature-anomaly-OWID/temperature-anomaly.csv"),
+  show_col_types = FALSE
+)
 
 temp_45 <- nc_open(here("input/temperature", "af.tas.ccsm4.rcp45.2006-2300.nc"))
 print(temp_45)
@@ -350,8 +352,41 @@ gmt_periods_pi <- gmt_periods |>
 cat("\nGlobal Mean Temperature Change by Period (relative to pre-industrial):\n")
 print(gmt_periods_pi)
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Compute GMT Change for Park Decades ##############################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Park et al. 2024 uses snapshot years 1965, 1975, 1985, 1995, 2005, 2015,
+# each representing a full decade (e.g. 1965 --> 1960s = 1960-1969).
+# GMT for each decade is the mean annual anomaly from the OWID World series,
+# which is already expressed relative to the pre-industrial baseline.
+
+park_years   <- c(1965, 1975, 1985, 1995, 2005, 2015)
+decade_start <- floor(park_years / 10) * 10          # 1960, 1970, ..., 2010
+decade_end   <- decade_start + 9                      # 1969, 1979, ..., 2019
+
+# Filter OWID data to World series only
+temp_world <- temp_anom |>
+  filter(Entity == "World") |>
+  select(year = Year, gmt_obs = Average)
+
+# For each Park decade, average the observed annual GMT across the decade window
+gmt_park_decades <- map_dfr(seq_along(park_years), function(i) {
+  temp_world |>
+    filter(year >= decade_start[i], year <= decade_end[i]) |>
+    summarise(
+      park_year   = park_years[i],
+      decade      = paste0(decade_start[i], "s"),
+      mean_gmt_pi = mean(gmt_obs, na.rm = TRUE)
+    )
+})
+
+cat("\nGMT Change for Park Decades (relative to pre-industrial):\n")
+print(gmt_park_decades)
+
 # save output
 write_csv(gmt_periods_pi, here("output", "gmt_periods_pi.csv"))
+write_csv(gmt_park_decades, here("output", "gmt_park_decades.csv"))
 
 
 # THE END 

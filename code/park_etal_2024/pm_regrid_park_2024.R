@@ -373,6 +373,24 @@ if (nrow(diff_indices) > 0) {
 ######################## save final master data to local ####################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# rename columns for final save
+
+combined_data <- combined_data %>%
+  rename_with(
+    .cols = starts_with("park_"),  # Target only "park_" columns
+    .fn = function(x) {
+      for (y in years) {
+        # Replace each specific year with its corresponding decade
+        x <- str_replace_all(
+          x,
+          as.character(y),
+          paste0(floor(y / 10) * 10, "s")
+        )
+      }
+      x
+    }
+  )
+
 write.csv(combined_data, here("output", "pop_pm_combined_with_park2024.csv"), row.names = FALSE)
 
 # THE END

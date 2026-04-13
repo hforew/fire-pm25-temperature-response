@@ -17,7 +17,9 @@ library(tibble)
 ############ Import #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_rev.csv")) #may use pop_pm_with_countries_rev.csv for latest version
+# pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_rev.csv")) #may use pop_pm_with_countries_rev.csv for latest version
+pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_park.csv")) #may use pop_pm_with_countries_rev.csv for latest version
+
 colnames(pop_pm_country)
 
 # Import world bank death rates (World Bank Death rate, crude (per 1,000 people)) skipping metadata rows
@@ -32,22 +34,22 @@ colnames(wb_death_rate)
 ############ Process death rate data ################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Clean and prepare death rate data: keep 2001-2010, rename columns, convert to proportion
+# Clean and prepare death rate data: keep 1960-2020, rename columns, convert to proportion
 wb_death_rate_clean <- wb_death_rate %>%
-  # Select country info and years 2001-2010
+  # Select country info and years 1960-2020
   select(
     country_name = `Country Name`,
     country_code_iso3 = `Country Code`,
-    `2001`:`2010`
+    `1960`:`2020`
   ) %>%
   # Rename year columns to death_rate_YYYY format and divide by 1000 (convert to proportion)
   mutate(across( # applies the same operation to multiple columns at once.
-    .cols = `2001`:`2010`,  # .cols = which columns to transform (years 2001-2010)
+    .cols = `1960`:`2020`,  # .cols = which columns to transform (years 1960-2020)
     .fns = ~ .x / 1000,  # .fns = function to apply (.x represents each column's values)
     .names = "death_rate_{.col}"  # .names = naming pattern for new columns ({.col} = original column name)
   )) %>%
   # Remove original year columns (keep only renamed ones)
-  select(-(`2001`:`2010`))
+  select(-(`1960`:`2020`))
 
 # Verify structure
 cat("Rows:", nrow(wb_death_rate_clean), "\n")
@@ -125,7 +127,7 @@ missing_death_rates <- pop_pm_country_death %>%
 
 cat("Grid cells with missing death rates:", nrow(missing_death_rates), "\n")
 
-# Calculate world average death rates for each year (2001-2010)
+# Calculate world average death rates for each year (1960-2020)
 world_death_rates <- wb_death_rate_clean %>%
   filter(country_code_iso3 == "WLD") %>%  # Filter to world aggregate (WLD = World)
   select(starts_with("death_rate_"))  # Select only death rate columns
@@ -176,7 +178,8 @@ print(flk_final)
 ############ save output ################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write_csv(pop_pm_country_death, here("output", "pop_pm_country_death.csv"))
+# write_csv(pop_pm_country_death, here("output", "pop_pm_country_death.csv"))
+write_csv(pop_pm_country_death, here("output", "pop_pm_country_death_park.csv"))
 
 
 ## THE END 
