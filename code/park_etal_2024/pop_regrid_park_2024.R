@@ -25,8 +25,6 @@ years <- c(1965, 1975, 1985, 1995, 2005, 2015)
 
 # Create latitude and longitude coordinates
 # Source grid: matches PM2.5 data convention (lon -179.5 to 180, lat N-to-S)
-# 360 rows = latitudes from 89.75 to -89.75 (0.5 degree resolution, N to S)
-# 720 columns = longitudes from -179.5 to 180.0 (0.5 degree resolution)
 lat <- seq(89.75, -89.75, by = -0.5)   # 360 values, N to S
 lon <- seq(-179.5, 180.0, by = 0.5)    # 720 values
 
@@ -70,7 +68,7 @@ pop_long <- bind_rows(pop_list)
 ############ Regrid to Target Grid (-179.75 to 179.75) ######################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Target grid: lon -179.75 to 179.75, lat -89.75 to 89.75 (step 0.5)
-# Cell centers at .25/.75 — matches population data convention in Park et al.
+# Cell centers at .25/.75 — matches population/PM data convention in Park et al.
 r_target <- rast(
   nrows = 360, ncols = 720,
   xmin = -180, xmax = 180,
