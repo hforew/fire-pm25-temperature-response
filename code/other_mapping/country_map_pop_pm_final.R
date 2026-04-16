@@ -21,6 +21,10 @@ sf_use_s2(FALSE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Import #########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# import give countries for filtering full dataset (give countries in GIVE only)
+give_countries <- read_csv(here("input", "GIVE", "GIVE_countries.csv"))
+
 #pop_pm_combined <- read_csv(here("output", "pop_pm_combined.csv"))
 pop_pm_combined <- read_csv(here("output", "pop_pm_combined_with_park2024.csv"))
 nrow(pop_pm_combined)
@@ -210,6 +214,18 @@ pop_pm_final <- pop_pm_final %>%
       TRUE ~ country_code_iso3
     )
   )
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Filter to GIVE countries only ##################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+give_iso3 <- give_countries$ISO3
+
+cat("Rows before GIVE filter:", nrow(pop_pm_final), "\n")
+pop_pm_final <- pop_pm_final %>%
+  filter(country_code_iso3 %in% give_iso3)
+
+cat("Rows after GIVE filter:", nrow(pop_pm_final), "\n")
+cat("Countries retained:", n_distinct(pop_pm_final$country_code_iso3), "\n")
 
 # Drop columns
 pop_pm_final <- pop_pm_final %>%
