@@ -232,6 +232,27 @@ pop_pm_final <- pop_pm_final %>%
   select(-any_of(c("iso_a2", "country_id_major")))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Compare Pierce vs Park population data #########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pierce_usa <- sum(pop_pm_final$pop_tot_2005[pop_pm_final$country_code_iso3 == "USA"], na.rm = TRUE)
+park_usa   <- sum(pop_pm_final$park_2000s_pop[pop_pm_final$country_code_iso3 == "USA"], na.rm = TRUE)
+pierce_global <- sum(pop_pm_final$pop_tot_2005,      na.rm = TRUE)
+park_global   <- sum(pop_pm_final$park_2000s_pop,    na.rm = TRUE)
+
+cat("\n=== Pierce vs Park Population Comparison ===\n")
+# USA
+cat("\n--- USA ---\n")
+cat("Pierce pop_tot_2005 (USA):", formatC(pierce_usa, format = "f", digits = 0, big.mark = ","), "\n")
+cat("Park park_2000s_pop (USA):", formatC(park_usa,   format = "f", digits = 0, big.mark = ","), "\n")
+cat("Ratio Pierce/Park (USA):",   round(pierce_usa / park_usa, 4), "\n")
+
+# Global
+cat("\n--- Global ---\n")
+cat("Pierce pop_tot_2005 (global):", formatC(pierce_global, format = "f", digits = 0, big.mark = ","), "\n")
+cat("Park park_2000s_pop (global):", formatC(park_global,   format = "f", digits = 0, big.mark = ","), "\n")
+cat("Ratio Pierce/Park (global):",   round(pierce_global / park_global, 4), "\n")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Save final output ##############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # write_csv(pop_pm_final, here("output", "pop_pm_with_countries_rev.csv"))
