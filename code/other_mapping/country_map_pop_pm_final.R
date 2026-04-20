@@ -21,6 +21,10 @@ sf_use_s2(FALSE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Import #########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# import give countries for filtering full dataset (give countries in GIVE only)
+give_countries <- read_csv(here("input", "GIVE", "GIVE_countries.csv"))
+
 #pop_pm_combined <- read_csv(here("output", "pop_pm_combined.csv"))
 pop_pm_combined <- read_csv(here("output", "pop_pm_combined_with_park2024.csv"))
 nrow(pop_pm_combined)
@@ -211,9 +215,42 @@ pop_pm_final <- pop_pm_final %>%
     )
   )
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Filter to GIVE countries only ##################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+give_iso3 <- give_countries$ISO3
+
+cat("Rows before GIVE filter:", nrow(pop_pm_final), "\n")
+pop_pm_final <- pop_pm_final %>%
+  filter(country_code_iso3 %in% give_iso3)
+
+cat("Rows after GIVE filter:", nrow(pop_pm_final), "\n")
+cat("Countries retained:", n_distinct(pop_pm_final$country_code_iso3), "\n")
+
 # Drop columns
 pop_pm_final <- pop_pm_final %>%
   select(-any_of(c("iso_a2", "country_id_major")))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Compare Pierce vs Park population data #########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pierce_usa <- sum(pop_pm_final$pop_tot_2005[pop_pm_final$country_code_iso3 == "USA"], na.rm = TRUE)
+park_usa   <- sum(pop_pm_final$park_2000s_pop[pop_pm_final$country_code_iso3 == "USA"], na.rm = TRUE)
+pierce_global <- sum(pop_pm_final$pop_tot_2005,      na.rm = TRUE)
+park_global   <- sum(pop_pm_final$park_2000s_pop,    na.rm = TRUE)
+
+cat("\n=== Pierce vs Park Population Comparison ===\n")
+# USA
+cat("\n--- USA ---\n")
+cat("Pierce pop_tot_2005 (USA):", formatC(pierce_usa, format = "f", digits = 0, big.mark = ","), "\n")
+cat("Park park_2000s_pop (USA):", formatC(park_usa,   format = "f", digits = 0, big.mark = ","), "\n")
+cat("Ratio Pierce/Park (USA):",   round(pierce_usa / park_usa, 4), "\n")
+
+# Global
+cat("\n--- Global ---\n")
+cat("Pierce pop_tot_2005 (global):", formatC(pierce_global, format = "f", digits = 0, big.mark = ","), "\n")
+cat("Park park_2000s_pop (global):", formatC(park_global,   format = "f", digits = 0, big.mark = ","), "\n")
+cat("Ratio Pierce/Park (global):",   round(pierce_global / park_global, 4), "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Save final output ##############################################

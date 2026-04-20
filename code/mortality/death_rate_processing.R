@@ -162,17 +162,18 @@ print(world_wb)
 # In pop_pm_country_death (after join and world rate assignment)
 cat("\n=== Death rates in pop_pm_country_death ===\n")
 
-somaliland_final <- pop_pm_country_death %>%
-  filter(country_code_iso3 == "-99" & country_name == "Somaliland") %>%
-  distinct(country_code_iso3, country_name, death_rate_2001)
-cat("Somaliland:\n")
-print(somaliland_final)
-
-flk_final <- pop_pm_country_death %>%
-  filter(country_code_iso3 == "FLK") %>%
-  distinct(country_code_iso3, country_name, death_rate_2001)
-cat("\nFalkland Islands:\n")
-print(flk_final)
+# countries dropped (not in GIVE)
+# somaliland_final <- pop_pm_country_death %>%
+#   filter(country_code_iso3 == "-99" & country_name == "Somaliland") %>%
+#   distinct(country_code_iso3, country_name, death_rate_2001)
+# cat("Somaliland:\n")
+# print(somaliland_final)
+# 
+# flk_final <- pop_pm_country_death %>%
+#   filter(country_code_iso3 == "FLK") %>%
+#   distinct(country_code_iso3, country_name, death_rate_2001)
+# cat("\nFalkland Islands:\n")
+# print(flk_final)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ save output ################################
