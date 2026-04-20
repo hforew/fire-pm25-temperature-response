@@ -5,6 +5,7 @@
 # PM2.5 exposure per 1°C GMT increase) onto the country list used by the
 # GIVE integrated assessment model. The goal is to produce a country-coverage-
 # complete dataset suitable for use as a damage function input in GIVE.
+# outputs for regression with 1) pierce data only and 2) pierce and park data
 
 rm(list = ls())
 
@@ -27,6 +28,10 @@ colnames(give_countries)
 alpha_coeff <- read_csv(here("output", "fpm_gmt_regression_coefs.csv"))
 colnames(alpha_coeff)
 head(alpha_coeff)
+
+alpha_coeff_park <- read_csv(here("output", "fpm_gmt_regression_coefs_park.csv"))
+colnames(alpha_coeff_park)
+head(alpha_coeff_park)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Join #####################################################
@@ -55,6 +60,25 @@ give_alpha <- give_alpha %>%
     ~ if_else(is.na(.x), global_row[[cur_column()]], .x)
   ))
 
+# --- Park ---
+give_alpha_park <- give_countries %>%
+  left_join(alpha_coeff_park, by = c("ISO3" = "country_code_iso3"))
+
+missing_alpha_park <- give_alpha_park %>%
+  filter(is.na(estimate_alpha_c2)) %>%
+  select(ISO3, country)
+
+print(missing_alpha_park)
+
+global_row_park <- alpha_coeff_park %>% filter(country_code_iso3 == "global")
+
+give_alpha_park <- give_alpha_park %>%
+  mutate(across(
+    starts_with("estimate_") | starts_with("std.error_") |
+      starts_with("statistic_") | starts_with("p.value_"),
+    ~ if_else(is.na(.x), global_row_park[[cur_column()]], .x)
+  ))
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Export #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -64,3 +88,8 @@ alpha_country_meta <- give_alpha %>%
   select(ISO3, estimate_alpha_c2)
 
 write_csv(alpha_country_meta, here("output", "alpha_country_meta.csv"))
+
+alpha_country_meta_park <- give_alpha_park %>%
+  select(ISO3, estimate_alpha_c2)
+
+write_csv(alpha_country_meta_park, here("output", "alpha_country_meta_park.csv"))

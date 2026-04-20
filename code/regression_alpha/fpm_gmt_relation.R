@@ -35,8 +35,7 @@ library(broom)      # for tidy() and glance() to extract regression coefficients
 #   exposure_percap_fpm_2050_45/85   --> 2041–2050 under RCP4.5 / RCP8.5
 #   exposure_percap_fpm_2100_45/85   --> 2091–2100 under RCP4.5 / RCP8.5
 
-#pop_wght <- read_csv(here("output", "pop_wght_pm_cntry.csv"))
-pop_wght <- read_csv(here("output", "pop_wght_pm_cntry_park.csv"))
+pop_wght <- read_csv(here("output", "pop_wght_pm_cntry.csv"))
 
 
 # Import decadal mean GMT anomaly (°C relative to 1850–1900 pre-industrial baseline)
