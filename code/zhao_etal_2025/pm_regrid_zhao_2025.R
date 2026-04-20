@@ -23,6 +23,13 @@ pm_nf_SSP585 <- read.csv(
   stringsAsFactors = FALSE
 )
 
+# pm2.5 concentration with fire under SSP5-8.5
+pm_SSP585 <- read.csv(
+  here("input/Zhao_etal_2025/gridded_output", "SSP585_with fire.csv"),
+  stringsAsFactors = FALSE
+)
+
+head(pm_SSP585)
 head(pm_nf_SSP585)
 
 # pm2.5 concentration without fire under SSP2-4.5
@@ -31,6 +38,19 @@ pm_nf_SSP245 <- read.csv(
   stringsAsFactors = FALSE
 )
 
+# pm2.5 concentration with fire under SSP2-4.5
+pm_SSP245 <- read.csv(
+  here("input/Zhao_etal_2025/gridded_output", "SSP245_with fire.csv"),
+  stringsAsFactors = FALSE
+)
+
+head(pm_SSP245)
 head(pm_nf_SSP245)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Fire PM #####################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Per grid cell per scenario (245 or 585), fire pm (fpm) = pm_nf_ - pm_
 
 
