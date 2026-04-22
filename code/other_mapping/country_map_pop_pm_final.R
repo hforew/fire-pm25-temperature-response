@@ -26,7 +26,9 @@ sf_use_s2(FALSE)
 give_countries <- read_csv(here("input", "GIVE", "GIVE_countries.csv"))
 
 #pop_pm_combined <- read_csv(here("output", "pop_pm_combined.csv"))
-pop_pm_combined <- read_csv(here("output", "pop_pm_combined_with_park2024.csv"))
+# pop_pm_combined <- read_csv(here("output", "pop_pm_combined_with_park2024.csv"))
+ pop_pm_combined <- read_csv(here("output", "pop_pm_combined_final.csv"))
+
 nrow(pop_pm_combined)
 colnames(pop_pm_combined)
 
@@ -256,11 +258,12 @@ cat("Ratio Pierce/Park (global):",   round(pierce_global / park_global, 4), "\n"
 ############ Save final output ##############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # write_csv(pop_pm_final, here("output", "pop_pm_with_countries_rev.csv"))
-write_csv(pop_pm_final, here("output", "pop_pm_with_countries_park.csv"))
+# write_csv(pop_pm_final, here("output", "pop_pm_with_countries_park.csv"))
+write_csv(pop_pm_final, here("output", "pop_pm_with_countries_final.csv"))
 
 
 cat("\nCountry mapping complete!\n")
-cat("Output saved to: output/pop_pm_with_countries_rev.csv\n")
+cat("Output saved to: output/pop_pm_with_countries_final.csv\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Summary statistics #############################################

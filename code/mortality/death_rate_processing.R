@@ -18,7 +18,7 @@ library(tibble)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_rev.csv")) #may use pop_pm_with_countries_rev.csv for latest version
-pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_park.csv")) #may use pop_pm_with_countries_rev.csv for latest version
+pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_final.csv")) # includes pierce, park, zhao data
 
 colnames(pop_pm_country)
 
@@ -180,7 +180,8 @@ cat("\n=== Death rates in pop_pm_country_death ===\n")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # write_csv(pop_pm_country_death, here("output", "pop_pm_country_death.csv"))
-write_csv(pop_pm_country_death, here("output", "pop_pm_country_death_park.csv"))
+# write_csv(pop_pm_country_death, here("output", "pop_pm_country_death_park.csv"))
+write_csv(pop_pm_country_death, here("output", "pop_pm_country_death_final.csv"))
 
 
 ## THE END 

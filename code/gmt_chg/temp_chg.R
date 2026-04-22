@@ -24,12 +24,30 @@ library(tidyverse)
 
 list.files(here("input/temperature"))
 
+# our world in data --- used for historical Park period
 temp_anom <- read_csv(
   here("input/temperature/temperature-anomaly-OWID/temperature-anomaly.csv"),
   show_col_types = FALSE
 )
 
-temp_45 <- nc_open(here("input/temperature", "af.tas.ccsm4.rcp45.2006-2300.nc"))
+# MimiSSP data, which we apply to the Zhao et al 2025 fire PM simulations 
+temp_mimiSSP245 <- read_csv(
+  here("input/temperature/MimiSSP/temperature_data-SSP245.csv"),
+  show_col_types = FALSE
+)
+
+temp_mimiSSP585 <- read_csv(
+  here("input/temperature/MimiSSP/temperature_data-SSP585.csv"),
+  show_col_types = FALSE
+)
+
+colnames(temp_anom)
+colnames(temp_mimiSSP245)
+colnames(temp_mimiSSP585)
+head(temp_mimiSSP245)
+
+# Pierce et al data --- temperature change used is Pierce et al CESM simulations
+temp_45 <- nc_open(here("input/temperature/pierce_etal_2017", "af.tas.ccsm4.rcp45.2006-2300.nc"))
 print(temp_45)
 
 # Primary Data Variable temp_45
@@ -67,15 +85,12 @@ print(temp_45)
 # Model: CCSM4 (Community Climate System Model version 4)
 
 
-temp_85 <- nc_open(here("input/temperature", "af.tas.ccsm4.rcp85.2006-2300.nc"))
+temp_85 <- nc_open(here("input/temperature/pierce_etal_2017", "af.tas.ccsm4.rcp85.2006-2300.nc"))
 print(temp_85)
 
 # temp_85 has identical file structure to temp_45, for RCP8.5.  
 
 # Area will be computed directly from coordinates using Method 3 (WGS84) — see below
-
-
-
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ confirm if grid cell edges / centers #####################################################
@@ -128,7 +143,7 @@ cat("tas_45 NA fraction:", mean(is.na(tas_45)), "\n")
 cat("tas_85 NA fraction:", mean(is.na(tas_85)), "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Compute grid cell areas — Method 2 (spherical Earth) ############
+############ Compute grid cell areas — Method (spherical Earth) ############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Method : area = R² × dlon_rad × (sin(lat_upper_rad) - sin(lat_lower_rad))
@@ -234,6 +249,7 @@ unique_years <- unique(time_years)   # 295 years: 2006-2300
 tas_45_annual <- array(NA, dim = c(288, 192, length(unique_years)))
 tas_85_annual <- array(NA, dim = c(288, 192, length(unique_years)))
 
+# NOTE: Loop takes 20+ minutes to run 
 # Loop over each of the 295 unique years (2006, 2007, ..., 2300)
 for (i in seq_along(unique_years)) {
   

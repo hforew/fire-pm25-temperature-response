@@ -21,7 +21,8 @@ library(tibble)
 # Import combined data
 # pop_pm_country <- read_csv(here("output", "pop_pm_with_countries.csv"))
 # pop_pm_country <- read_csv(here("output", "pop_pm_country_death.csv"))
-pop_pm_country <- read_csv(here("output", "pop_pm_country_death_park.csv"))
+# pop_pm_country <- read_csv(here("output", "pop_pm_country_death_park.csv"))
+pop_pm_country <- read_csv(here("output", "pop_pm_country_death_final.csv"))
 
 colnames(pop_pm_country)
 
@@ -49,13 +50,15 @@ pop_pm_country <- pop_pm_country %>%
 #
 # fpm_* columns are already decadal averages, so 1/10 * sum_t collapses to the column value
 
-# pierce data FPM 
+# pierce data FPM + Zhao et al. 2025
 fpm_cols <- c(
   "fpm_2000",
   "fpm_2050_45",
   "fpm_2050_85",
   "fpm_2100_45",
-  "fpm_2100_85"
+  "fpm_2100_85",
+  "fpm_2095_SSP245_Zhao",
+  "fpm_2095_SSP585_Zhao"
 )
 
 # Park et al. fPM column names: park_{model}_{decade}_fpm (18 columns: 3 models x 6 decades)
@@ -138,8 +141,8 @@ pop_wght_pm_cntry %>%
 ############ Add Global Row #############################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# pierce data
-fpm_suffixes <- c("2000", "2050_45", "2050_85", "2100_45", "2100_85")
+# pierce data + Zhao et al. 2025
+fpm_suffixes <- c("2000", "2050_45", "2050_85", "2100_45", "2100_85", "2095_SSP245_Zhao", "2095_SSP585_Zhao")
 
 # World average baseline death rate: mean of WLD crude death rate 2001-2010, from World Bank data
 wb_death_rate <- read_csv(
@@ -217,7 +220,8 @@ colnames(pop_wght_pm_cntry)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # write_csv(pop_wght_pm_cntry, here("output", "pop_wght_pm_cntry.csv"))
-write_csv(pop_wght_pm_cntry, here("output", "pop_wght_pm_cntry_park.csv"))
+# write_csv(pop_wght_pm_cntry, here("output", "pop_wght_pm_cntry_park.csv"))
+write_csv(pop_wght_pm_cntry, here("output", "pop_wght_pm_cntry_final.csv"))
 
 glimpse(pop_wght_pm_cntry)
 
