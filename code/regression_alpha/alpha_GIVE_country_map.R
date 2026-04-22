@@ -5,7 +5,7 @@
 # PM2.5 exposure per 1°C GMT increase) onto the country list used by the
 # GIVE integrated assessment model. The goal is to produce a country-coverage-
 # complete dataset suitable for use as a damage function input in GIVE.
-# outputs for regression with 1) pierce data only and 2) pierce and park data
+# outputs for regression with 1) pierce only, 2) pierce + park, 3) pierce + park + zhao
 
 rm(list = ls())
 
@@ -32,6 +32,10 @@ head(alpha_coeff)
 alpha_coeff_park <- read_csv(here("output", "fpm_gmt_regression_coefs_park.csv"))
 colnames(alpha_coeff_park)
 head(alpha_coeff_park)
+
+alpha_coeff_final <- read_csv(here("output", "fpm_gmt_regression_coefs_final.csv"))
+colnames(alpha_coeff_final)
+head(alpha_coeff_final)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Join #####################################################
@@ -79,17 +83,41 @@ give_alpha_park <- give_alpha_park %>%
     ~ if_else(is.na(.x), global_row_park[[cur_column()]], .x)
   ))
 
+# --- Final (Pierce, Park, and Zhao data---
+give_alpha_final <- give_countries %>%
+  left_join(alpha_coeff_final, by = c("ISO3" = "country_code_iso3"))
+
+missing_alpha_final <- give_alpha_final %>%
+  filter(is.na(estimate_alpha_c2)) %>%
+  select(ISO3, country)
+
+print(missing_alpha_final)
+
+global_row_final <- alpha_coeff_final %>% filter(country_code_iso3 == "global")
+
+give_alpha_final <- give_alpha_final %>%
+  mutate(across(
+    starts_with("estimate_") | starts_with("std.error_") |
+      starts_with("statistic_") | starts_with("p.value_"),
+    ~ if_else(is.na(.x), global_row_final[[cur_column()]], .x)
+  ))
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Export #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Keep only GIVE country identifier and the key damage function parameter.
 alpha_country_meta <- give_alpha %>%
-  select(ISO3, estimate_alpha_c2)
+  select(ISO3, estimate_alpha_c2, std.error_alpha_c2)
 
 write_csv(alpha_country_meta, here("output", "alpha_country_meta.csv"))
 
 alpha_country_meta_park <- give_alpha_park %>%
-  select(ISO3, estimate_alpha_c2)
+  select(ISO3, estimate_alpha_c2, std.error_alpha_c2)
 
 write_csv(alpha_country_meta_park, here("output", "alpha_country_meta_park.csv"))
+
+alpha_country_meta_final <- give_alpha_final %>%
+  select(ISO3, estimate_alpha_c2, std.error_alpha_c2)
+
+write_csv(alpha_country_meta_final, here("output", "alpha_country_meta_final.csv"))

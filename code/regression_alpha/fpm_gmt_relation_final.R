@@ -61,6 +61,11 @@ gmt_chg <- read_csv(here("output", "gmt_periods_pi.csv"))
 # Columns: park_year, decade, mean_gmt_pi
 gmt_park <- read_csv(here("output", "gmt_park_decades.csv"))
 
+# Import Zhao et al. ~2095 GMT anomalies (°C relative to pre-industrial baseline)
+# Rows: SSP245, SSP585 --- these temp changes assigned to Zhao but sourced from MimiSSPs 
+# Columns: scenario, mean_gmt_pi
+gmt_zhao <- read_csv(here("output", "gmt_zhao_mimi.csv"))
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Extract scalar GMT values for each period × scenario #######################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,15 +82,9 @@ gmt_2040s_85 <- gmt_chg$mean_gmt_85[gmt_chg$period == "2041-2050"]
 gmt_2090s_45 <- gmt_chg$mean_gmt_45[gmt_chg$period == "2091-2100"]
 gmt_2090s_85 <- gmt_chg$mean_gmt_85[gmt_chg$period == "2091-2100"]
 
-# TEMPORARY HARDCODED: Zhao et al. ~2095 GMT anomalies (°C vs PI baseline) — replace with
-# values derived from actual SSP GMT data when available.
-gmt_2090s_245 <- 2.7   # Zhao SSP2-4.5 ~2095
-gmt_2090s_585 <- 4.5   # Zhao SSP5-8.5 ~2095
-
-# Print GMT values
-cat("GMT baseline (2006-2010 avg):", gmt_baseline, "\n")
-cat("GMT 2040s RCP4.5:", gmt_2040s_45, "  RCP8.5:", gmt_2040s_85, "\n")
-cat("GMT 2090s RCP4.5:", gmt_2090s_45, "  RCP8.5:", gmt_2090s_85, "\n")
+# Zhao et al. ~2095 GMT scalars from gmt_zhao_mimi.csv
+gmt_2090s_245 <- gmt_zhao$mean_gmt_pi[gmt_zhao$scenario == "SSP245"]
+gmt_2090s_585 <- gmt_zhao$mean_gmt_pi[gmt_zhao$scenario == "SSP585"]
 
 # Park decade GMT scalars — one per decade, indexed by park_year (reliable numeric).
 # Mirrors the future GMT scalar pattern above: one named object per observation type.
@@ -96,8 +95,19 @@ gmt_1990s <- gmt_park$mean_gmt_pi[gmt_park$park_year == 1995]   # 1990s decade m
 gmt_2000s <- gmt_park$mean_gmt_pi[gmt_park$park_year == 2005]   # 2000s decade mean GMT
 gmt_2010s <- gmt_park$mean_gmt_pi[gmt_park$park_year == 2015]   # 2010s decade mean GMT
 
+
+# Print GMT values
+# pierce
+cat("GMT baseline (2006-2010 avg):", gmt_baseline, "\n")
+cat("GMT 2040s RCP4.5:", gmt_2040s_45, "  RCP8.5:", gmt_2040s_85, "\n")
+cat("GMT 2090s RCP4.5:", gmt_2090s_45, "  RCP8.5:", gmt_2090s_85, "\n")
+
+# park 
 cat("GMT 1960s:", gmt_1960s, " 1970s:", gmt_1970s, " 1980s:", gmt_1980s, "\n")
 cat("GMT 1990s:", gmt_1990s, " 2000s:", gmt_2000s, " 2010s:", gmt_2010s, "\n")
+
+# Zhao (MimiSSPs)
+cat("GMT SSP245 2095-99:", gmt_2090s_245, "GMT SSP585 2095-99:", gmt_2090s_585, "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Reshape to long format for regression ######################################
@@ -373,6 +383,7 @@ reg_coefs <- reg_results %>%
 
 # Inspect coefficient table
 print(head(reg_coefs, 10))
+colnames(reg_coefs)
 cat("\nDimensions of regression coefficient table:", nrow(reg_coefs), "countries\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -401,7 +412,8 @@ cat("Countries with negative alpha_c2 (less fire PM with warming):",
 #
 # With 23 DF, t_critical is ~2.07 — very close to the large-sample approximation of 1.96,
 #   reflecting the added precision from the Park and Zhao observations.
-t_critical <- qt(0.975, df = 23)   # ~2.069 for 95% CI with 23 degrees of freedom
+df <- nrow(usa_data)-2
+t_critical <- qt(0.975, df)   # ~2.069 for 95% CI with 23 degrees of freedom
 cat("\nt_critical (95% CI, df = 23):", round(t_critical, 4), "\n")
 
 t_critical_largesample <- 1.96

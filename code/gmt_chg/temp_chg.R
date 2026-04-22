@@ -1,11 +1,13 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Global Mean Temperature Change — Area-Weighted, Three Periods
+# Global Mean Temperature Change — Multiple Sources and Periods
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Goal: Compute area-weighted GMT change for 2006-2010, 2041-2050, 2091-2100
-#       using pre-computed grid cell areas from CESM area file
+# Goal: Compute GMT change relative to pre-industrial baseline for three sources:
+#   1. Pierce et al. CESM (RCP4.5/8.5) — area-weighted from gridded NetCDF,
+#      grid cell areas computed from coordinates (spherical Earth formula),
+#      assigned to Pierce et al. projection periods (2006-2010, 2041-2050, 2091-2100)
+#   2. OWID observed — decadal means assigned to Park et al. 2024 simulations
+#   3. MimiSSP (SSP245/585) — mean over 2095-2099 assigned to Zhao et al. 2025 simulations
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# This code computes global mean temp change (GMTΔ) for RCP4.5 and RCP8.5.  
 
 # Remove all objects from the environment
 rm(list = ls())
@@ -41,10 +43,9 @@ temp_mimiSSP585 <- read_csv(
   show_col_types = FALSE
 )
 
-colnames(temp_anom)
-colnames(temp_mimiSSP245)
 colnames(temp_mimiSSP585)
 head(temp_mimiSSP245)
+head(temp_anom)
 
 # Pierce et al data --- temperature change used is Pierce et al CESM simulations
 temp_45 <- nc_open(here("input/temperature/pierce_etal_2017", "af.tas.ccsm4.rcp45.2006-2300.nc"))
@@ -355,9 +356,14 @@ print(gmt_periods)
 ############ Adjust to pre-industrial baseline ###############################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Pre-industrial (PI) to 2005 warming = +0.91°C approximately  https://ourworldindata.org/grapher/temperature-anomaly
-# Adding 0.91 to each anomaly shifts the reference from 2005 to pre-industrial
-pi_offset <- 0.914 # 0.914 is average change 2001-2010
+# Pierce CESM anomalies are relative to 2005; shift to pre-industrial by adding
+# observed warming from PI to 2005, approximated as the OWID World mean over 2001-2010.
+pi_offset <- temp_anom |>
+  filter(Entity == "World", Year %in% 2001:2010) |>
+  summarise(mean(Average, na.rm = TRUE)) |>
+  pull()
+
+pi_offset
 
 gmt_periods_pi <- gmt_periods |>
   mutate(
@@ -400,9 +406,33 @@ gmt_park_decades <- map_dfr(seq_along(park_years), function(i) {
 cat("\nGMT Change for Park Decades (relative to pre-industrial):\n")
 print(gmt_park_decades)
 
-# save output
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Compute GMT Change for Zhao et al. 2025 (MimiSSP) ###############
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Zhao et al. 2025 fire PM simulations use SSP245 and SSP585 scenarios.
+# MimiSSP temperature series are already relative to pre-industrial baseline.
+# Target period: 2095-2099 (end-of-century window matching Zhao simulations).
+
+gmt_zhao_mimi <- bind_rows(
+  temp_mimiSSP245 |>
+    filter(time %in% 2095:2099) |>
+    summarise(scenario = "SSP245", mean_gmt_pi = mean(temperature, na.rm = TRUE)),
+  temp_mimiSSP585 |>
+    filter(time %in% 2095:2099) |>
+    summarise(scenario = "SSP585", mean_gmt_pi = mean(temperature, na.rm = TRUE))
+)
+
+cat("\nGMT Change for Zhao et al. 2025 Period 2095-2099 (relative to pre-industrial):\n")
+print(gmt_zhao_mimi)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ save output ###############
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 write_csv(gmt_periods_pi, here("output", "gmt_periods_pi.csv"))
 write_csv(gmt_park_decades, here("output", "gmt_park_decades.csv"))
+write_csv(gmt_zhao_mimi, here("output", "gmt_zhao_mimi.csv"))
 
 
-# THE END 
+# THE END
