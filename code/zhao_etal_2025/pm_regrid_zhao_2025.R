@@ -26,9 +26,10 @@ library(patchwork)                                   # combine plots
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pm_dir       <- here("input/Zhao_etal_2025/gridded_output")     # Zhao inputs
 pop_pm_file  <- here("output", "pop_pm_combined_with_park2024.csv")
+pop_zhao_file <- here("output", "pop_regrid_zhao_20252010.csv")
 out_file     <- here("output", "pop_pm_combined_final.csv")
-fig_dir      <- here("output", "figures")                       # save plots here
-dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
+#fig_dir      <- here("images", "Zhao_checks")                       # save plots here
+#dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Target Grid (0.5 deg) ###
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -143,21 +144,72 @@ cat(sprintf("fpm_2095_SSP585_Zhao : mean = %.3f  |  max = %.2f  |  min = %.3f  |
             max(pm_2095_Zhao$fpm_2095_SSP585_Zhao,  na.rm = TRUE),
             min(pm_2095_Zhao$fpm_2095_SSP585_Zhao,  na.rm = TRUE),
             sum(pm_2095_Zhao$fpm_2095_SSP585_Zhao < 0, na.rm = TRUE)))
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Load Existing pop_pm Dataset ###
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pop_pm <- fread(pop_pm_file)
 cat("\nLoaded pop_pm_combined_with_park2024.csv:\n")
 cat("  rows:", nrow(pop_pm), " cols:", ncol(pop_pm), "\n")
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Merge pop_pm with Zhao by (lon, lat) ###
+############ Load Zhao Regridded Population Dataset ###
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pop_zhao <- fread(pop_zhao_file)
+
+cat("\nLoaded pop_regrid_zhao_20252010.csv:\n")
+cat("  rows:", nrow(pop_zhao), " cols:", ncol(pop_zhao), "\n")
+
+# If the population file uses x/y instead of lon/lat, rename them
+if (all(c("x", "y") %in% names(pop_zhao))) {
+  setnames(pop_zhao, c("x", "y"), c("lon", "lat"))
+}
+
+# Check that merge keys exist in both datasets
+stopifnot(all(c("lon", "lat") %in% names(pop_zhao)))
+stopifnot(all(c("lon", "lat") %in% names(pop_pm)))
+
+# Rename the Zhao population column to pop_zhao_2010
+if ("pop" %in% names(pop_zhao)) {
+  setnames(pop_zhao, "pop", "pop_zhao_2010")
+}
+
+# Keep only lon, lat, and the Zhao 2010 population column
+stopifnot("pop_zhao_2010" %in% names(pop_zhao))
+pop_zhao <- pop_zhao[, .(lon, lat, pop_zhao_2010)]
+
+# Remove duplicated coordinate pairs if any
+pop_zhao <- unique(pop_zhao, by = c("lon", "lat"))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Merge Zhao PM Data into pop_pm by (lon, lat) ###
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pop_pm_final <- pm_2095_Zhao[pop_pm, on = .(lon, lat)]
 
-n_matched <- pop_pm_final[!is.na(pm_2095_SSP245_Zhao), .N]
-cat("\nMerge: ", n_matched, "/", nrow(pop_pm_final),
-    " rows matched to Zhao grid (",
-    round(100 * n_matched / nrow(pop_pm_final), 2), "%)\n", sep = "")
+n_matched_pm <- pop_pm_final[!is.na(pm_2095_SSP245_Zhao), .N]
+cat("\nPM merge: ", n_matched_pm, "/", nrow(pop_pm_final),
+    " rows matched to Zhao PM grid (",
+    round(100 * n_matched_pm / nrow(pop_pm_final), 2), "%)\n", sep = "")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Merge Zhao Regridded Population into Final Dataset ###
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pop_pm_final <- pop_zhao[pop_pm_final, on = .(lon, lat)]
+
+n_matched_pop <- pop_pm_final[!is.na(pop_zhao_2010), .N]
+cat("\nPopulation merge: added column = pop_zhao_2010\n")
+cat("Population matched rows: ", n_matched_pop, "/", nrow(pop_pm_final),
+    " (", round(100 * n_matched_pop / nrow(pop_pm_final), 2), "%)\n", sep = "")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Reorder Columns Before Writing ###
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+pop_cols <- grep("pop", names(pop_pm_final), value = TRUE)
+pop_cols <- setdiff(pop_cols, c("lon", "lat"))
+
+other_cols <- setdiff(names(pop_pm_final), c("lon", "lat", pop_cols))
+setcolorder(pop_pm_final, c("lon", "lat", pop_cols, other_cols))
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Write Final Output ###
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -165,6 +217,4 @@ setorder(pop_pm_final, -lat, lon)
 fwrite(pop_pm_final, out_file)
 
 cat("\nWrote:", out_file, "\n")
-cat("Final dataset: ", nrow(pop_pm_final), "rows x", ncol(pop_pm_final), "cols\n")
-
-##THE END
+cat("Final dataset: ", nrow(pop_pm_final), " rows x ", ncol(pop_pm_final), " cols\n", sep = "")
