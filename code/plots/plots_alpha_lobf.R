@@ -13,6 +13,7 @@ library(tidyverse)
 library(ggplot2)
 library(maps)
 library(countrycode)
+library(ggrepel)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Import #####################################################
@@ -188,20 +189,85 @@ print("Alpha maps saved to images/regression_alpha/")
 #   reg_data_combined -- 25 rows per country: T_ps (GMT regressor) and exposure_percap (response)
 #   reg_coefs         -- alpha_c1 and alpha_c2 per country (define the fitted line)
 
-countries_to_plot <- c("USA", "RUS", "AUS", "CHN", "IND", "ARG", "global")
+# Lookup table: maps each period_scenario to its fire model and warming trajectory.
+# Used to set color (model) and shape (trajectory) aesthetics in the scatter plots.
+scenario_lookup <- tibble(
+  period_scenario = c(
+    "exposure_percap_park_classic_1960s_fpm", "exposure_percap_park_classic_1970s_fpm",
+    "exposure_percap_park_classic_1980s_fpm", "exposure_percap_park_classic_1990s_fpm",
+    "exposure_percap_park_classic_2000s_fpm", "exposure_percap_park_classic_2010s_fpm",
+    "exposure_percap_park_jules_1960s_fpm",   "exposure_percap_park_jules_1970s_fpm",
+    "exposure_percap_park_jules_1980s_fpm",   "exposure_percap_park_jules_1990s_fpm",
+    "exposure_percap_park_jules_2000s_fpm",   "exposure_percap_park_jules_2010s_fpm",
+    "exposure_percap_park_ssib4_1960s_fpm",   "exposure_percap_park_ssib4_1970s_fpm",
+    "exposure_percap_park_ssib4_1980s_fpm",   "exposure_percap_park_ssib4_1990s_fpm",
+    "exposure_percap_park_ssib4_2000s_fpm",   "exposure_percap_park_ssib4_2010s_fpm",
+    "exposure_percap_fpm_2000",
+    "exposure_percap_fpm_2050_45",            "exposure_percap_fpm_2050_85",
+    "exposure_percap_fpm_2100_45",            "exposure_percap_fpm_2100_85",
+    "exposure_percap_fpm_2095_SSP245_Zhao",   "exposure_percap_fpm_2095_SSP585_Zhao"
+  ),
+  model = c(
+    rep("CLASSIC", 6), rep("JULES", 6), rep("SSiB4", 6),
+    "CESM", "CESM", "CESM", "CESM", "CESM",
+    "Multi-model", "Multi-model"
+  ),
+  trajectory = c(
+    rep("Historical", 18),
+    "Historical", "RCP4.5", "RCP8.5", "RCP4.5", "RCP8.5",
+    "SSP2-4.5", "SSP5-8.5"
+  )
+)
+
+model_colors <- c(
+  "CESM"        = "#E69F00",
+  "JULES"       = "#56B4E9",
+  "SSiB4"       = "#009E73",
+  "CLASSIC"     = "#CC79A7",
+  "Multi-model" = "#000000"
+)
+
+trajectory_shapes <- c(
+  "Historical" = 16,
+  "RCP4.5"     = 17,
+  "RCP8.5"     = 15,
+  "SSP2-4.5"   = 18,
+  "SSP5-8.5"   = 8
+)
+
+countries_to_plot <- c("USA", "RUS", "AUS", "CHN", "IND", "ARG", "global", "DEU")
 
 for (iso in countries_to_plot) {
 
-  # Filter to this country's 25 observations and create short label.
-  # Labels are shown for all Pierce and Zhao observations and only the Park 2010s points
-  # (one per fire model). All other Park decades get NA and are unlabelled.
+  # Filter to this country's 25 observations, join model/trajectory lookup, and
+  # create point labels. Labels shown for all Pierce/Zhao points and Park 2010s only;
+  # all other Park decades are unlabelled to avoid overplotting.
   df <- reg_data_combined %>%
     filter(country_code_iso3 == iso) %>%
-    mutate(label = ifelse(
-      !grepl("park", period_scenario) | grepl("2010s", period_scenario),
-      str_remove(period_scenario, "exposure_percap_"),
-      NA
-    ))
+    left_join(scenario_lookup, by = "period_scenario") %>%
+    mutate(
+      model      = factor(model,      levels = names(model_colors)),
+      trajectory = factor(trajectory, levels = names(trajectory_shapes)),
+      label = case_when(
+        period_scenario %in% c(
+          "exposure_percap_park_classic_2010s_fpm",
+          "exposure_percap_park_jules_2010s_fpm",
+          "exposure_percap_park_ssib4_2010s_fpm"
+        ) ~ "Park et al.",
+        period_scenario %in% c(
+          "exposure_percap_fpm_2000",
+          "exposure_percap_fpm_2050_45",
+          "exposure_percap_fpm_2050_85",
+          "exposure_percap_fpm_2100_45",
+          "exposure_percap_fpm_2100_85"
+        ) ~ "Pierce et al.",
+        period_scenario %in% c(
+          "exposure_percap_fpm_2095_SSP245_Zhao",
+          "exposure_percap_fpm_2095_SSP585_Zhao"
+        ) ~ "Zhao et al.",
+        TRUE ~ NA_character_
+      )
+    )
 
   # Pull alpha_c1 (intercept) and alpha_c2 (slope) from reg_coefs
   coef_row  <- reg_coefs %>% filter(country_code_iso3 == iso)
@@ -215,26 +281,29 @@ for (iso in countries_to_plot) {
     pull(r.squared)
   n_obs <- nrow(df)
 
-  p <- ggplot(df, aes(x = T_ps, y = exposure_percap)) +
+  p <- ggplot(df, aes(x = T_ps, y = exposure_percap, color = model, shape = trajectory)) +
     # Each point is one observation: 18 Park (decade × fire model) +
     # 5 Pierce (baseline, 2040s RCP4.5/8.5, 2090s RCP4.5/8.5) + 2 Zhao (~2095 SSP2-4.5/SSP5-8.5)
-    geom_point(size = 3, color = "steelblue") +
-    # Pierce and Zhao labels: positioned above each point.
-    geom_text(data = ~ filter(.x, !grepl("park", period_scenario)),
-              aes(label = label), vjust = -0.8, size = 3) +
-    # Park 2010s labels: positioned to the right of each point.
-    geom_text(data = ~ filter(.x, grepl("2010s", period_scenario)),
-              aes(label = label), hjust = -0.1, size = 3) +
+    geom_point(size = 3) +
+    # Labels for all labelled points (Park 2010s, Pierce, Zhao).
+    # ggrepel automatically nudges overlapping labels apart and draws
+    # a line back to the point when a label is pushed away.
+    geom_text_repel(data = ~ filter(.x, !is.na(label)),
+                    aes(label = label),
+                    size = 3, box.padding = 0.4, max.overlaps = Inf,
+                    show.legend = FALSE) +
     # OLS fitted line using alpha_c1 and alpha_c2 from reg_coefs.
     # geom_abline draws the exact same line as the stored regression coefficients,
     # ensuring consistency with the values used downstream in GIVE.
     geom_abline(intercept = alpha_c1, slope = alpha_c2,
                 color = "darkred", linewidth = 0.8) +
+    scale_color_manual(values = model_colors,      name = "Model") +
+    scale_shape_manual(values = trajectory_shapes, name = "Trajectory") +
     labs(
       title    = paste0(iso, ": Per-Capita Fire PM2.5 vs. GMT"),
-      subtitle = paste0("alpha_c2 = ", round(alpha_c2, 4), " µg/m³/yr per °C",
-                        "   |   n = ", n_obs,
-                        "   |   R² = ", round(r_squared, 4)),
+      subtitle = bquote(alpha[c2] == .(round(alpha_c2, 2)) ~
+                          "µg/m³/yr per °C  |  n =" ~ .(n_obs) ~
+                          "|  R² =" ~ .(round(r_squared, 2))),
       x        = "GMT Anomaly relative to 1850-1900 (°C)",
       y        = "Per-Capita Fire PM2.5 Exposure (µg/m³/yr)"
     ) +
