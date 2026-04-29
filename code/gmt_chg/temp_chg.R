@@ -365,14 +365,14 @@ pi_offset <- temp_anom |>
 
 pi_offset
 
-gmt_periods_pi <- gmt_periods |>
+gmt_pierce_RCPs <- gmt_periods |>
   mutate(
     mean_gmt_45 = mean_gmt_45 + pi_offset,   # RCP4.5 anomaly relative to PI
     mean_gmt_85 = mean_gmt_85 + pi_offset    # RCP8.5 anomaly relative to PI
   )
 
 cat("\nGlobal Mean Temperature Change by Period (relative to pre-industrial):\n")
-print(gmt_periods_pi)
+print(gmt_pierce_RCPs)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Compute GMT Change for Park Decades ##############################
@@ -393,7 +393,7 @@ temp_world <- temp_anom |>
   select(year = Year, gmt_obs = Average)
 
 # For each Park decade, average the observed annual GMT across the decade window
-gmt_park_decades <- map_dfr(seq_along(park_years), function(i) {
+gmt_park_hist <- map_dfr(seq_along(park_years), function(i) {
   temp_world |>
     filter(year >= decade_start[i], year <= decade_end[i]) |>
     summarise(
@@ -404,7 +404,7 @@ gmt_park_decades <- map_dfr(seq_along(park_years), function(i) {
 })
 
 cat("\nGMT Change for Park Decades (relative to pre-industrial):\n")
-print(gmt_park_decades)
+print(gmt_park_hist)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Compute GMT Change for Zhao et al. 2025 (MimiSSP) ###############
@@ -414,7 +414,7 @@ print(gmt_park_decades)
 # MimiSSP temperature series are already relative to pre-industrial baseline.
 # Target period: 2095-2099 (end-of-century window matching Zhao simulations).
 
-gmt_zhao_mimi <- bind_rows(
+gmt_zhao_SSPs <- bind_rows(
   temp_mimiSSP245 |>
     filter(time %in% 2095:2099) |>
     summarise(scenario = "SSP245", mean_gmt_pi = mean(temperature, na.rm = TRUE)),
@@ -424,15 +424,15 @@ gmt_zhao_mimi <- bind_rows(
 )
 
 cat("\nGMT Change for Zhao et al. 2025 Period 2095-2099 (relative to pre-industrial):\n")
-print(gmt_zhao_mimi)
+print(gmt_zhao_SSPs)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ save output ###############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write_csv(gmt_periods_pi, here("output", "gmt_periods_pi.csv"))
-write_csv(gmt_park_decades, here("output", "gmt_park_decades.csv"))
-write_csv(gmt_zhao_mimi, here("output", "gmt_zhao_mimi.csv"))
+write_csv(gmt_pierce_RCPs, here("output", "gmt_pierce_RCPs.csv"))
+write_csv(gmt_park_hist, here("output", "gmt_park_hist.csv"))
+write_csv(gmt_zhao_SSPs, here("output", "gmt_zhao_SSPs.csv"))
 
 
 # THE END
