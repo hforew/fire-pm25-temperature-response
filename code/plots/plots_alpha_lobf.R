@@ -30,7 +30,7 @@ library(ggrepel)
 #                          damage function parameter used downstream in GIVE.
 #                          Positive = more fire PM with warming; negative = less.
 
-source(here("code/regression_alpha", "fpm_gmt_relation_final.R")) # regression file and load all objects
+source(here("code/regression_alpha", "fpm_gmt_regression_final.R")) # regression file and load all objects
 
 head(reg_coefs)
 str(reg_coefs)
