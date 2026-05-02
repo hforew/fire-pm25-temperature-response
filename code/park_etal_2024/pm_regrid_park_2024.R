@@ -13,6 +13,7 @@ library(here)
 library(tidyverse)
 library(ncdf4)
 library(R.matlab)
+library(fields)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ File Paths for All Scenarios ##################################
@@ -60,119 +61,155 @@ file_paths_ssib4 <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
 )
 
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Function to Convert Grid Edge to Grid Center ##################
+############ Target Grid (0.5 deg x 0.5 deg centers) #######################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+target_lon <- seq(-179.75, 179.75, by = 0.5)  # 720
+target_lat <- seq(-89.75,  89.75,  by = 0.5)  # 360
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Helper: edge -> center #########################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 convert_edge_to_center <- function(coords) {
-  # Check if coordinates are grid edges or centers
-  # Grid edges: start at exact values like -180, 0, etc.
-  # Grid centers: start at offset values like -179.75, 0.25, etc.
-  
-  # Get the first few values
-  first_val <- coords[1]
   resolution <- mean(diff(coords))
-  
-  # Check if first value is a multiple of resolution (edge) or offset (center)
-  # For 0.5 degree grid:
-  # Edge starts at -180, -179.5, -179, ...
-  # Center starts at -179.75, -179.25, -178.75, ...
-  
-  # If coordinates are already at center, return as is
-  # If at edge, shift by half resolution
-  
-  # Simple check: if first value modulo resolution is close to 0, it's edge
-  remainder <- abs(first_val %% resolution)
-  
-  if (remainder < 0.01 || abs(remainder - resolution) < 0.01) {
-    # Grid edge detected - convert to center
-    coords_center <- coords + (resolution / 2)
-    return(coords_center)
+  remainder  <- abs(coords[1] %% resolution)
+  if (remainder < 1e-6 || abs(remainder - resolution) < 1e-6) {
+    return(coords + resolution / 2)
   } else {
-    # Already at grid center
     return(coords)
   }
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Function to Extract Data #######################################
+############ Helper: 0-360 lon -> -180-180 ##################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-extract_pm25_data <- function(file_paths, years, scenario_name) {
+shift_lon_to_180 <- function(lon, mat) {
+  if (max(lon) > 180) {
+    lon_new <- ifelse(lon > 180, lon - 360, lon)
+    ord     <- order(lon_new)
+    lon_new <- lon_new[ord]
+    mat     <- mat[ord, , drop = FALSE]
+    return(list(lon = lon_new, mat = mat))
+  }
+  list(lon = lon, mat = mat)
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Function to Extract + Regrid ##################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+extract_pm25_data <- function(file_paths, years, scenario_name,
+                              target_lon, target_lat) {
   
   pm25_list <- list()
   
-  for (i in 1:length(file_paths)) {
+  for (i in seq_along(file_paths)) {
     
-    # Open NetCDF file
     nc <- nc_open(file_paths[i])
     
-    # Extract coordinates - use seq to ensure correct grid
-    # For 0.5 degree resolution: -179.75 to 179.75
-    lon <- seq(-179.75, 179.75, by = 0.5)  # 720 values
-    lat <- seq(-89.75, 89.75, by = 0.5)    # 360 values
+    # 1. Read actual lon/lat from the file
+    lon_name <- if ("lon" %in% names(nc$dim)) "lon" else "longitude"
+    lat_name <- if ("lat" %in% names(nc$dim)) "lat" else "latitude"
+    lon_src  <- as.numeric(ncvar_get(nc, lon_name))
+    lat_src  <- as.numeric(ncvar_get(nc, lat_name))
     
-    # Extract PM2.5 data
+    cat("lon range:", range(lon_src), " | n =", length(lon_src), "\n")
+    cat("lat range:", range(lat_src), " | n =", length(lat_src), "\n")
+    cat("first 5 lon:", head(lon_src, 5), "\n")
+    cat("first 5 lat:", head(lat_src, 5), "\n")
+    
+    # Edge -> center if needed
+    lon_src <- convert_edge_to_center(lon_src)
+    lat_src <- convert_edge_to_center(lat_src)
+    
+    # 2. Read PM2.5 and reduce to 2D
     pm25_raw <- ncvar_get(nc, "PM25")
-    
-    # Check dimensions and extract surface data accordingly
-    dims <- dim(pm25_raw)
-    
-    if (length(dims) == 4) {
-      # 4D array: [lon, lat, lev, time]
-      pm25_surface <- pm25_raw[, , 1, 1]
-    } else if (length(dims) == 3) {
-      # 3D array: could be [lon, lat, time] or [lon, lat, lev]
-      pm25_surface <- pm25_raw[, , 1]
-    } else if (length(dims) == 2) {
-      # 2D array: [lon, lat]
-      pm25_surface <- pm25_raw
-    } else {
-      stop("Unexpected PM25 dimensions: ", paste(dims, collapse = " x "))
-    }
-    
-    # Close NetCDF file
+    dims     <- dim(pm25_raw)
+    pm25_surface <- switch(as.character(length(dims)),
+                           "4" = pm25_raw[, , 1, 1],
+                           "3" = pm25_raw[, , 1],
+                           "2" = pm25_raw,
+                           stop("Unexpected PM25 dimensions: ", paste(dims, collapse = " x "))
+    )
     nc_close(nc)
     
-    # Create data frame with lon varying first
+    # 3. Ensure orientation is [lon, lat]
+    if (nrow(pm25_surface) == length(lat_src) &&
+        ncol(pm25_surface) == length(lon_src)) {
+      pm25_surface <- t(pm25_surface)
+    }
+    stopifnot(nrow(pm25_surface) == length(lon_src),
+              ncol(pm25_surface) == length(lat_src))
+    
+    # 4. Convert lon to -180..180 if needed
+    sh           <- shift_lon_to_180(lon_src, pm25_surface)
+    lon_src      <- sh$lon
+    pm25_surface <- sh$mat
+    
+    # 5. Make latitude ascending (required by interp.surface.grid)
+    if (is.unsorted(lat_src)) {
+      ord          <- order(lat_src)
+      lat_src      <- lat_src[ord]
+      pm25_surface <- pm25_surface[, ord, drop = FALSE]
+    }
+    
+    # 6. Regrid to target 0.5 deg grid (skip if already identical)
+    same_grid <-
+      length(lon_src) == length(target_lon) &&
+      length(lat_src) == length(target_lat) &&
+      max(abs(lon_src - target_lon)) < 1e-6 &&
+      max(abs(lat_src - target_lat)) < 1e-6
+    
+    if (same_grid) {
+      pm25_regrid <- pm25_surface
+    } else {
+      obj <- list(x = lon_src, y = lat_src, z = pm25_surface)
+      pm25_regrid <- interp.surface.grid(
+        obj,
+        grid.list = list(x = target_lon, y = target_lat)
+      )$z
+    }
+    
+    # 7. Long format (lon varies first)
     df <- expand.grid(
-      lon = lon,
-      lat = lat,
-      KEEP.OUT.ATTRS = FALSE,
+      lon = target_lon,
+      lat = target_lat,
+      KEEP.OUT.ATTRS  = FALSE,
       stringsAsFactors = FALSE
     )
-    
-    # Add PM2.5 - transpose if needed to match grid order
-    df$pm25 <- as.vector(pm25_surface)
+    df$pm25 <- as.vector(pm25_regrid)
     df$year <- years[i]
-    
-    # Reorder columns
-    df <- df %>%
-      select(year, lon, lat, pm25)
-    
-    # Store in list
+    df <- df %>% select(year, lon, lat, pm25)
     pm25_list[[i]] <- df
+    
+    cat(sprintf("[%s] %d: src %d x %d -> target %d x %d %s\n",
+                scenario_name, years[i],
+                length(lon_src), length(lat_src),
+                length(target_lon), length(target_lat),
+                if (same_grid) "(no regrid)" else "(bilinear regridded)"))
   }
   
-  # Combine all years
-  pm25_data <- bind_rows(pm25_list)
-  
-  # Rename pm25 column to include scenario name
-  pm25_data <- pm25_data %>%
+  bind_rows(pm25_list) %>%
     rename(!!paste0("pm25_", scenario_name) := pm25)
-  
-  return(pm25_data)
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Extract Data for All Scenarios #################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Extract data for each scenario
-withoutfire <- extract_pm25_data(file_paths_withoutfire, years, "withoutfire")
-classic <- extract_pm25_data(file_paths_classic, years, "classic")
-jules <- extract_pm25_data(file_paths_jules, years, "jules")
-ssib4 <- extract_pm25_data(file_paths_ssib4, years, "ssib4")
+withoutfire <- extract_pm25_data(file_paths_withoutfire, years, "withoutfire",
+                                 target_lon, target_lat)
+classic     <- extract_pm25_data(file_paths_classic,     years, "classic",
+                                 target_lon, target_lat)
+jules       <- extract_pm25_data(file_paths_jules,       years, "jules",
+                                 target_lon, target_lat)
+ssib4       <- extract_pm25_data(file_paths_ssib4,       years, "ssib4",
+                                 target_lon, target_lat)
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Merge All Scenarios by Year, Lon, Lat #########################
@@ -323,9 +360,9 @@ cat("\nFirst 5x5 from our data (rounded):\n")
 print(fpm_rounded[1:5, 1:5])
 
 if (max_diff == 0) {
-  cat("\n✓ SUCCESS: Matrices are identical at 4 decimal precision!\n")
+  cat("\n SUCCESS: Matrices are identical at 4 decimal precision!\n")
 } else {
-  cat("\n✗ WARNING: Matrices differ at 4 decimal precision!\n")
+  cat("\n WARNING: Matrices differ at 4 decimal precision!\n")
 }
 
 
@@ -349,9 +386,9 @@ cat("\nFirst 5x5 from our data (truncated):\n")
 print(fpm_truncated[1:5, 1:5])
 
 if (max_diff == 0) {
-  cat("\n✓ SUCCESS: Matrices are identical after truncation!\n")
+  cat("\n SUCCESS: Matrices are identical after truncation!\n")
 } else {
-  cat("\n✗ Difference remains:", max_diff, "\n")
+  cat("\n Difference remains:", max_diff, "\n")
 }
 
 # Find different cells
@@ -393,4 +430,206 @@ combined_data <- combined_data %>%
 
 write.csv(combined_data, here("output", "pop_pm_combined_with_park2024.csv"), row.names = FALSE)
 
-# THE END
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ SANITY CHECK: Plot US fpm for ALL models x years ##############
+############ Output as HTML to local folder                       ##########
+############ Standalone — does not affect final dataset           ##########
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+library(ncdf4)
+library(ggplot2)
+library(dplyr)
+library(maps)
+library(patchwork)
+library(htmltools)
+library(base64enc)
+
+# --- Output settings ---
+out_dir  <- "C:/Ford_BA_FPM25/images/fpm_cell_usa"
+out_name <- "fpm_cell_usa_park_sanitycheck"
+out_html <- file.path(out_dir, paste0(out_name, ".html"))
+
+if (!dir.exists(out_dir)) dir.create(out_dir, recursive = TRUE)
+
+# --- helper: read PM25 surface field with original lon/lat ---
+read_pm25 <- function(path) {
+  nc <- nc_open(path)
+  lon_name <- if ("lon" %in% names(nc$dim)) "lon" else "longitude"
+  lat_name <- if ("lat" %in% names(nc$dim)) "lat" else "latitude"
+  lon <- as.numeric(ncvar_get(nc, lon_name))
+  lat <- as.numeric(ncvar_get(nc, lat_name))
+  
+  # ====== Print ORIGINAL lon/lat from the NetCDF file ======
+  cat("\n----- ORIGINAL coordinates from file -----\n")
+  cat("File: ", basename(path), "\n", sep = "")
+  cat("Variable names:  lon = '", lon_name, "' | lat = '", lat_name, "'\n", sep = "")
+  cat(sprintf("lon: n = %d | range = [%.4f, %.4f] | first 5 = %s | last 5 = %s\n",
+              length(lon),
+              min(lon), max(lon),
+              paste(round(head(lon, 5), 4), collapse = ", "),
+              paste(round(tail(lon, 5), 4), collapse = ", ")))
+  cat(sprintf("lat: n = %d | range = [%.4f, %.4f] | first 5 = %s | last 5 = %s\n",
+              length(lat),
+              min(lat), max(lat),
+              paste(round(head(lat, 5), 4), collapse = ", "),
+              paste(round(tail(lat, 5), 4), collapse = ", ")))
+  cat(sprintf("lon resolution = %.4f | lat resolution = %.4f\n",
+              mean(diff(lon)), mean(diff(lat))))
+  cat("------------------------------------------\n")
+  # =========================================================
+  
+  pm <- ncvar_get(nc, "PM25")
+  d  <- dim(pm)
+  pm <- switch(as.character(length(d)),
+               "4" = pm[, , 1, 1],
+               "3" = pm[, , 1],
+               "2" = pm,
+               stop("Unexpected PM25 dimensions"))
+  nc_close(nc)
+  
+  if (nrow(pm) == length(lat) && ncol(pm) == length(lon)) {
+    pm <- t(pm)
+  }
+  list(lon = lon, lat = lat, pm = pm)
+}
+
+# --- helper: build fpm dataframe for one model x one year ---
+build_fpm_df <- function(path_model, path_withoutfire) {
+  a <- read_pm25(path_model)
+  b <- read_pm25(path_withoutfire)
+  stopifnot(length(a$lon) == length(b$lon),
+            length(a$lat) == length(b$lat))
+  
+  fpm_mat <- a$pm - b$pm
+  
+  df <- expand.grid(lon = a$lon, lat = a$lat,
+                    KEEP.OUT.ATTRS = FALSE) %>%
+    mutate(fpm = as.vector(fpm_mat))
+  
+  if (max(df$lon) > 180) {
+    df <- df %>% mutate(lon = ifelse(lon > 180, lon - 360, lon))
+  }
+  
+  df %>% filter(lon >= -125, lon <= -66, lat >= 24, lat <= 50)
+}
+
+# --- helper: single plot ---
+us_map <- map_data("state")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Color Palette: White -> Yellow -> Dark Coffee #################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Low fPM = white, High fPM = dark coffee
+fpm_palette <- c("#3B1F0E", "#6B3E1B", "#A9651A", "#D9A441",
+                 "#F2D04A", "#FFF2A8", "#FFFFFF")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ make_plot: matching plot_fpm_var styling ######################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+make_plot <- function(df, title, fill_max) {
+  ggplot(df, aes(x = lon, y = lat, fill = fpm)) +
+    geom_raster() +
+    geom_polygon(data = us_map,
+                 aes(x = long, y = lat, group = group),
+                 fill = NA, color = "grey30", linewidth = 0.2,
+                 inherit.aes = FALSE) +
+    scale_fill_gradientn(
+      colors   = rev(fpm_palette),     # white -> ... -> dark coffee
+      name     = "fPM",
+      limits   = c(0, fill_max),
+      oob      = scales::squish,
+      na.value = "white"
+    ) +
+    coord_quickmap(xlim = c(-125, -66.5), ylim = c(24, 49.5),
+                   expand = FALSE) +
+    labs(title = title) +
+    theme_void(base_size = 9) +
+    theme(
+      plot.title        = element_text(hjust = 0.5, size = 9, face = "bold"),
+      legend.key.height = unit(0.35, "cm"),
+      legend.key.width  = unit(0.25, "cm"),
+      legend.title      = element_text(size = 7),
+      legend.text       = element_text(size = 6),
+      plot.margin       = margin(2, 2, 2, 2)
+    )
+}
+
+# --- build one combined image per model, save to temp PNG, then embed ---
+models <- list(
+  classic = file_paths_classic,
+  jules   = file_paths_jules,
+  ssib4   = file_paths_ssib4
+)
+
+png_to_base64 <- function(png_path) {
+  paste0("data:image/png;base64,",
+         base64enc::base64encode(png_path))
+}
+
+img_tags <- list()
+
+for (m in names(models)) {
+  
+  cat("Building plot for model:", m, "\n")
+  
+  dfs <- lapply(seq_along(years), function(i) {
+    build_fpm_df(models[[m]][i], file_paths_withoutfire[i])
+  })
+  
+  fill_max <- quantile(unlist(lapply(dfs, `[[`, "fpm")),
+                       0.99, na.rm = TRUE)
+  
+  plots <- lapply(seq_along(years), function(i) {
+    make_plot(dfs[[i]],
+              title = paste0(m, " — ", years[i]),
+              fill_max = fill_max)
+  })
+  
+  combined <- wrap_plots(plots, nrow = 2, ncol = 3) +
+    plot_annotation(
+      title    = paste0("Sanity check: ", m, " fire PM2.5 (CONUS)"),
+      subtitle = "Original NetCDF coordinates, common color scale (0 to 99th percentile)",
+      theme    = theme(plot.title    = element_text(face = "bold", size = 13),
+                       plot.subtitle = element_text(size = 10))
+    ) +
+    plot_layout(guides = "collect") & theme(legend.position = "right")
+  
+  # Save to a temp PNG first, then read back as base64 for embedding
+  tmp_png <- tempfile(fileext = ".png")
+  ggsave(tmp_png, combined, width = 14, height = 8, dpi = 130, bg = "white")
+  
+  img_tags[[m]] <- tags$div(
+    style = "margin-bottom: 40px;",
+    tags$h2(paste0("Model: ", m),
+            style = "font-family: sans-serif; color: #333;"),
+    tags$img(src   = png_to_base64(tmp_png),
+             style = "max-width: 100%; height: auto; border: 1px solid #ddd;")
+  )
+}
+
+# --- assemble HTML ---
+page <- tags$html(
+  tags$head(
+    tags$title("Park et al. 2024 — Fire PM2.5 Sanity Check (CONUS)"),
+    tags$meta(charset = "utf-8")
+  ),
+  tags$body(
+    style = "font-family: sans-serif; max-width: 1400px; margin: 20px auto; padding: 0 20px;",
+    tags$h1("Fire PM2.5 Sanity Check — Park et al. 2024"),
+    tags$p(
+      style = "color: #555;",
+      paste0("Generated on ", format(Sys.time(), "%Y-%m-%d %H:%M:%S"),
+             ". Plots use original NetCDF coordinates (no regrid). ",
+             "Color scale per model: 0 to 99th percentile of all years.")
+    ),
+    tags$hr(),
+    img_tags
+  )
+)
+
+save_html(page, out_html)
+
+cat("\n HTML saved to:\n", out_html, "\n")
+
+#THE END
