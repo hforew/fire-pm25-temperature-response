@@ -464,7 +464,7 @@ library(htmltools)
 library(base64enc)
 
 # --- Output settings ---
-out_dir  <- "C:/Ford_BA_FPM25/images/fpm_cell_usa"
+out_dir <- here::here("images", "fpm_cell_usa")
 out_name <- "fpm_cell_usa_park_sanitycheck"
 out_html <- file.path(out_dir, paste0(out_name, ".html"))
 
@@ -569,7 +569,7 @@ make_plot <- function(df, title, fill_max) {
                  fill = NA, color = "grey30", linewidth = 0.2,
                  inherit.aes = FALSE) +
     scale_fill_gradientn(
-      colors   = rev(fpm_palette),     # white -> ... -> dark coffee
+      colors   = rev(fpm_palette),
       name     = "fPM",
       limits   = c(0, fill_max),
       oob      = scales::squish,
@@ -581,10 +581,11 @@ make_plot <- function(df, title, fill_max) {
     theme_void(base_size = 9) +
     theme(
       plot.title        = element_text(hjust = 0.5, size = 9, face = "bold"),
-      legend.key.height = unit(0.35, "cm"),
-      legend.key.width  = unit(0.25, "cm"),
-      legend.title      = element_text(size = 7),
-      legend.text       = element_text(size = 6),
+      legend.key.height = unit(0.6, "cm"),
+      legend.key.width  = unit(0.45, "cm"),
+      legend.title      = element_text(size = 9),
+      legend.text       = element_text(size = 8),
+      
       plot.margin       = margin(2, 2, 2, 2)
     )
 }
