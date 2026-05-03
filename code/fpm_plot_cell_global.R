@@ -126,7 +126,8 @@ other_row <- wrap_plots(other_plots, nrow = 1)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Save Each Group Row to Standalone HTML ######################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-out_dir <- "C:/Ford_BA_FPM25/images/fpm_cell_global"
+out_dir <- here::here("images", "fpm_cell_global")
+
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 save_row_html <- function(plot_obj, n_cols, file_name, title) {

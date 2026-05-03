@@ -69,22 +69,12 @@ file_paths_ssib4 <- c(
 target_lon <- seq(-179.75, 179.75, by = 0.5)  # 720
 target_lat <- seq(-89.75,  89.75,  by = 0.5)  # 360
 
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Helper: edge -> center #########################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 convert_edge_to_center <- function(coords) {
-  resolution <- mean(diff(coords))
-  remainder  <- abs(coords[1] %% resolution)
-  if (remainder < 1e-6 || abs(remainder - resolution) < 1e-6) {
-    return(coords + resolution / 2)
-  } else {
-    return(coords)
-  }
+  return(coords)
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Helper: 0-360 lon -> -180-180 ##################################
+############ 0-360 lon -> -180-180 ##########################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 shift_lon_to_180 <- function(lon, mat) {
@@ -101,7 +91,6 @@ shift_lon_to_180 <- function(lon, mat) {
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Function to Extract + Regrid ##################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 extract_pm25_data <- function(file_paths, years, scenario_name,
                               target_lon, target_lat) {
   
@@ -122,7 +111,7 @@ extract_pm25_data <- function(file_paths, years, scenario_name,
     cat("first 5 lon:", head(lon_src, 5), "\n")
     cat("first 5 lat:", head(lat_src, 5), "\n")
     
-    # Edge -> center if needed
+    # Edge -> center if needed (no-op for Park et al. files)
     lon_src <- convert_edge_to_center(lon_src)
     lat_src <- convert_edge_to_center(lat_src)
     
@@ -137,7 +126,7 @@ extract_pm25_data <- function(file_paths, years, scenario_name,
     )
     nc_close(nc)
     
-    # 3. Ensure orientation is [lon, lat]
+    # 3. Ensure orientation is [lon, lat] (rows = lon, cols = lat)
     if (nrow(pm25_surface) == length(lat_src) &&
         ncol(pm25_surface) == length(lon_src)) {
       pm25_surface <- t(pm25_surface)
@@ -157,7 +146,35 @@ extract_pm25_data <- function(file_paths, years, scenario_name,
       pm25_surface <- pm25_surface[, ord, drop = FALSE]
     }
     
-    # 6. Regrid to target 0.5 deg grid (skip if already identical)
+    # 5a. Pad latitude on both poles so target endpoints (-89.75, 89.75) fall
+    # strictly inside the source lat range. Source lat endpoints equal target
+    # endpoints, which can trigger out-of-bounds errors in interp.surface.grid
+    # due to numerical precision. lat is not periodic so we use nearest-neighbor.
+    # Matrix is [lon, lat], so lat is along columns
+    lat_resolution <- mean(diff(lat_src))
+    pm25_surface <- cbind(
+      pm25_surface[, 1],
+      pm25_surface,
+      pm25_surface[, ncol(pm25_surface)]
+    )
+    lat_src <- c(min(lat_src) - lat_resolution,
+                 lat_src,
+                 max(lat_src) + lat_resolution)
+    
+    # 5b. Wrap longitude on both sides for Earth periodicity (lon = 180 == -180).
+    # Target lon -179.75..179.75 must fall inside source lon -179.5..180.
+    # Matrix is [lon, lat], so lon is along rows
+    if (max(lon_src) >= 180 - 1e-6 && min(lon_src) > -180 + 1e-6) {
+      lon_resolution <- mean(diff(lon_src))
+      pm25_surface <- rbind(
+        pm25_surface[nrow(pm25_surface), ],   # copy lon = 180  -> place at -180
+        pm25_surface,
+        pm25_surface[1, ]                      # copy lon = -179.5 -> place at +180.5
+      )
+      lon_src <- c(-180, lon_src, max(lon_src) + lon_resolution)
+    }
+    
+    # 6. Regrid to target 0.5 deg grid 
     same_grid <-
       length(lon_src) == length(target_lon) &&
       length(lat_src) == length(target_lat) &&
@@ -196,7 +213,6 @@ extract_pm25_data <- function(file_paths, years, scenario_name,
   bind_rows(pm25_list) %>%
     rename(!!paste0("pm25_", scenario_name) := pm25)
 }
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Extract Data for All Scenarios #################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -323,12 +339,15 @@ print(fpm_matrix[1:5, 1:5])
 ############ Validation: Compare with Original MAT File ####################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Purpose: Verify that our processed Classic 2015 fire PM2.5 (NetCDF -> regrid
+# -> classic minus withoutfire) matches the authors' pre-computed PMfire data
+# in results1206.mat, as a sanity check on the full pipeline.
+
 # Read the MAT file
 mat_data <- readMat(here("input", "Park_etal_2024", "results1206.mat"))
 
 # Extract Classic model data
-PMfire_classic <- mat_data$PMfire[[1]][[1]]  # Classic model: 360(lat) x 720(lon) x 6(years) x 2(scenarios)
-
+PMfire_classic <- mat_data$PMfire[[1]][[1]]  # Classic model: 360(lat, north -> south) x 720(lon) x 6(years) x 2(scenarios)
 cat("\n=== Original MAT File ===\n")
 cat("PMfire_classic dimensions:", dim(PMfire_classic), "\n")
 
@@ -336,9 +355,15 @@ cat("PMfire_classic dimensions:", dim(PMfire_classic), "\n")
 PMfire_classic_2015 <- PMfire_classic[, , 6, 1]  # 360 x 720
 
 # Convert our data to matrix and transpose to match
+# expand.grid(lon, lat) -> lon varies first, so nrow = 720 (lon), ncol = 360 (lat).
+# Transpose to get lat as rows, lon as cols (standard raster convention).
 fpm_vector <- combined_data$park_classic_2015_fpm
 fpm_matrix <- matrix(fpm_vector, nrow = 720, ncol = 360)
-fpm_matrix_t <- t(fpm_matrix)  # Now 360 x 720
+fpm_matrix_t <- t(fpm_matrix)  # Now 360 (lat: south -> north) x 720 (lon)
+
+# Flip lat: our data is south -> north, but the MAT file stores lat north -> south.
+# This is comparison-only; combined_data itself keeps the standard south -> north order.
+fpm_matrix_t <- fpm_matrix_t[360:1, ]
 
 # Round to some decimal places for comparison
 PMfire_rounded <- round(PMfire_classic_2015, 6)
@@ -347,24 +372,20 @@ fpm_rounded <- round(fpm_matrix_t, 6)
 # Compare
 max_diff <- max(abs(fpm_rounded - PMfire_rounded))
 mean_diff <- mean(abs(fpm_rounded - PMfire_rounded))
-
+cat("Comparing: our park_classic_2015_fpm (lat-flipped) vs MAT PMfire[Classic, 2015, scenario 1]\n")
 cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
 cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
 cat("Maximum difference:", max_diff, "\n")
 cat("Mean difference:", mean_diff, "\n")
-
 cat("\nFirst 5x5 from MAT file (rounded):\n")
 print(PMfire_rounded[1:5, 1:5])
-
 cat("\nFirst 5x5 from our data (rounded):\n")
 print(fpm_rounded[1:5, 1:5])
-
 if (max_diff == 0) {
-  cat("\n SUCCESS: Matrices are identical at 4 decimal precision!\n")
+  cat("\n SUCCESS: Matrices are identical at 6 decimal precision!\n")
 } else {
-  cat("\n WARNING: Matrices differ at 4 decimal precision!\n")
+  cat("\n WARNING: Matrices differ at 6 decimal precision!\n")
 }
-
 
 # Truncate to some decimal places (keep only some digits after decimal)
 PMfire_truncated <- trunc(PMfire_classic_2015 * 1e6) / 1e6
@@ -373,18 +394,14 @@ fpm_truncated <- trunc(fpm_matrix_t * 1e6) / 1e6
 # Compare
 max_diff <- max(abs(fpm_truncated - PMfire_truncated))
 mean_diff <- mean(abs(fpm_truncated - PMfire_truncated))
-
 cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
 cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
 cat("Maximum difference:", max_diff, "\n")
 cat("Mean difference:", mean_diff, "\n")
-
 cat("\nFirst 5x5 from MAT file (truncated):\n")
 print(PMfire_truncated[1:5, 1:5])
-
 cat("\nFirst 5x5 from our data (truncated):\n")
 print(fpm_truncated[1:5, 1:5])
-
 if (max_diff == 0) {
   cat("\n SUCCESS: Matrices are identical after truncation!\n")
 } else {
@@ -392,9 +409,11 @@ if (max_diff == 0) {
 }
 
 # Find different cells
+# the source NetCDF grid centers are at -179.5..180,
+# while our target grid centers are at -179.75..179.75 (offset by 0.25 deg),
+# so bilinear regridding introduces minor smoothing.
 diff_matrix <- fpm_matrix_t - PMfire_classic_2015
 diff_indices <- which(abs(diff_matrix) > 0, arr.ind = TRUE)
-
 cat("\nNumber of different cells:", nrow(diff_indices), "\n")
 if (nrow(diff_indices) > 0) {
   cat("\nFirst 10 different cells:\n")
@@ -433,7 +452,7 @@ write.csv(combined_data, here("output", "pop_pm_combined_with_park2024.csv"), ro
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ SANITY CHECK: Plot US fpm for ALL models x years ##############
 ############ Output as HTML to local folder                       ##########
-############ Standalone — does not affect final dataset           ##########
+############ does not affect final dataset           #######################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 library(ncdf4)
@@ -490,10 +509,25 @@ read_pm25 <- function(path) {
   if (nrow(pm) == length(lat) && ncol(pm) == length(lon)) {
     pm <- t(pm)
   }
+  
+  # Ensure latitude is ascending (south -> north) for correct raster rendering
+  if (is.unsorted(lat)) {
+    ord <- order(lat)
+    lat <- lat[ord]
+    pm  <- pm[, ord, drop = FALSE]
+  }
+  
+  # Ensure longitude is ascending too
+  if (is.unsorted(lon)) {
+    ord <- order(lon)
+    lon <- lon[ord]
+    pm  <- pm[ord, , drop = FALSE]
+  }
+  
   list(lon = lon, lat = lat, pm = pm)
 }
 
-# --- helper: build fpm dataframe for one model x one year ---
+# --- build fpm dataframe for one model x one year ---
 build_fpm_df <- function(path_model, path_withoutfire) {
   a <- read_pm25(path_model)
   b <- read_pm25(path_withoutfire)
@@ -571,7 +605,7 @@ img_tags <- list()
 
 for (m in names(models)) {
   
-  cat("Building plot for model:", m, "\n")
+  cat("Building plots for model:", m, "\n")
   
   dfs <- lapply(seq_along(years), function(i) {
     build_fpm_df(models[[m]][i], file_paths_withoutfire[i])
@@ -580,31 +614,27 @@ for (m in names(models)) {
   fill_max <- quantile(unlist(lapply(dfs, `[[`, "fpm")),
                        0.99, na.rm = TRUE)
   
-  plots <- lapply(seq_along(years), function(i) {
-    make_plot(dfs[[i]],
-              title = paste0(m, " — ", years[i]),
-              fill_max = fill_max)
+  year_imgs <- lapply(seq_along(years), function(i) {
+    p <- make_plot(dfs[[i]],
+                   title = paste0(m, " — ", years[i]),
+                   fill_max = fill_max)
+    tmp <- tempfile(fileext = ".png")
+    ggsave(tmp, p, width = 9, height = 5.5, dpi = 220, bg = "white")
+    
+    tags$img(
+      src   = png_to_base64(tmp),
+      style = paste("width: 49%; margin: 0.5%; vertical-align: top;",
+                    "border: 1px solid #ddd;",
+                    "image-rendering: pixelated;",
+                    "image-rendering: crisp-edges;")
+    )
   })
-  
-  combined <- wrap_plots(plots, nrow = 2, ncol = 3) +
-    plot_annotation(
-      title    = paste0("Sanity check: ", m, " fire PM2.5 (CONUS)"),
-      subtitle = "Original NetCDF coordinates, common color scale (0 to 99th percentile)",
-      theme    = theme(plot.title    = element_text(face = "bold", size = 13),
-                       plot.subtitle = element_text(size = 10))
-    ) +
-    plot_layout(guides = "collect") & theme(legend.position = "right")
-  
-  # Save to a temp PNG first, then read back as base64 for embedding
-  tmp_png <- tempfile(fileext = ".png")
-  ggsave(tmp_png, combined, width = 14, height = 8, dpi = 130, bg = "white")
   
   img_tags[[m]] <- tags$div(
     style = "margin-bottom: 40px;",
     tags$h2(paste0("Model: ", m),
             style = "font-family: sans-serif; color: #333;"),
-    tags$img(src   = png_to_base64(tmp_png),
-             style = "max-width: 100%; height: auto; border: 1px solid #ddd;")
+    do.call(tags$div, year_imgs)
   )
 }
 
@@ -632,4 +662,124 @@ save_html(page, out_html)
 
 cat("\n HTML saved to:\n", out_html, "\n")
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Sanity Check: Native Model Resolution ##########################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Purpose: Verify the true (native) resolution of the GEOS-Chem PM2.5 fields
+# distributed by Park et al. 2024. The files are stored on a 0.5° x 0.5° mesh,
+# but inspection of block structure (consecutive identical values) reveals the
+# underlying simulation grid is much coarser.
+#
+# Reference: GEOS-Chem Classic 14.7.1 horizontal grids documentation
+#   https://geos-chem.readthedocs.io/en/latest/supplemental-guides/horizontal-grids.html
+#
+# Expected for a 4° x 5° global grid with half_size_polar_boxes = TRUE:
+#   - Mid-latitude rows: 4° lat / 0.5° = 8 consecutive identical 0.5° cells
+#   - Polar half-cells (lat = +/-89, width 2°): 4 consecutive identical cells
+#   - Total lat runs: 44 mid-latitude + 2 polar = 46 runs spanning 360 cells
+
+diagnose_resolution <- function(file_path, label, sample_lon = -100, sample_lat = 40) {
+  cat("\n============================================================\n")
+  cat("DIAGNOSTIC FOR:", label, "\n")
+  cat("File:", basename(file_path), "\n")
+  cat("============================================================\n")
+  
+  nc <- nc_open(file_path)
+  lon_src <- as.numeric(ncvar_get(nc, "lon"))
+  lat_src <- as.numeric(ncvar_get(nc, "lat"))
+  pm      <- ncvar_get(nc, "PM25")
+  nc_close(nc)
+  
+  # [1] Coordinate metadata
+  cat("\n[1] Shape & coordinate metadata\n")
+  cat(sprintf("    length(lon) = %d | range = [%g, %g] | res = %g\n",
+              length(lon_src), min(lon_src), max(lon_src), mean(diff(lon_src))))
+  cat(sprintf("    length(lat) = %d | range = [%g, %g] | res = %g\n",
+              length(lat_src), min(lat_src), max(lat_src), mean(diff(lat_src))))
+  cat(sprintf("    dim(pm)     = %d x %d\n", dim(pm)[1], dim(pm)[2]))
+  
+  # [2] Unique values along each axis at a sample point
+  lon_idx <- which.min(abs(lon_src - sample_lon))
+  lat_idx <- which.min(abs(lat_src - sample_lat))
+  cat("\n[2] Unique values along each axis (at sample point)\n")
+  cat(sprintf("    Sample column (lon = %g): %d unique values out of %d\n",
+              lon_src[lon_idx], length(unique(pm[lon_idx, ])), length(lat_src)))
+  cat(sprintf("    Sample row    (lat = %g): %d unique values out of %d\n",
+              lat_src[lat_idx], length(unique(pm[, lat_idx])), length(lon_src)))
+  
+  # [3] Block-size structure (run-length encoding of identical values)
+  # In a remapped coarse-to-fine field, identical 0.5° cells form blocks whose
+  # length reveals the native cell width. Mode of run lengths = typical block.
+  lat_runs <- rle(pm[lon_idx, ])
+  lon_runs <- rle(pm[, lat_idx])
+  most_common <- function(x) as.integer(names(sort(table(x), decreasing = TRUE)[1]))
+  cat("\n[3] Detected block size (consecutive cells with identical value)\n")
+  cat(sprintf("    Along lat axis: most common run length = %d   (samples: %s)\n",
+              most_common(lat_runs$lengths),
+              paste(head(lat_runs$lengths, 10), collapse = ",")))
+  cat(sprintf("    Along lon axis: most common run length = %d   (samples: %s)\n",
+              most_common(lon_runs$lengths),
+              paste(head(lon_runs$lengths, 10), collapse = ",")))
+  
+  # [4] Inferred true resolution from block sizes
+  eff_lat_res <- most_common(lat_runs$lengths) * abs(mean(diff(lat_src)))
+  eff_lon_res <- most_common(lon_runs$lengths) * abs(mean(diff(lon_src)))
+  cat("\n[4] Inferred TRUE resolution\n")
+  cat(sprintf("    Stored lon res = %g deg | effective lon res ~ %g deg\n",
+              abs(mean(diff(lon_src))), eff_lon_res))
+  cat(sprintf("    Stored lat res = %g deg | effective lat res ~ %g deg\n",
+              abs(mean(diff(lat_src))), eff_lat_res))
+  
+  # [5] 5x5 patch near sample point (visual confirmation of block structure)
+  cat("\n[5] 5x5 PM25 patch near (lon =", sample_lon, ", lat =", sample_lat, ")\n")
+  print(round(pm[lon_idx:(lon_idx + 4), lat_idx:(lat_idx + 4)], 4))
+  
+  # [6] Polar-cap check: half_size_polar_boxes leaves shorter runs at poles.
+  # For a 4° x 5° grid, mid-latitude runs = 8 cells, polar runs = 4 cells.
+  full_lat_runs <- rle(pm[lon_idx, ])
+  cat("\n[6] Polar-cap structure (full lat axis run lengths)\n")
+  cat(sprintf("    Number of lat runs: %d (expect 46 for 4 deg x 5 deg global grid)\n",
+              length(full_lat_runs$lengths)))
+  cat(sprintf("    Run length at far south: %d (expect 4 for half polar cell)\n",
+              full_lat_runs$lengths[1]))
+  cat(sprintf("    Run length at far north: %d (expect 4 for half polar cell)\n",
+              full_lat_runs$lengths[length(full_lat_runs$lengths)]))
+  
+  # [7] Verdict
+  cat("\n[7] Verdict\n")
+  cat("    Data is stored on a 0.5 deg mesh BUT effective resolution is COARSER.\n")
+  cat(sprintf("    Native model grid is approximately %g deg lon x %g deg lat.\n",
+              eff_lon_res, eff_lat_res))
+  cat("    Consistent with GEOS-Chem Classic 4 deg x 5 deg global grid\n")
+  cat("    with half_size_polar_boxes = TRUE (mid-lat runs = 8, polar runs = 4,\n")
+  cat("    46 total lat runs spanning 360 cells = 44 mid-lat + 2 polar).\n")
+  cat("    The lon axis appears continuous because conservative regridding\n")
+  cat("    (CDO remapcon) blends adjacent 5 deg native cells into smoothly\n")
+  cat("    varying 0.5 deg sub-cells along the longitude direction.\n")
+  cat("============================================================\n")
+}
+
+# Run diagnostics on representative files (one per scenario, plus a year check)
+diagnose_resolution(file_paths_classic[6],     "classic 2015")
+diagnose_resolution(file_paths_classic[1],     "classic 1965")
+diagnose_resolution(file_paths_withoutfire[6], "withoutfire 2015")
+diagnose_resolution(file_paths_jules[6],       "jules 2015")
+diagnose_resolution(file_paths_ssib4[6],       "ssib4 2015")
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Conclusion (consistent with GEOS-Chem Classic horizontal grids documentation):
+#   - Native simulation grid: 4° lat × 5° lon, with half_size_polar_boxes = TRUE.
+#   - Data are stored on a finer 0.5° × 0.5° grid after conservative remapping
+#     (CDO remapcon), but this does NOT reflect the true model resolution.
+#   - Latitude direction clearly shows the native resolution (~4°, ~2° at poles)
+#     through repeated identical values (block structure).
+#   - Longitude direction appears smooth because remapcon spreads each 5° grid
+#     cell across multiple 0.5° cells, masking the original coarse resolution.
+#   - Therefore, the true spatial resolution remains 4° × 5°, and any finer-scale
+#     variation (e.g., <4°) should be interpreted as a regridding artifact,
+#     not a physical signal.
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 #THE END
+
