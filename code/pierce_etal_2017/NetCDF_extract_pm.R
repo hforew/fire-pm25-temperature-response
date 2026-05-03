@@ -2,6 +2,27 @@
 ## Extract PM2.5 grid cell data from NetCDF ##
 #########################################
 
+# Pierce et al (2017) data source: 
+# this code 1) extracts fire PM grid cell data from NetCDF file, converts to dataframe and exports as csv
+
+# ## inputs
+# * CESM_09x125_PM25_ 
+# ** multiple files with this predix, see section 3 for detail
+# 
+# ## outputs 
+# * annual_ave_pm25.csv
+# ** columns:
+#   lon	lat	pm_2000	pm_2050_45	pm_2050_85	pm_2100_45	pm_2100_85	fpm_2000	fpm_2050_45	fpm_2050_45_hi	
+# fpm_2050_85	fpm_2050_85_hi	fpm_2100_45	fpm_2100_45_hi	fpm_2100_85	fpm_2100_85_hi	fpm_2100_rcp_chg	
+# fpm_2100_rcp_chg_hi	fpm_2050_rcp_chg	fpm_2050_rcp_chg_hi	fpm_2050_45_base_chg	fpm_2050_85_base_chg	
+# fpm_2100_45_base_chg	fpm_2100_85_base_chg	fpm_2050_45_base_chg_hi	fpm_2050_85_base_chg_hi	
+# fpm_2100_45_base_chg_hi	fpm_2100_85_base_chg_hi	n_months
+# ** at grid cell level, this data is:
+#   - pm total (including fire)
+#   - pm total with human influence
+#   - pm without fire 
+#   - Fire pm (fpm)  
+#   - Computed for years (2000, 2050, 2100) and RCPs (4.5,8.5)
 
 # Remove all objects from the environment
 rm(list = ls())
