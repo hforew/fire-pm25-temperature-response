@@ -152,7 +152,7 @@ other_row <- wrap_plots(other_plots, nrow = 1)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Save Each Row to a Standalone HTML File #####################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-out_dir <- "C:/Ford_BA_FPM25/images/fpm_cell_usa"
+out_dir <- here::here("images", "fpm_cell_usa")
 dir.create(out_dir, showWarnings = FALSE, recursive = TRUE)
 
 if (!requireNamespace("base64enc", quietly = TRUE)) install.packages("base64enc")
