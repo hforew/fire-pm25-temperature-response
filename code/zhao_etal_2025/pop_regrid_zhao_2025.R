@@ -4,6 +4,8 @@
 #                                                        [-90.05,   89.95] lat#
 # Target: 0.5 deg, centers x.25/x.75, edges x.0/x.5, extent [-180,180]x[-90,90]#
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+rm(list = ls())
+
 
 library(here)                                          # relative paths
 library(reticulate)                                    # Python interop for .npz
