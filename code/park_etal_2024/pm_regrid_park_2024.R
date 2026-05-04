@@ -1,6 +1,19 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Extract Year, Longitude, Latitude, and PM2.5 from NetCDF Files ##################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Process GEOS-Chem PM2.5 output from Park et al. (2024) to derive gridded
+# fire-attributable PM2.5 (fPM) and merge it into the master dataset.
+#
+# Inputs : Decade-mean surface PM2.5 NetCDF files for 6 periods
+#          (1965, 1975, 1985, 1995, 2005, 2015) under 4 scenarios:
+#          withoutfire (no-fire baseline), classic, jules, ssib4 (fire models).
+#
+# Steps  : (1) Read NetCDFs, shift lon to [-180,180], regrid to 0.5° x 0.5°.
+#          (2) Compute fPM = PM2.5(models) - PM2.5(withoutfire) for each model.
+#          (3) Reshape to wide format (one column per model x year).
+#          (4) Merge with population data and the master pop_pm dataset.
+#          (5) Validate against authors' results1206.mat; render CONUS sanity-
+#              check maps; diagnose the native 4° x 5° simulation resolution.
 
 # Remove all objects from the environment
 rm(list = ls())
