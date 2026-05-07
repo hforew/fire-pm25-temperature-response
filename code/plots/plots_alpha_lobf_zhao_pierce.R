@@ -30,7 +30,7 @@ library(ggrepel)
 #                          damage function parameter used downstream in GIVE.
 #                          Positive = more fire PM with warming; negative = less.
 
-source(here("code/regression_alpha", "fpm_gmt_regression_final.R")) # regression file and load all objects
+source(here("code/regression_alpha", "fpm_gmt_regression_zhao_pierce.R")) # regression file and load all objects
 
 head(reg_coefs)
 str(reg_coefs)
@@ -51,7 +51,7 @@ hist_alpha_c2 <- ggplot(reg_coefs, aes(x = estimate_alpha_c2)) +
   theme_minimal()
 
 hist_alpha_c2
-ggsave(here("images/regression_alpha", "hist_alpha_c2_final.png"), plot = hist_alpha_c2, width = 8, height = 5, dpi = 300)
+ggsave(here("images/regression_alpha/alpha_zhao_pierce", "hist_alpha_c2_zhao_pierce.png"), plot = hist_alpha_c2, width = 8, height = 5, dpi = 300)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -133,7 +133,7 @@ map_alpha_c1 <- ggplot() +
 
 
 map_alpha_c1
-ggsave(here("images/regression_alpha", "map_alpha_c1_final.png"),
+ggsave(here("images/regression_alpha/alpha_zhao_pierce", "map_alpha_c1_zhao_pierce.png"),
        map_alpha_c1, width = 12, height = 6)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -180,48 +180,37 @@ map_alpha_c2 <- ggplot() +
 
 
 map_alpha_c2
-ggsave(here("images/regression_alpha", "map_alpha_c2_final.png"),
+ggsave(here("images/regression_alpha/alpha_zhao_pierce", "map_alpha_c2_zhao_pierce.png"),
        map_alpha_c2, width = 12, height = 6)
 
-print("Alpha maps saved to images/regression_alpha/")
+print("Alpha maps saved to images/regression_alpha/alpha_zhao_pierce/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Line of Best Fit #########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# For each selected country, plot all 25 observations (18 Park + 5 Pierce + 2 Zhao) with the
+# For each selected country, plot all 7 observations (5 Pierce + 2 Zhao) with the
 # OLS fitted line: exposure_percap = alpha_c1 + alpha_c2 * T_ps
 #
 # Data objects from source():
-#   reg_data_combined -- 25 rows per country: T_ps (GMT regressor) and exposure_percap (response)
-#   reg_coefs         -- alpha_c1 and alpha_c2 per country (define the fitted line)
+#   reg_data_long -- 7 rows per country: T_ps (GMT regressor) and exposure_percap (response)
+#   reg_coefs     -- alpha_c1 and alpha_c2 per country (define the fitted line)
 
 # Lookup table: maps each period_scenario to its fire model and warming trajectory.
 # Used to set color (model) and shape (trajectory) aesthetics in the scatter plots.
 scenario_lookup <- tibble(
   period_scenario = c(
-    "exposure_percap_park_classic_1960s_fpm", "exposure_percap_park_classic_1970s_fpm",
-    "exposure_percap_park_classic_1980s_fpm", "exposure_percap_park_classic_1990s_fpm",
-    "exposure_percap_park_classic_2000s_fpm", "exposure_percap_park_classic_2010s_fpm",
-    "exposure_percap_park_jules_1960s_fpm",   "exposure_percap_park_jules_1970s_fpm",
-    "exposure_percap_park_jules_1980s_fpm",   "exposure_percap_park_jules_1990s_fpm",
-    "exposure_percap_park_jules_2000s_fpm",   "exposure_percap_park_jules_2010s_fpm",
-    "exposure_percap_park_ssib4_1960s_fpm",   "exposure_percap_park_ssib4_1970s_fpm",
-    "exposure_percap_park_ssib4_1980s_fpm",   "exposure_percap_park_ssib4_1990s_fpm",
-    "exposure_percap_park_ssib4_2000s_fpm",   "exposure_percap_park_ssib4_2010s_fpm",
     "exposure_percap_fpm_2000",
     "exposure_percap_fpm_2050_45",            "exposure_percap_fpm_2050_85",
     "exposure_percap_fpm_2100_45",            "exposure_percap_fpm_2100_85",
     "exposure_percap_fpm_2095_SSP245_Zhao",   "exposure_percap_fpm_2095_SSP585_Zhao"
   ),
   model = c(
-    rep("CLASSIC", 6), rep("JULES", 6), rep("SSiB4", 6),
     "CESM", "CESM", "CESM", "CESM", "CESM",
     "Multi-model", "Multi-model"
   ),
   trajectory = c(
-    rep("Historical", 18),
     "Historical", "RCP4.5", "RCP8.5", "RCP4.5", "RCP8.5",
     "SSP2-4.5", "SSP5-8.5"
   )
@@ -229,9 +218,6 @@ scenario_lookup <- tibble(
 
 model_colors <- c(
   "CESM"        = "#E69F00",
-  "JULES"       = "#56B4E9",
-  "SSiB4"       = "#009E73",
-  "CLASSIC"     = "#CC79A7",
   "Multi-model" = "#000000"
 )
 
@@ -247,21 +233,15 @@ countries_to_plot <- c("global", "USA","DEU", "RUS", "AUS", "CHN", "IND", "ARG",
 
 for (iso in countries_to_plot) {
 
-  # Filter to this country's 25 observations, join model/trajectory lookup, and
-  # create point labels. Labels shown for all Pierce/Zhao points and Park 2010s only;
-  # all other Park decades are unlabelled to avoid overplotting.
-  df <- reg_data_combined %>%
+  # Filter to this country's 7 observations, join model/trajectory lookup, and
+  # create point labels for all Pierce and Zhao points.
+  df <- reg_data_long %>%
     filter(country_code_iso3 == iso) %>%
     left_join(scenario_lookup, by = "period_scenario") %>%
     mutate(
       model      = factor(model,      levels = names(model_colors)),
       trajectory = factor(trajectory, levels = names(trajectory_shapes)),
       label = case_when(
-        period_scenario %in% c(
-          "exposure_percap_park_classic_2010s_fpm",
-          "exposure_percap_park_jules_2010s_fpm",
-          "exposure_percap_park_ssib4_2010s_fpm"
-        ) ~ "Park et al.",
         period_scenario %in% c(
           "exposure_percap_fpm_2000",
           "exposure_percap_fpm_2050_45",
@@ -291,10 +271,10 @@ for (iso in countries_to_plot) {
   n_obs <- nrow(df)
 
   p <- ggplot(df, aes(x = T_ps, y = exposure_percap, color = model, shape = trajectory)) +
-    # Each point is one observation: 18 Park (decade × fire model) +
-    # 5 Pierce (baseline, 2040s RCP4.5/8.5, 2090s RCP4.5/8.5) + 2 Zhao (~2095 SSP2-4.5/SSP5-8.5)
+    # Each point is one observation: 5 Pierce (baseline, 2040s RCP4.5/8.5, 2090s RCP4.5/8.5)
+    # + 2 Zhao (~2095 SSP2-4.5/SSP5-8.5)
     geom_point(size = 3) +
-    # Labels for all labelled points (Park 2010s, Pierce, Zhao).
+    # Labels for all labelled points (Pierce, Zhao).
     # ggrepel automatically nudges overlapping labels apart and draws
     # a line back to the point when a label is pushed away.
     geom_text_repel(data = ~ filter(.x, !is.na(label)),
@@ -320,11 +300,11 @@ for (iso in countries_to_plot) {
     theme(panel.grid.minor = element_blank())
 
   print(p)
-  ggsave(here("images/regression_alpha", paste0("lof_", tolower(iso), "_final.png")),
+  ggsave(here("images/regression_alpha/alpha_zhao_pierce", paste0("lof_", tolower(iso), "_zhao_pierce.png")),
          p, width = 7, height = 5, dpi = 300)
 }
 
 
-print("Line of best fit plots saved to images/regression_alpha/")
+print("Line of best fit plots saved to images/regression_alpha/alpha_zhao_pierce/")
 
 ### THE END

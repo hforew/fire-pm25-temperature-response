@@ -83,11 +83,9 @@ pop_wght_pm_cntry <- pop_pm_country %>%
     ),
     # Per-capita fire PM2.5 exposure in country c:
     # exposure_cps^per-capita = sum_i( fPM_ics * pop_bar_ic ) / pop_bar_c
-    # denominator uses only cells where fPM is non-missing
     across(
       all_of(fpm_cols),
-      ~ sum(.x * pop_bar, na.rm = TRUE) /
-          sum(pop_bar[!is.na(.x)], na.rm = TRUE),
+      ~ sum(.x * pop_bar, na.rm = TRUE) / pop_bar_c,
       .names = "exposure_percap_{.col}"
     ),
     # Park et al. fPM exposure: all 18 columns weighted by pop_bar (same baseline as future scenarios).
@@ -99,8 +97,7 @@ pop_wght_pm_cntry <- pop_pm_country %>%
     ),
     across(
       all_of(park_fpm_cols),
-      ~ sum(.x * pop_bar, na.rm = TRUE) /
-          sum(pop_bar[!is.na(.x)], na.rm = TRUE),
+      ~ sum(.x * pop_bar, na.rm = TRUE) / pop_bar_c,
       .names = "exposure_percap_{.col}"
     ),
     .groups = "drop"
@@ -214,6 +211,149 @@ bind_rows(
   select(source, pop_bar_c, base_death)
 
 colnames(pop_wght_pm_cntry)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Descriptive Statistics: Per-Capita fPM Exposure (excl. JULES) #############
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# select all per-capita exposure cols, drop JULES (excluded from analysis)
+desc_cols <- colnames(pop_wght_pm_cntry) %>%
+  .[grepl("^exposure_percap_", .)] %>%
+  .[!grepl("jules", .)]
+
+# pivot to long so each row is one (country, column, value) triple,
+# then compute summary stats across countries for each exposure column
+pop_wght_pm_cntry %>%
+  select(all_of(desc_cols)) %>%
+  pivot_longer(everything(), names_to = "column", values_to = "value") %>%
+  group_by(column) %>%
+  summarise(
+    n      = sum(!is.na(value)),          # non-missing country count
+    mean   = mean(value,             na.rm = TRUE),
+    sd     = sd(value,               na.rm = TRUE),
+    min    = min(value,              na.rm = TRUE),
+    p25    = quantile(value, 0.25,   na.rm = TRUE),
+    median = median(value,           na.rm = TRUE),
+    p75    = quantile(value, 0.75,   na.rm = TRUE),
+    max    = max(value,              na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  print(n = Inf)
+
+
+# subset to Park-only per-capita cols (non-jules) to investigate high max values
+park_percap_cols <- desc_cols[grepl("park", desc_cols)]
+
+# for each Park column, return the 3 highest-exposure countries —
+# identifies which countries drive the distribution's upper tail
+park_percap_cols %>%
+  lapply(function(col) {
+    pop_wght_pm_cntry %>%
+      filter(!is.na(.data[[col]]), country_code_iso3 != "global") %>% # exclude synthetic global row
+      slice_max(order_by = .data[[col]], n = 3) %>%
+      select(country_code_iso3, country_name, value = all_of(col)) %>%
+      mutate(column = col)
+  }) %>%
+  bind_rows() %>%
+  select(column, country_code_iso3, country_name, value) %>%
+  print(n = Inf)
+
+# sanity check on CAF (Central African Republic), which has the highest per-capita
+# fPM across all Park decades: verify high values reflect real grid-cell fPM,
+# not a data/join artifact. mean_fpm ~42, pop ~3.5M → per-capita ~48 is expected.
+pop_pm_country %>%
+  filter(country_code_iso3 == "CAF") %>%
+  summarise(
+    n_cells        = n(),                                      # number of grid cells in CAF
+    mean_fpm       = mean(park_classic_2010s_fpm, na.rm = TRUE), # avg fire PM across cells
+    max_fpm        = max(park_classic_2010s_fpm,  na.rm = TRUE), # upper tail of cell distribution
+    pop_bar_total  = sum(pop_bar,                 na.rm = TRUE)  # total baseline population
+  )
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ USA Sanity Check #############
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# choose USA only per capita exposure results
+usa_percap <- pop_wght_pm_cntry %>%
+  filter(country_code_iso3 == "USA") %>%
+  select(country_code_iso3, pop_bar_c, starts_with("exposure_percap_"), -contains("jules"))
+
+usa_percap
+
+# print ssib4
+usa_percap %>%
+  select(country_code_iso3, pop_bar_c, contains("ssib4"))
+
+# grid cell level desc stats for ssib4 for USA
+pop_pm_country %>%
+  filter(country_code_iso3 == "USA") %>%
+  select(contains("ssib4")) %>%
+  pivot_longer(everything(), names_to = "column", values_to = "value") %>%
+  group_by(column) %>%
+  summarise(
+    n      = sum(!is.na(value)),
+    mean   = mean(value,           na.rm = TRUE),
+    sd     = sd(value,             na.rm = TRUE),
+    min    = min(value,            na.rm = TRUE),
+    p25    = quantile(value, 0.25, na.rm = TRUE),
+    median = median(value,         na.rm = TRUE),
+    p75    = quantile(value, 0.75, na.rm = TRUE),
+    max    = max(value,            na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  print(n = Inf)
+
+# USA SSiB4 per-capita exposure: identify highest and lowest decade,
+# then print grid-cell desc stats for those decades to substantiate
+usa_ssib4_percap <- pop_wght_pm_cntry %>%
+  filter(country_code_iso3 == "USA") %>%
+  select(starts_with("exposure_percap_park_ssib4")) %>%
+  pivot_longer(everything(), names_to = "column", values_to = "percap") %>%
+  mutate(decade = gsub(".*ssib4_(\\w+)_fpm", "\\1", column))  # extract decade label
+
+# highest and lowest per-capita SSiB4 decade for USA
+usa_ssib4_max <- usa_ssib4_percap %>% slice_max(percap, n = 1)
+usa_ssib4_min <- usa_ssib4_percap %>% slice_min(percap, n = 1)
+
+# grid-cell desc stats for highest SSiB4 decade — substantiates the per-capita value
+usa_ssib4_max_stats <- pop_pm_country %>%
+  filter(country_code_iso3 == "USA") %>%
+  summarise(
+    n_cells = n(),
+    mean    = mean(.data[[paste0("park_ssib4_", usa_ssib4_max$decade, "_fpm")]], na.rm = TRUE),
+    sd      = sd(.data[[paste0("park_ssib4_", usa_ssib4_max$decade, "_fpm")]],   na.rm = TRUE),
+    min     = min(.data[[paste0("park_ssib4_", usa_ssib4_max$decade, "_fpm")]],  na.rm = TRUE),
+    median  = median(.data[[paste0("park_ssib4_", usa_ssib4_max$decade, "_fpm")]], na.rm = TRUE),
+    max     = max(.data[[paste0("park_ssib4_", usa_ssib4_max$decade, "_fpm")]],  na.rm = TRUE)
+  )
+
+# grid-cell desc stats for lowest SSiB4 decade — substantiates the per-capita value
+usa_ssib4_min_stats <- pop_pm_country %>%
+  filter(country_code_iso3 == "USA") %>%
+  summarise(
+    n_cells = n(),
+    mean    = mean(.data[[paste0("park_ssib4_", usa_ssib4_min$decade, "_fpm")]], na.rm = TRUE),
+    sd      = sd(.data[[paste0("park_ssib4_", usa_ssib4_min$decade, "_fpm")]],   na.rm = TRUE),
+    min     = min(.data[[paste0("park_ssib4_", usa_ssib4_min$decade, "_fpm")]],  na.rm = TRUE),
+    median  = median(.data[[paste0("park_ssib4_", usa_ssib4_min$decade, "_fpm")]], na.rm = TRUE),
+    max     = max(.data[[paste0("park_ssib4_", usa_ssib4_min$decade, "_fpm")]],  na.rm = TRUE)
+  )
+
+## comparison check 
+
+cat("USA SSiB4 highest per-capita exposure:",
+    usa_ssib4_max$decade, "—", round(usa_ssib4_max$percap, 3), "µg/m³\n")
+
+cat("\nGrid-cell fPM stats for USA SSiB4", usa_ssib4_max$decade, "(highest):\n")
+print(usa_ssib4_max_stats)
+
+
+cat("USA SSiB4 lowest  per-capita exposure:",
+    usa_ssib4_min$decade, "—", round(usa_ssib4_min$percap, 3), "µg/m³\n")
+
+cat("\nGrid-cell fPM stats for USA SSiB4", usa_ssib4_min$decade, "(lowest):\n")
+print(usa_ssib4_min_stats)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Export #############################################################
