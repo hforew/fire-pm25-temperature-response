@@ -2,14 +2,20 @@
 ## FPM–GMT RELATIONSHIP: Estimate alpha_c2 (per-capita fire PM2.5 change per 1°C GMT)
 ##                        with Park et al. historical data integrated
 ##
-## Goal: For each country c, estimate the linear regression:
-##   exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps
+## Goal: For each country c, estimate the linear regression with fire-model fixed effects:
+##   exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m])
 ##
 ## where T_ps is GMT change in period p under scenario s (°C relative to 1850–1900),
-## and alpha_c2 is the key damage function parameter: the change in per-capita fire
-## PM2.5 exposure (µg/m³/person/year) per 1°C increase in GMT.
+## alpha_c2 is the key damage function parameter (change in per-capita fire PM2.5
+## per 1°C GMT), and delta_m are fixed effects for each fire model (absorbing
+## model-level mean differences in absolute exposure levels).
 ##
-## Data spans two sources combined:
+## Five fire-model fixed effect levels:
+##   classic (reference), jules, ssib4  --> Park et al. historical models
+##   CESM                               --> Pierce et al. projections
+##   Zhao                               --> Zhao et al. projections
+##
+## Data spans three sources combined:
 ##   - Pierce et al. projections: baseline (~2001–2010), 2041–2050, and 2091–2100
 ##     under RCP4.5 and RCP8.5 — 5 (period × scenario) observations per country.
 ##   - Park et al. historical: 1960s–2010s across 3 fire models (classic, JULES, SSIB4)
@@ -152,9 +158,11 @@ reg_data_long <- reg_data_wide %>%
   )) %>%
   # Drop rows with missing exposure (uninhabited territories or missing data).
   # Countries with NA exposure cannot contribute to the regression.
-  filter(!is.na(exposure_percap))
+  filter(!is.na(exposure_percap)) %>%
+  # Label each Pierce/Zhao row with its source model for the fixed effect.
+  mutate(fire_model = if_else(grepl("Zhao", period_scenario), "Zhao", "CESM"))
 
-# Inspect the reshaped data to confirm structure (5 rows per country)
+# Inspect the reshaped data to confirm structure (5 rows per country, fire_model visible)
 print(head(reg_data_long, 15))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -235,28 +243,38 @@ print(head(park_data_long, 18))
 # One regression per country across all observations:
 #   18 Park historical obs (3 fire models × 6 decades) + 5 Pierce obs (1 base + 4 future)
 #   + 2 Zhao obs (SSP2-4.5, SSP5-8.5) = 25 total.
-reg_data_combined <- bind_rows(park_data_long, reg_data_long)
+reg_data_combined <- bind_rows(park_data_long, reg_data_long) %>%
+  # Set fire_model as factor with "classic" as reference level so FE dummies
+  # for jules, ssib4, CESM, Zhao are all interpreted relative to classic.
+  mutate(fire_model = factor(fire_model,
+                             levels = c("classic", "jules", "ssib4", "CESM", "Zhao")))
 
-# Sanity check: print total rows and a summary of per-country observation counts.
+# Sanity check: total rows and per-country observation counts.
 # Every country should have exactly 25 rows (18 Park + 5 Pierce + 2 Zhao).
-# Min = Max = 25 confirms no duplicates from a bad join and no countries with missing data sources.
 cat("\nCombined rows:", nrow(reg_data_combined), "\n")
 print(reg_data_combined %>% count(country_name) %>% summary())
+# Expected: Combined rows: 4375 | n Min=25, Mean=25, Max=25 (175 countries * 25 obs) -- 25 per country
+
+# Transparency: show observation count by fire_model across all countries.
+# Per country: classic=6, jules=6, ssib4=6, CESM=5, Zhao=2 (total=25).
+cat("\nTotal observations by fire_model (all countries combined):\n")
+print(reg_data_combined %>% count(fire_model))
+# Expected: classic=1050 = 175 x 6, jules=1050, ssib4=1050, CESM=875, Zhao=350 (175 countries each)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Run country-level linear regression ########################################
 ##
-## Model: exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps
+## Model: exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m])
 ##
 ## For each country c, we regress per-capita fire PM2.5 exposure on GMT (T_ps)
-## across the 5 (period × scenario) data points.
+## with fire-model fixed effects across all 25 observations.
 ##
 ## alpha_c2 (slope) = change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase.
 ## alpha_c1 (intercept) = OLS-fitted y-intercept; a mathematical artefact of the line fit,
 ##   not a meaningful estimate of exposure at pre-industrial temperatures. All observed
 ##   T_ps values are ~1°C or higher, so T=0 lies outside the data range.
 ##
-## Countries with fewer than 2 valid observations are dropped (cannot fit a line).
+## Countries with fewer than 6 valid observations are dropped (cannot fit 6 parameters).
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -271,10 +289,10 @@ usa_data <- reg_data_combined %>%
 # Print the USA data to inspect all 25 observations (18 Park decade × fire model + 5 Pierce
 # period × scenario + 2 Zhao) and their GMT values that will serve as inputs to the regression.
 cat("\n--- USA regression input data ---\n")
-print(usa_data %>% select(period_scenario, T_ps, exposure_percap))
+print(usa_data %>% select(fire_model, period_scenario, T_ps, exposure_percap) %>% arrange(fire_model))
 
 # Fit the OLS regression for the USA:
-#   exposure_percap ~ T_ps
+#   exposure_percap ~ T_ps + fire_model
 #
 # lm() fits an ordinary least squares (OLS) linear model.
 #   - The first argument is a formula: response ~ predictor(s).
@@ -283,10 +301,11 @@ print(usa_data %>% select(period_scenario, T_ps, exposure_percap))
 #   - The second argument, data =, specifies the data frame containing those variables.
 #   - lm() returns an object of class "lm" containing fitted coefficients, residuals,
 #     the model matrix, and metadata needed for summary(), predict(), and other methods.
-#   - With one predictor, the model is: y = beta_0 + beta_1 * x + epsilon,
-#     where beta_0 is the intercept (alpha_c1) and beta_1 is the slope (alpha_c2).
-#   - OLS minimises the sum of squared residuals to find beta_0 and beta_1.
-usa_model <- lm(exposure_percap ~ T_ps, data = usa_data)
+#   - The model is: y = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m]) + epsilon,
+#     where alpha_c1 is the classic-model baseline intercept, alpha_c2 is the GMT slope,
+#     and delta_m are fixed effects for jules, ssib4, CESM, and Zhao relative to classic.
+#   - OLS minimises the sum of squared residuals to find all 6 parameters.
+usa_model <- lm(exposure_percap ~ T_ps + fire_model, data = usa_data)
 
 # summary() on an lm object prints:
 #   - Residuals: min, Q1, median, Q3, max of the fitted residuals
@@ -321,9 +340,9 @@ global_data <- reg_data_combined %>%
   filter(country_name == "global")
 
 cat("\n--- Global regression input data ---\n")
-print(global_data %>% select(period_scenario, T_ps, exposure_percap))
+print(global_data %>% select(fire_model, period_scenario, T_ps, exposure_percap) %>% arrange(fire_model))
 
-global_model <- lm(exposure_percap ~ T_ps, data = global_data)
+global_model <- lm(exposure_percap ~ T_ps + fire_model, data = global_data)
 
 cat("\n--- Global lm() summary ---\n")
 print(summary(global_model))
@@ -343,14 +362,14 @@ cat("Global R-squared:", round(global_r2, 4), "\n")
 # The result is a list-column of tidy regression coefficient tables.
 reg_results <- reg_data_combined %>%
   group_by(country_code_iso3, country_name) %>%
-  # Keep only countries with at least 2 non-NA observations (minimum to fit a line;
+  # Keep only countries with at least 6 non-NA observations (minimum to fit 6 parameters;
   # in practice all countries have 25 observations after the pop_bar_c == 0 filter)
-  filter(n() >= 2) %>%
+  filter(n() >= 6) %>%
   # Nest all observations for each country into a sub-dataframe
   nest() %>%
   mutate(
-    # Fit OLS: exposure_percap ~ T_ps  (intercept + slope on GMT)
-    model = purrr::map(data, ~ lm(exposure_percap ~ T_ps, data = .x)),
+    # Fit OLS with fire-model FEs: intercept (classic baseline) + slope on GMT + 4 model dummies
+    model = purrr::map(data, ~ lm(exposure_percap ~ T_ps + fire_model, data = .x)),
 
     # Extract tidy coefficient table (term, estimate, std.error, statistic, p.value)
     tidied = purrr::map(model, tidy),
@@ -368,13 +387,15 @@ reg_results <- reg_data_combined %>%
 reg_coefs <- reg_results %>%
   select(country_code_iso3, country_name, tidied) %>%
   unnest(tidied) %>%
-  # Rename the regression terms to the paper's notation for clarity
+  # Keep only the intercept (classic baseline) and slope terms.
+  # FE dummy terms (fire_modeljules, fire_modelssib4, etc.) are dropped here —
+  # they absorb model-level mean differences but are not the output of interest.
+  filter(term %in% c("(Intercept)", "T_ps")) %>%
   mutate(param = case_when(
-    term == "(Intercept)" ~ "alpha_c1",  # OLS y-intercept (extrapolated; T=0 outside data range)
-    term == "T_ps"        ~ "alpha_c2"   # slope: exposure change per 1°C GMT (the key parameter)
+    term == "(Intercept)" ~ "alpha_c1",  # classic-model baseline intercept
+    term == "T_ps"        ~ "alpha_c2"   # slope: exposure change per 1°C GMT (key parameter)
   )) %>%
   select(country_code_iso3, country_name, param, estimate, std.error, statistic, p.value) %>%
-  # Pivot wide so each country has one row with columns alpha_c1 and alpha_c2
   pivot_wider(
     id_cols     = c(country_code_iso3, country_name),
     names_from  = param,
@@ -391,7 +412,7 @@ cat("\nDimensions of regression coefficient table:", nrow(reg_coefs), "countries
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Print summary statistics for alpha_c2 across all countries.
-# alpha_c2 > 0 means higher GMT → more fire PM2.5 exposure (expected for most countries).
+# alpha_c2 > 0 means higher GMT --> more fire PM2.5 exposure (expected for most countries).
 cat("\n--- Summary of alpha_c2 (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
 summary(reg_coefs$estimate_alpha_c2)
 
@@ -409,20 +430,17 @@ print(reg_coefs %>% filter(estimate_alpha_c2 < 0) %>% select(country_code_iso3, 
 
 # Compute the t critical value for a 95% confidence interval.
 #
-# Degrees of freedom (DF): each country regression has n = 25 observations (18 Park +
-#   5 Pierce + 2 Zhao) and estimates 2 parameters (intercept + slope), so DF = n - 2 = 23.
-#
-# With 23 DF, t_critical is ~2.07 — very close to the large-sample approximation of 1.96,
-#   reflecting the added precision from the Park and Zhao observations.
-df <- nrow(usa_data)-2
-t_critical <- qt(0.975, df)   # ~2.069 for 95% CI with 23 degrees of freedom
-cat("\nt_critical (95% CI, df = 23):", round(t_critical, 4), "\n")
+# Degrees of freedom (DF): each country regression has n = 25 observations and
+#   estimates 6 parameters (intercept + slope + 4 model FE dummies), so DF = n - 6 = 19.
+df <- nrow(usa_data) - 6
+t_critical <- qt(0.975, df)   # ~2.093 for 95% CI with 19 degrees of freedom
+cat("\nt_critical (95% CI, df = 19):", round(t_critical, 4), "\n")
 
 t_critical_largesample <- 1.96
 
 reg_coefs <- reg_coefs %>%
   mutate(
-    # 95% CI bounds using exact t_critical for df = 23
+    # 95% CI bounds using exact t_critical for df = 19
     lower_alpha_c2        = estimate_alpha_c2 - t_critical * std.error_alpha_c2,
     upper_alpha_c2        = estimate_alpha_c2 + t_critical * std.error_alpha_c2,
 
@@ -431,7 +449,7 @@ reg_coefs <- reg_coefs %>%
     upper_alpha_c2_1.96   = estimate_alpha_c2 + t_critical_largesample * std.error_alpha_c2,
 
     # Store both critical values as columns for reference
-    t_critical_df23        = t_critical,
+    t_critical_df19        = t_critical,
     t_critical_largesample = t_critical_largesample,
 
     # gamma_alpha_c2: scaled slope used in the GIVE damage function. 0.0095 from Orellano et al 2024 RR
@@ -439,7 +457,7 @@ reg_coefs <- reg_coefs %>%
   ) %>%
   select(
     country_code_iso3, country_name, gamma_alpha_c2,
-    t_critical_df23, t_critical_largesample,
+    t_critical_df19, t_critical_largesample,
     lower_alpha_c2, lower_alpha_c2_1.96,
     estimate_alpha_c2,
     upper_alpha_c2_1.96, upper_alpha_c2,
@@ -458,10 +476,9 @@ print(head(reg_coefs %>% select(country_code_iso3, estimate_alpha_c2,
 
 # Save the full coefficient table (alpha_c1, alpha_c2 with SEs and p-values) to CSV.
 # This is the primary output used downstream in the GIVE damage function.
-# write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs_park.csv"))
-write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs_final.csv"))
+write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs_FE_all.csv"))
 
-cat("\nSaved regression coefficients to output/fpm_gmt_regression_coefs_final.csv\n")
+cat("\nSaved regression coefficients to output/fpm_gmt_regression_coefs_FE_all.csv\n")
 
 
 # THE END 
