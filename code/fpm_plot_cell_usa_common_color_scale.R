@@ -116,25 +116,32 @@ fpm_palette <- c("#3B1F0E", "#6B3E1B", "#A9651A", "#D9A441", "#F2D04A", "#FFF2A8
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Plotting Function for One fpm Variable ######################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-plot_fpm_var <- function(sf_obj, var) {
-  ggplot(sf_obj) +
-    geom_sf(aes(fill = .data[[var]]), color = NA) +
-    geom_sf(data = states_sf, fill = NA, color = "grey30", linewidth = 0.2) +
+plot_fpm_var <- function(sf_obj, var, fill_max) {
+  ggplot() +
+    geom_sf(data = sf_obj,
+            aes(fill = .data[[var]]),
+            color = "grey35", linewidth = 0.12) +
+    geom_sf(data = states_sf,
+            fill = NA, color = "grey25", linewidth = 0.18) +
+    geom_sf(data = us_mainland,
+            fill = NA, color = "black", linewidth = 0.4) +
     scale_fill_gradientn(
-      colors = rev(fpm_palette),
-      name = "fPM",
+      colors   = rev(fpm_palette),
+      name     = "fPM",
+      limits   = c(0, fill_max),
+      oob      = scales::squish,
       na.value = "white"
     ) +
     coord_sf(xlim = c(-125, -66.5), ylim = c(24, 49.5), expand = FALSE) +
     labs(title = var) +
     theme_void(base_size = 9) +
     theme(
-      plot.title = element_text(hjust = 0.5, size = 9, face = "bold"),
+      plot.title        = element_text(hjust = 0.5, size = 9, face = "bold"),
       legend.key.height = unit(0.35, "cm"),
       legend.key.width  = unit(0.25, "cm"),
-      legend.title = element_text(size = 7),
-      legend.text  = element_text(size = 6),
-      plot.margin = margin(2, 2, 2, 2)
+      legend.title      = element_text(size = 7),
+      legend.text       = element_text(size = 6),
+      plot.margin       = margin(2, 2, 2, 2)
     )
 }
 
@@ -155,9 +162,9 @@ cat("Shared fill_max — zhao:", round(zhao_max, 3),
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Build Plots: One Row per Group, Time Old -> New Left -> Right ###############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-zhao_plots  <- lapply(zhao_cols,  function(v) plot_fpm_var(us_fpm, v))
-park_plots  <- lapply(park_cols,  function(v) plot_fpm_var(us_fpm, v))
-other_plots <- lapply(other_cols, function(v) plot_fpm_var(us_fpm, v))
+zhao_plots  <- lapply(zhao_cols,  function(v) plot_fpm_var(us_fpm, v, zhao_max))
+park_plots  <- lapply(park_cols,  function(v) plot_fpm_var(us_fpm, v, park_max))
+other_plots <- lapply(other_cols, function(v) plot_fpm_var(us_fpm, v, other_max))
 
 zhao_row  <- wrap_plots(zhao_plots,  nrow = 1)
 park_row  <- wrap_plots(park_plots,  nrow = 1)
