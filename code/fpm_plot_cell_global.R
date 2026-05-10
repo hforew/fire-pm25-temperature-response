@@ -93,7 +93,7 @@ fpm_palette <- c("#3B1F0E", "#6B3E1B", "#A9651A", "#D9A441", "#F2D04A", "#FFF2A8
 plot_global_fpm <- function(sf_obj, var) {
   ggplot(sf_obj) +
     geom_sf(aes(fill = .data[[var]]), color = NA) +
-    geom_sf(data = world_sf, fill = NA, color = "grey30", linewidth = 0.15) +
+    geom_sf(data = world_sf, fill = NA, color = "grey30", linewidth = 0.2) +
     scale_fill_gradientn(
       colors   = rev(fpm_palette),
       name     = "fPM",
@@ -101,14 +101,14 @@ plot_global_fpm <- function(sf_obj, var) {
     ) +
     coord_sf(xlim = c(-180, 180), ylim = c(-60, 85), expand = FALSE) +
     labs(title = var) +
-    theme_void(base_size = 10) +
+    theme_void(base_size = 9) +
     theme(
-      plot.title        = element_text(hjust = 0.5, size = 10, face = "bold"),
-      legend.key.height = unit(0.45, "cm"),
-      legend.key.width  = unit(0.3, "cm"),
+      plot.title        = element_text(hjust = 0.5, size = 9, face = "bold"),
+      legend.key.height = unit(0.35, "cm"),
+      legend.key.width  = unit(0.25, "cm"),
       legend.title      = element_text(size = 7),
       legend.text       = element_text(size = 6),
-      plot.margin       = margin(3, 3, 3, 3)
+      plot.margin       = margin(2, 2, 2, 2)
     )
 }
 

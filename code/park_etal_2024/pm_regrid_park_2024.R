@@ -16,6 +16,7 @@
 #              check maps; diagnose the native 4° x 5° simulation resolution.
 
 # Remove all objects from the environment
+
 rm(list = ls())
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -238,7 +239,42 @@ jules       <- extract_pm25_data(file_paths_jules,       years, "jules",
                                  target_lon, target_lat)
 ssib4       <- extract_pm25_data(file_paths_ssib4,       years, "ssib4",
                                  target_lon, target_lat)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ SANITY CHECK: PM2.5 by year for all 3 models ##################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# Force 6 decimal places in console output
+options(pillar.sigfig = 7, digits = 7)
+
+classic %>%
+  group_by(year) %>%
+  summarise(
+    min    = min   (pm25_classic, na.rm = TRUE),
+    max    = max   (pm25_classic, na.rm = TRUE),
+    mean   = mean  (pm25_classic, na.rm = TRUE),
+    median = median(pm25_classic, na.rm = TRUE)
+  ) %>%
+  print()
+
+jules %>%
+  group_by(year) %>%
+  summarise(
+    min    = min   (pm25_jules, na.rm = TRUE),
+    max    = max   (pm25_jules, na.rm = TRUE),
+    mean   = mean  (pm25_jules, na.rm = TRUE),
+    median = median(pm25_jules, na.rm = TRUE)
+  ) %>%
+  print()
+
+ssib4 %>%
+  group_by(year) %>%
+  summarise(
+    min    = min   (pm25_ssib4, na.rm = TRUE),
+    max    = max   (pm25_ssib4, na.rm = TRUE),
+    mean   = mean  (pm25_ssib4, na.rm = TRUE),
+    median = median(pm25_ssib4, na.rm = TRUE)
+  ) %>%
+  print()
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Merge All Scenarios by Year, Lon, Lat #########################
@@ -249,6 +285,42 @@ pm25_all <- withoutfire %>%
   left_join(classic, by = c("year", "lon", "lat")) %>%
   left_join(jules, by = c("year", "lon", "lat")) %>%
   left_join(ssib4, by = c("year", "lon", "lat"))
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ PM2.5 Wide Format (separate dataset, PM not fPM) ##############
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+pm25_wide <- pm25_all %>%
+  select(year, lon, lat, pm25_withoutfire, pm25_classic, pm25_jules, pm25_ssib4) %>%
+  pivot_longer(
+    cols = c(pm25_withoutfire, pm25_classic, pm25_jules, pm25_ssib4),
+    names_to = "model",
+    values_to = "pm25"
+  ) %>%
+  mutate(
+    model_year = paste0(gsub("pm25_", "", model), "_", year, "_pm25")
+  ) %>%
+  select(-model, -year) %>%
+  pivot_wider(
+    names_from = model_year,
+    values_from = pm25
+  ) %>%
+  rename_with(
+    ~ paste0("park_", .x),
+    .cols = -c(lon, lat)
+  ) %>%
+  # Replace years like 1965 with their corresponding decades (e.g., 1960s) to ensure consistency with the FPM dataset.
+  rename_with(
+    .cols = starts_with("park_"),
+    .fn = function(x) {
+      for (y in years) {
+        x <- str_replace_all(x, as.character(y), paste0(floor(y / 10) * 10, "s"))
+      }
+      x
+    }
+  )
+
+#write.csv(pm25_wide, here("output", "pm25_park2024.csv"), row.names = FALSE)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Calculate Fire PM (Difference from Without Fire) ##############
@@ -576,10 +648,11 @@ fpm_palette <- c("#3B1F0E", "#6B3E1B", "#A9651A", "#D9A441",
 
 make_plot <- function(df, title, fill_max) {
   ggplot(df, aes(x = lon, y = lat, fill = fpm)) +
-    geom_raster() +
+    geom_tile(width = 0.5, height = 0.5,
+              color = "grey50", linewidth = 0.05) +     
     geom_polygon(data = us_map,
                  aes(x = long, y = lat, group = group),
-                 fill = NA, color = "grey30", linewidth = 0.2,
+                 fill = NA, color = "grey30", linewidth = 0.15,
                  inherit.aes = FALSE) +
     scale_fill_gradientn(
       colors   = rev(fpm_palette),
@@ -588,18 +661,17 @@ make_plot <- function(df, title, fill_max) {
       oob      = scales::squish,
       na.value = "white"
     ) +
-    coord_quickmap(xlim = c(-125, -66.5), ylim = c(24, 49.5),
+    coord_quickmap(xlim = c(-125.5, -66.0), ylim = c(23.5, 50.0),
                    expand = FALSE) +
     labs(title = title) +
-    theme_void(base_size = 9) +
+    theme_void(base_size = 10) +
     theme(
-      plot.title        = element_text(hjust = 0.5, size = 9, face = "bold"),
-      legend.key.height = unit(0.6, "cm"),
-      legend.key.width  = unit(0.45, "cm"),
-      legend.title      = element_text(size = 9),
-      legend.text       = element_text(size = 8),
-      
-      plot.margin       = margin(2, 2, 2, 2)
+      plot.title        = element_text(hjust = 0.5, size = 10, face = "bold"),
+      legend.key.height = unit(0.45, "cm"),
+      legend.key.width  = unit(0.3, "cm"),
+      legend.title      = element_text(size = 7),
+      legend.text       = element_text(size = 6),
+      plot.margin       = margin(3, 3, 3, 3)
     )
 }
 
