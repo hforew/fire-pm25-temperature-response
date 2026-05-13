@@ -1,12 +1,12 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## PLOTS OF COUNTRY ALPHA COEFFICIENTS - ##
+## PLOTS OF COUNTRY BETA COEFFICIENTS - ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rm(list = ls())
 
 # Visualises country-level FE regression outputs from fpm_gmt_regression_FE_all.R.
-# Produces: (1) histogram of alpha_c2 distribution; (2) world choropleth maps of
-# alpha_c1 and alpha_c2; (3) individual country LOBF scatter plots; (4) 2x3
+# Produces: (1) histogram of beta_c distribution; (2) world choropleth map of
+# beta_c; (3) individual country LOBF scatter plots; (4) 2x3
 # multi-country LOBF grid. All outputs saved to images/regression_alpha/alpha_FE_all/.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -29,9 +29,7 @@ library(ggrepel)
 # Each row is one country. Key columns:
 #   country_code_iso3   -- ISO 3166-1 alpha-3 country code (used for map joining)
 #   country_name        -- full country name
-#   estimate_alpha_c1   -- OLS intercept: fitted exposure at T_ps = 0 (extrapolated
-#                          outside the data range; not physically meaningful)
-#   estimate_alpha_c2   -- OLS slope: change in per-capita fire PM2.5 exposure
+#   estimate_beta_c     -- OLS slope: change in per-capita fire PM2.5 exposure
 #                          (µg/m^3/yr) per 1°C increase in GMT. This is the key
 #                          damage function parameter used downstream in GIVE.
 #                          Positive = more fire PM with warming; negative = less.
@@ -42,22 +40,50 @@ head(reg_coefs)
 str(reg_coefs)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Histogram of alpha_c2 ####################################################
+############ Within-model demeaning of exposure_percap #################################
+##
+## The FE regression absorbs fire-model level differences via model-specific intercepts
+## (delta_jules, delta_ssib4, delta_CESM, delta_Zhao relative to classic). The slope
+## beta_c is identified purely from within-model variation: how exposure moves with T_ps
+## *within* each fire model group, after removing each group's mean level.
+##
+## To visualise this, we demean exposure_percap within each (country x fire model) group:
+##   exposure_percap_dm = exposure_percap - mean(exposure_percap)  [within group]
+##
+## This removes the group-level intercept shift so all fire model groups are centered
+## at zero. The fitted line through the demeaned data passes through the origin with
+## slope beta_c -- no intercept needed. This visually represents the FE within-estimator:
+## it strips out the between-group mean differences and estimates beta_c from
+## the remaining within-group variation in T_ps and exposure.
+##
+## Grouping: country_code_iso3 x fire_model
+##   classic: 6 obs (1960s-2010s)    jules: 6 obs    ssib4: 6 obs
+##   CESM:    5 obs (baseline + 4 future scenarios)   Zhao: 2 obs
+## Each group gets its own mean subtracted --> 25 demeaned values per country.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-hist_alpha_c2 <- ggplot(reg_coefs, aes(x = estimate_alpha_c2)) +
+reg_data_combined <- reg_data_combined %>%
+  group_by(country_code_iso3, fire_model) %>%   # one mean per country x fire model group
+  mutate(exposure_percap_dm = exposure_percap - mean(exposure_percap)) %>%  # subtract group mean
+  ungroup()  # remove grouping so downstream code operates on the full data frame
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Histogram of beta_c ####################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+hist_beta_c <- ggplot(reg_coefs, aes(x = estimate_beta_c)) +
   geom_histogram(bins = 50, fill = "steelblue", color = "white") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
   labs(
-    title    = "Distribution of alpha_c2 across countries",
+    title    = expression("Distribution of " ~ beta^"(c)" ~ "across countries"),
     subtitle = "Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase",
-    x        = "alpha_c2 (µg/m³/yr per °C)",
+    x        = expression(beta^"(c)" ~ "(µg/m³/yr per °C)"),
     y        = "Number of countries"
   ) +
   theme_minimal()
 
-hist_alpha_c2
-ggsave(here("images/regression_alpha/alpha_FE_all", "hist_alpha_c2_fe.png"), plot = hist_alpha_c2, width = 8, height = 5, dpi = 300)
+hist_beta_c
+ggsave(here("images/regression_alpha/alpha_FE_all", "hist_beta_c_fe.png"), plot = hist_beta_c, width = 8, height = 5, dpi = 300)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,15 +106,15 @@ world_map$iso3 <- countrycode(world_map$region,
                                destination = "iso3c",
                                warn = FALSE)
 
-# Left join alpha coefficients onto the map polygon vertices by ISO3 code.
-# Every polygon vertex row gets the country's alpha_c1 and alpha_c2 values.
+# Left join beta coefficients onto the map polygon vertices by ISO3 code.
+# Every polygon vertex row gets the country's beta_c value.
 # Countries not present in reg_coefs (no regression data) will have NA
 # and will be rendered in the na.value color (lightgray) on the map.
-world_alpha <- world_map %>%
+world_beta <- world_map %>%
   left_join(reg_coefs, by = c("iso3" = "country_code_iso3"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Descriptive stats: alpha_c2 distribution ################################
+############ Descriptive stats: beta_c distribution ################################
 ##
 ## Run before defining color palette breaks to see where the data actually falls.
 ## Key outputs: percentiles, share negative, share above candidate break thresholds.
@@ -97,8 +123,8 @@ world_alpha <- world_map %>%
 
 thresholds <- c(0, 0.5, 1, 1.5, 2)
 
-print_alpha_stats <- function(x, label) {
-  cat("\n--- alpha_c2 descriptive stats:", label, "(n =", sum(!is.na(x)), "countries) ---\n")
+print_beta_stats <- function(x, label) {
+  cat("\n--- beta_c descriptive stats:", label, "(n =", sum(!is.na(x)), "countries) ---\n")
   cat("Min:  ", round(min(x,  na.rm = TRUE), 3), "\n")
   cat("Max:  ", round(max(x,  na.rm = TRUE), 3), "\n")
   cat("Mean: ", round(mean(x, na.rm = TRUE), 3), "\n")
@@ -114,7 +140,7 @@ print_alpha_stats <- function(x, label) {
   cat("  > 2 :", round(100 * mean(x > 2, na.rm = TRUE), 1), "%\n")
 }
 
-print_alpha_stats(reg_coefs$estimate_alpha_c2, "GLOBAL")
+print_beta_stats(reg_coefs$estimate_beta_c, "GLOBAL")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Map color palette  #################
@@ -131,10 +157,10 @@ band_colors <- c(
   ">1.00"     = "#7A0000"   # dark red     -- extreme
 )
 
-# Bins a continuous alpha value into the 6 labelled factor bands.
+# Bins a continuous beta value into the 6 labelled factor bands.
 # right = FALSE --> intervals are [lo, hi) so boundary values fall in the upper band.
 # include.lowest = TRUE closes the final [1.0, Inf] bin.
-cut_alpha <- function(x) {
+cut_beta <- function(x) {
   cut(x,
       breaks         = c(-Inf, 0, 0.1, 0.25, 0.5, 1.0, Inf),
       labels         = band_labels,
@@ -143,81 +169,47 @@ cut_alpha <- function(x) {
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Plot alpha_c1 #####################################################
+############ Plot beta_c #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# alpha_c1 is the OLS y-intercept from the country-level regression with fire-model FEs:
-#   exposure_percap = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m])
-# It represents the classic-model baseline intercept (T_ps = 0, model = classic).
-# Because all observed T_ps values are ~1°C or above, T = 0 lies outside
-# the data range — alpha_c1 is an extrapolation and has no direct physical
-# interpretation. It is mapped here for completeness.
-
-map_alpha_c1 <- world_alpha %>%
-  mutate(fill_band = cut_alpha(estimate_alpha_c1)) %>%
-  ggplot(aes(x = long, y = lat, group = group, fill = fill_band)) +
-  geom_polygon(color = "white", linewidth = 0.1) +
-  scale_fill_manual(
-    values   = band_colors,
-    name     = expression(alpha[c1]),
-    drop     = FALSE,
-    na.value = "lightgray"
-  ) +
-  # coord_fixed(1.3) preserves geographic aspect ratio (lat/lon are not
-  # equal-distance units; 1.3 approximates a Mercator-like stretch).
-  coord_fixed(1.3) +
-  theme_minimal() +
-  labs(title = expression("Country-Level Intercept Coefficient (" * alpha[c1] * "): FPM-GMT Regression"),
-       x = NULL, y = NULL) +
-  theme(panel.grid = element_blank())
-
-
-map_alpha_c1
-ggsave(here("images/regression_alpha/alpha_FE_all", "map_alpha_c1_fe.png"),
-       map_alpha_c1, width = 12, height = 6)
-
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Plot alpha_c2 #####################################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-# alpha_c2 is the OLS slope from the country-level regression with fire-model FEs:
-#   exposure_percap = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m])
+# beta_c is the OLS slope from the country-level regression with fire-model FEs:
+#   exposure_percap = alpha_c_m + beta_c * T_ps + epsilon
 #
 # It is the key damage function parameter: the change in per-capita fire PM2.5
 # exposure (µg/m³/yr) per 1°C increase in global mean temperature (GMT).
 #
 # Interpretation:
-#   alpha_c2 > 0  --> warming increases fire PM2.5 exposure in that country
-#   alpha_c2 < 0  --> warming decreases fire PM2.5 exposure in that country
-#   alpha_c2 = 0  --> no relationship between GMT and fire PM2.5 in that country
+#   beta_c > 0  --> warming increases fire PM2.5 exposure in that country
+#   beta_c < 0  --> warming decreases fire PM2.5 exposure in that country
+#   beta_c = 0  --> no relationship between GMT and fire PM2.5 in that country
 #
 # This coefficient is used downstream in GIVE to translate GMT change scenarios
 # into country-level fire PM2.5 exposure changes and associated mortality impacts.
 
-map_alpha_c2 <- world_alpha %>%
-  mutate(fill_band = cut_alpha(estimate_alpha_c2)) %>%
+map_beta_c <- world_beta %>%
+  mutate(fill_band = cut_beta(estimate_beta_c)) %>%
   ggplot(aes(x = long, y = lat, group = group, fill = fill_band)) +
   geom_polygon(color = "white", linewidth = 0.1) +
   scale_fill_manual(
     values   = band_colors,
-    name     = expression(alpha[c2]),
+    name     = expression(beta^"(c)"),
     drop     = FALSE,
     na.value = "lightgray"
   ) +
   # coord_fixed(1.3) preserves geographic aspect ratio.
   coord_fixed(1.3) +
   theme_minimal() +
-  labs(title    = "Distribution of alpha_c2 across countries",
+  labs(title    = expression("Distribution of " ~ beta^"(c)" ~ "across countries"),
        subtitle = "Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase",
        x = NULL, y = NULL) +
   theme(panel.grid = element_blank())
 
 
-map_alpha_c2
-ggsave(here("images/regression_alpha/alpha_FE_all", "map_alpha_c2_fe.png"),
-       map_alpha_c2, width = 12, height = 6)
+map_beta_c
+ggsave(here("images/regression_alpha/alpha_FE_all", "map_beta_c_fe.png"),
+       map_beta_c, width = 12, height = 6)
 
-print("Alpha maps saved to images/regression_alpha/alpha_FE_all/")
+print("Beta map saved to images/regression_alpha/alpha_FE_all/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -225,11 +217,15 @@ print("Alpha maps saved to images/regression_alpha/alpha_FE_all/")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # For each selected country, plot all 25 observations (18 Park + 5 Pierce + 2 Zhao) with the
-# OLS fitted line: exposure_percap = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m])
+# OLS fitted line through within-model demeaned exposure values.
+#
+# y-axis: exposure_percap_dm (demeaned within fire model group, pre-computed above).
+# Fitted line: passes through the origin with slope beta_c (no intercept needed after
+# demeaning removes all model-level mean shifts).
 #
 # Data objects from source():
-#   reg_data_combined -- 25 rows per country: T_ps (GMT regressor) and exposure_percap (response)
-#   reg_coefs         -- alpha_c1 and alpha_c2 per country (define the fitted line)
+#   reg_data_combined -- 25 rows per country: T_ps, exposure_percap, exposure_percap_dm
+#   reg_coefs         -- beta_c per country (defines the fitted line slope)
 
 # Lookup table: maps each period_scenario to its fire model and warming trajectory.
 # Used to set color (model) and shape (trajectory) aesthetics in the scatter plots.
@@ -252,7 +248,7 @@ scenario_lookup <- tibble(
   model = c(
     rep("CLASSIC", 6), rep("JULES", 6), rep("SSiB4", 6),
     "CESM", "CESM", "CESM", "CESM", "CESM",
-    "Multi", "Multi"
+    "Zhao", "Zhao"
   ),
   trajectory = c(
     rep("Historical", 18),
@@ -262,17 +258,17 @@ scenario_lookup <- tibble(
 )
 
 model_colors <- c(
-  "CESM"        = "#E69F00",
-  "JULES"       = "#56B4E9",
-  "SSiB4"       = "#009E73",
-  "CLASSIC"     = "#CC79A7",
-  "Multi"    = "#000000"
+  "CESM"    = "#E69F00",
+  "JULES"   = "#56B4E9",
+  "SSiB4"   = "#009E73",
+  "CLASSIC" = "#CC79A7",
+  "Zhao"    = "#000000"
 )
 
 trajectory_shapes <- c(
   "Historical" = 16,
-  "SSP1-4.5"     = 17,
-  "SSP3-8.5"     = 15,
+  "SSP1-4.5"   = 17,
+  "SSP3-8.5"   = 15,
   "SSP2-4.5"   = 18,
   "SSP5-8.5"   = 8
 )
@@ -311,11 +307,10 @@ for (iso in countries_to_plot) {
       )
     )
 
-  # Pull alpha_c1 (intercept), alpha_c2 (slope), and its standard error from reg_coefs
-  coef_row    <- reg_coefs %>% filter(country_code_iso3 == iso)
-  alpha_c1    <- coef_row$estimate_alpha_c1
-  alpha_c2    <- coef_row$estimate_alpha_c2
-  se_alpha_c2 <- coef_row$std.error_alpha_c2
+  # Pull beta_c (slope) and its standard error from reg_coefs
+  coef_row <- reg_coefs %>% filter(country_code_iso3 == iso)
+  beta_c   <- coef_row$estimate_beta_c
+  se_beta_c <- coef_row$std.error_beta_c
 
   # Pull R² from the glanced model-fit statistics and observation count from df
   r_squared <- reg_results %>%
@@ -324,9 +319,10 @@ for (iso in countries_to_plot) {
     pull(r.squared)
   n_obs <- nrow(df)
 
-  p <- ggplot(df, aes(x = T_ps, y = exposure_percap, color = model, shape = trajectory)) +
-    # Each point is one observation: 18 Park (decade × fire model) +
-    # 5 Pierce (baseline, 2040s SSP1-4.5/SSP3-8.5, 2090s SSP1-4.5/SSP3-8.5) + 2 Zhao (~2095 SSP2-4.5/SSP5-8.5)
+  p <- ggplot(df, aes(x = T_ps, y = exposure_percap_dm, color = model, shape = trajectory)) +
+    # Each point is one observation: 18 Park (decade x fire model) +
+    # 5 Pierce (baseline, 2040s SSP1-4.5/SSP3-8.5, 2090s SSP1-4.5/SSP3-8.5) + 2 Zhao (~2095 SSP2-4.5/SSP5-8.5).
+    # y values are demeaned within fire model group so all groups are centered at zero.
     geom_point(size = 3) +
     # Labels for all labelled points (Park 2010s, Pierce, Zhao).
     # ggrepel automatically nudges overlapping labels apart and draws
@@ -335,23 +331,20 @@ for (iso in countries_to_plot) {
                     aes(label = label),
                     size = 3, box.padding = 0.4, max.overlaps = Inf,
                     show.legend = FALSE) +
-    # Classic-model reference line: intercept = alpha_c1, slope = alpha_c2.
-    # With FEs, each model has its own intercept (alpha_c1 + delta_m); this line
-    # shows the classic baseline. alpha_c2 (slope) is shared across all models.
-    geom_abline(intercept = alpha_c1, slope = alpha_c2,  # fitted line w/ CLASSIC intercept
+    # Fitted line through the origin with slope beta_c.
+    # After demeaning, all model-level intercept shifts are removed, so the line
+    # passes through (0, 0) and the slope beta_c is the only parameter.
+    geom_abline(intercept = 0, slope = beta_c,
                 color = "darkred", linewidth = 0.8) +
-    annotate("text", x = Inf, y = -Inf, hjust = 1.05, vjust = -0.5,
-             label = "fitted line: CLASSIC intercept",
-             color = "darkred", size = 2.5, fontface = "italic") +
     scale_color_manual(values = model_colors,      name = "Model") +
     scale_shape_manual(values = trajectory_shapes, name = "Trajectory") +
     labs(
       title    = paste0(iso, ": Per-Capita Fire PM2.5 vs. GMT"),
-      subtitle = bquote(alpha[c2] == .(round(alpha_c2, 2)) %+-% .(round(se_alpha_c2, 2)) ~
+      subtitle = bquote(beta^"(c)" == .(round(beta_c, 2)) %+-% .(round(se_beta_c, 2)) ~
                           "µg/m³/yr per °C  |  n =" ~ .(n_obs) ~
                           "|  R² =" ~ .(round(r_squared, 2))),
       x        = "GMT Anomaly relative to 1850-1900 (°C)",
-      y        = "Per-Capita Fire PM2.5 Exposure (µg/m³/yr)"
+      y        = "Fire PM2.5 Exposure, demeaned within fire model (µg/m³/yr)"
     ) +
     theme_minimal() +
     theme(panel.grid.minor  = element_blank(),
@@ -369,9 +362,10 @@ print("Line of best fit plots saved to images/regression_alpha/alpha_FE_all/")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Line of Best Fit: multi-country grid (2 x 3) ############################
 ##
-## Six-panel faceted plot: 2 columns x 3 rows, free y-axis scales, single legend.
-## Strip label: country code + alpha_c2 + n.
-## Fitted line uses CLASSIC model intercept (alpha_c1); slope alpha_c2 shared.
+## Six-panel faceted plot: 2 rows x 3 columns, free y-axis scales, single legend.
+## Strip label: country code + beta_c + n.
+## y-axis: exposure_percap_dm (demeaned within fire model group).
+## Fitted line passes through the origin with slope beta_c.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 countries_to_multiplot <- c("USA", "RUS", "CHN", "IND", "BRA", "NGA")
@@ -381,9 +375,9 @@ countries_to_multiplot <- c("USA", "RUS", "CHN", "IND", "BRA", "NGA")
 # (the ISO3 code) to the anonymous function, which builds that country's
 # 25-row data frame. Results are row-bound into one combined data frame.
 df_multi <- purrr::map_dfr(countries_to_multiplot, function(iso) {
-  coef_row    <- reg_coefs %>% filter(country_code_iso3 == iso)
-  alpha_c2    <- coef_row$estimate_alpha_c2    # slope for strip label
-  se_alpha_c2 <- coef_row$std.error_alpha_c2   # SE for strip label
+  coef_row  <- reg_coefs %>% filter(country_code_iso3 == iso)
+  beta_c    <- coef_row$estimate_beta_c    # slope for strip label
+  se_beta_c <- coef_row$std.error_beta_c   # SE for strip label
 
   reg_data_combined %>%
     filter(country_code_iso3 == iso) %>%
@@ -391,9 +385,9 @@ df_multi <- purrr::map_dfr(countries_to_multiplot, function(iso) {
     mutate(
       model       = factor(model,      levels = names(model_colors)),
       trajectory  = factor(trajectory, levels = names(trajectory_shapes)),
-      # HTML subscript rendered by element_markdown(); Unicode ± for plus-minus
-      strip_label = paste0(iso, "  |  α<sub>c2</sub> = ", round(alpha_c2, 2),
-                           " ± ", round(se_alpha_c2, 2),
+      # HTML superscript rendered by element_markdown(); Unicode ± for plus-minus
+      strip_label = paste0(iso, "  |  β<sup>(c)</sup> = ", round(beta_c, 2),
+                           " ± ", round(se_beta_c, 2),
                            " µg/m³/yr per °C  |  n = ", n())
     )
 })
@@ -410,33 +404,31 @@ df_multi <- df_multi %>%
 
 # lines_multi must contain strip_label (the faceting variable) so geom_abline
 # subsets it per panel and draws the correct country-specific fitted line.
+# intercept = 0 for all panels: after demeaning, the fitted line passes through the origin.
 lines_multi <- reg_coefs %>%
   filter(country_code_iso3 %in% countries_to_multiplot) %>%
   left_join(df_multi %>% distinct(country_code_iso3, strip_label),
             by = "country_code_iso3")
 
 p_multi <- ggplot(df_multi,
-                  aes(x = T_ps, y = exposure_percap, color = model, shape = trajectory)) +
+                  aes(x = T_ps, y = exposure_percap_dm, color = model, shape = trajectory)) +
   geom_point(size = 2) +
   # geom_abline with data = lines_multi draws a per-panel line using each
-  # country's alpha_c1 (CLASSIC intercept) and shared slope alpha_c2.
+  # country's beta_c slope. intercept = 0 because demeaning removes all model-level
+  # mean shifts, so the fitted line passes through the origin in every panel.
   geom_abline(data  = lines_multi,
-              aes(intercept = estimate_alpha_c1, slope = estimate_alpha_c2),
-              color = "darkred", linewidth = 0.7) +  # fitted line w/ CLASSIC intercept
-  # annotate() draws in every panel; Inf/-Inf anchors text to bottom-right corner.
-  annotate("text", x = Inf, y = -Inf, hjust = 1.05, vjust = -0.5,
-           label = "fitted line: CLASSIC intercept",
-           color = "darkred", size = 2, fontface = "italic") +
+              aes(intercept = 0, slope = estimate_beta_c),
+              color = "darkred", linewidth = 0.7) +
   scale_color_manual(values = model_colors,      name = "Model") +
   scale_shape_manual(values = trajectory_shapes, name = "Trajectory") +
   guides(shape = guide_legend(order = 1),   # Trajectory row first
          color = guide_legend(order = 2)) + # Model row second
-  # ncol = 2 --> 2x3 grid; scales = "free_y" --> each panel scaled to its own y range.
-  facet_wrap(~ strip_label, ncol = 2, scales = "free_y") +
+  # ncol = 3 --> 3x2 grid; common y-axis across all panels for comparable visual slopes.
+  facet_wrap(~ strip_label, ncol = 3) +
   labs(
     title = "Per-Capita Fire PM2.5 vs. GMT",
     x     = "GMT Anomaly relative to 1850-1900 (°C)",
-    y     = "Per-Capita Fire PM2.5 Exposure (µg/m³/yr)"
+    y     = "Fire PM2.5 Exposure, demeaned within fire model (µg/m³/yr)"
   ) +
   theme_minimal() +
   theme(
@@ -450,7 +442,7 @@ p_multi <- ggplot(df_multi,
 
 print(p_multi)
 ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multiplot_fe.png"),
-       p_multi, width = 8.5, height = 11, dpi = 300)
+       p_multi, width = 14, height = 8, dpi = 300)
 
 print("Multi-country grid plot saved to images/regression_alpha/alpha_FE_all/lof_multiplot_fe.png")
 

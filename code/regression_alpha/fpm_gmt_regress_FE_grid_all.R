@@ -1,11 +1,14 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## FPM–GMT RELATIONSHIP: Grid-cell level fixed-effect regression
 ##
-## Goal: For each grid cell i, estimate the linear regression with fire-model FEs:
-##   fPM_ips = alpha_i1 + alpha_i2 * T_ps + sum(delta_m * I[model=m]) + epsilon
+## Goal: For each grid cell i, estimate the linear regression with fire-model fixed effects:
+##   fPM_ips = alpha^(i)_m + beta^(i) * T_ps + epsilon^(i)_ps
 ##
-## alpha_i2 (slope) = change in fire PM2.5 concentration (µg/m³) per 1°C GMT at cell i.
-## alpha_i1 (intercept) = OLS y-intercept (extrapolated; not directly interpretable).
+## where fPM_ips is fire PM2.5 concentration (µg/m^3) at cell i, period p, scenario s,
+## and fire model m; T_ps is GMT anomaly relative to the 1850-1900 pre-industrial baseline (°C);
+## beta^(i) is the slope (change in fPM concentration per 1°C GMT at cell i), and
+## alpha^(i)_m are fire-model-specific intercepts (fixed effects absorbing model-level
+## mean differences in concentration levels).
 ##
 ## Five fire-model fixed effect levels:
 ##   classic (reference), jules, ssib4  --> Park et al. historical models
@@ -17,11 +20,11 @@
 ##   - Park et al.:  18 obs (3 fire models x 6 decades)
 ##   - Zhao et al.:   2 obs (SSP2-4.5 and SSP5-8.5 ~2095)
 ##
-## Output: one row per grid cell with alpha_i2, SE, p-value, lon, lat.
+## Output: one row per grid cell with beta^(i), SE, p-value, lon, lat.
 ##         Used for spatial mapping in a separate plotting script.
 ##
-## Note: response is raw fPM concentration (µg/m³), not per-capita exposure.
-##       Grid-cell alphas are NOT aggregated to country level here.
+## Note: response is raw fPM concentration (µg/m^3), not per-capita exposure.
+##       Grid-cell betas are NOT aggregated to country level here.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rm(list = ls())
@@ -259,6 +262,7 @@ cat("Expected (", n_cells, "cells x 25 obs):", n_cells * 25, "\n")
 # tidy() (from broom) extracts the coefficient table as a tidy data frame.
 # Cells with fewer than 6 obs are dropped — cannot fit 6 parameters
 # (intercept + T_ps + 4 fire-model dummies). In practice all cells have 25 obs.
+# See last section for how R actually implements the regression.
 reg_results <- reg_data %>%
   group_by(row_id, lon, lat, country_code_iso3, country_name) %>%
   filter(n() >= 6) %>%
@@ -269,36 +273,36 @@ reg_results <- reg_data %>%
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Extract alpha_i1 and alpha_i2 ########################################
+############ Extract beta^(i) #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # unnest(tidied) expands the list-column so each coefficient term gets its own row.
-# filter() keeps only the intercept and slope — fire-model FE dummies are discarded
-# as they are nuisance parameters, not the output of interest.
-# pivot_wider then rotates alpha_i1 and alpha_i2 from rows into columns,
-# producing one output row per cell with estimate, SE, t-stat, and p-value for each.
+# Only the T_ps slope term is retained — the CLASSIC intercept and FE dummies
+# are not stored in the output.
+# pivot_wider rotates beta^(i) from rows into columns, producing one output row
+# per cell with estimate, SE, t-stat, and p-value.
 reg_coefs <- reg_results %>%
   select(row_id, lon, lat, country_code_iso3, country_name, tidied) %>%
-  unnest(tidied) %>%                                # one row per term per cell
-  filter(term %in% c("(Intercept)", "T_ps")) %>%   # keep intercept and GMT slope only
-  mutate(param = if_else(term == "T_ps", "alpha_i2", "alpha_i1")) %>%
+  unnest(tidied) %>%           # one row per term per cell
+  filter(term == "T_ps") %>%   # keep only the GMT slope; drop intercept and FE dummies
+  mutate(param = "beta_i") %>%
   select(row_id, lon, lat, country_code_iso3, country_name,
          param, estimate, std.error, statistic, p.value) %>%
   pivot_wider(
     id_cols     = c(row_id, lon, lat, country_code_iso3, country_name),
-    names_from  = param,                             # alpha_i1 and alpha_i2 become col prefixes
-    values_from = c(estimate, std.error, statistic, p.value)  # four cols per param
+    names_from  = param,                                          # beta_i becomes col prefix
+    values_from = c(estimate, std.error, statistic, p.value)     # four cols per param
   )
 
 cat("\nGrid-cell regression complete:", nrow(reg_coefs), "cells\n")
 
-cat("\n--- Summary of alpha_i2 (fPM concentration change per 1°C GMT, µg/m³/°C) ---\n")
-print(summary(reg_coefs$estimate_alpha_i2))
+cat("\n--- Summary of beta^(i) (fPM concentration change per 1°C GMT, µg/m^3/°C) ---\n")
+print(summary(reg_coefs$estimate_beta_i))
 
-cat("\nCells with positive alpha_i2 (more fPM with warming):",
-    sum(reg_coefs$estimate_alpha_i2 > 0, na.rm = TRUE), "\n")
-cat("Cells with negative alpha_i2 (less fPM with warming):",
-    sum(reg_coefs$estimate_alpha_i2 < 0, na.rm = TRUE), "\n")
+cat("\nCells with positive beta^(i) (more fPM with warming):",
+    sum(reg_coefs$estimate_beta_i > 0, na.rm = TRUE), "\n")
+cat("Cells with negative beta^(i) (less fPM with warming):",
+    sum(reg_coefs$estimate_beta_i < 0, na.rm = TRUE), "\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Export ##############################################################
@@ -308,5 +312,37 @@ write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs_FE_grid.csv"))
 cat("\nSaved to output/fpm_gmt_regression_coefs_FE_grid.csv\n")
 
 glimpse(reg_coefs)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ R implementation of regression ###########################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# R implementation of fPM_ips = alpha^(i)_m + beta^(i) * T_ps + epsilon^(i)_ps:
+#
+# Because fire_model is a factor with classic as the reference level, R automatically
+# creates four indicator (dummy) variables — one for each non-reference model:
+#   D_jules = 1 if fire_model == "jules", 0 otherwise
+#   D_ssib4 = 1 if fire_model == "ssib4", 0 otherwise
+#   D_CESM  = 1 if fire_model == "CESM",  0 otherwise
+#   D_Zhao  = 1 if fire_model == "Zhao",  0 otherwise
+#
+# The expanded model estimated by lm() is:
+#   fPM = alpha^(i)_classic
+#         + delta_jules  * D_jules
+#         + delta_ssib4  * D_ssib4
+#         + delta_CESM   * D_CESM
+#         + delta_Zhao   * D_Zhao
+#         + beta^(i)     * T_ps
+#         + epsilon
+#
+# alpha^(i)_m for each model is therefore:
+#   classic --> (Intercept)
+#   jules   --> (Intercept) + fire_modeljules
+#   ssib4   --> (Intercept) + fire_modelssib4
+#   CESM    --> (Intercept) + fire_modelCESM
+#   Zhao    --> (Intercept) + fire_modelZhao
+#
+# beta^(i) is the T_ps coefficient — shared across all models for cell i.
+
 
 ### THE END
