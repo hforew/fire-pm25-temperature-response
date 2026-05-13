@@ -1,14 +1,16 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## FPM–GMT RELATIONSHIP: Estimate alpha_c2 (per-capita fire PM2.5 change per 1°C GMT)
+## FPM–GMT RELATIONSHIP: Estimate beta^(c) (per-capita fire PM2.5 change per 1°C GMT)
 ##                        with Park et al. historical data integrated
 ##
 ## Goal: For each country c, estimate the linear regression with fire-model fixed effects:
-##   exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m])
+##   PM_bar^(c)_psm = alpha^(c)_m + beta^(c) * T_ps + epsilon^(c)_psm
 ##
-## where T_ps is GMT change in period p under scenario s (°C relative to 1850–1900),
-## alpha_c2 is the key damage function parameter (change in per-capita fire PM2.5
-## per 1°C GMT), and delta_m are fixed effects for each fire model (absorbing
-## model-level mean differences in absolute exposure levels).
+## where PM_bar^(c)_psm is population-weighted per-capita fire PM2.5 exposure (µg/m^3/yr)
+## for country c, period p, scenario s, and fire model m;
+## T_ps is GMT anomaly relative to the 1850-1900 pre-industrial baseline (°C);
+## beta^(c) is the key damage function parameter (change in population-weighted
+## per-capita fire PM2.5 per 1°C GMT), and alpha^(c)_m are fire-model-specific
+## intercepts (fixed effects absorbing model-level mean differences in exposure levels).
 ##
 ## Five fire-model fixed effect levels:
 ##   classic (reference), jules, ssib4  --> Park et al. historical models
@@ -42,7 +44,7 @@ library(broom)      # for tidy() and glance() to extract regression coefficients
 ############ Import #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Import country-level per-capita fire PM2.5 exposure (µg/m³/person/year).
+# Import country-level per-capita fire PM2.5 exposure (µg/m^3/person/year).
 # Each row is a country; columns include per-capita exposure for each period × scenario:
 #   exposure_percap_fpm_2000         --> baseline period (~2001–2010)
 #   exposure_percap_fpm_2050_45/85   --> 2041–2050 under RCP4.5 / RCP8.5
@@ -120,7 +122,7 @@ cat("GMT SSP245 2095-99:", gmt_2090s_245, "GMT SSP585 2095-99:", gmt_2090s_585, 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # We need one row per (country, period, scenario) with columns:
-#   country_code_iso3, country_name, T_ps (GMT), exposure_percap (µg/m³/person/yr)
+#   country_code_iso3, country_name, T_ps (GMT), exposure_percap (µg/m^3/person/yr)
 #
 # This long format lets us run a single lm() call per country across all 7 data points.
 
@@ -264,15 +266,15 @@ print(reg_data_combined %>% count(fire_model))
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Run country-level linear regression ########################################
 ##
-## Model: exposure_cps^per-capita = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m])
+## Model: PM_bar^(c)_psm = alpha^(c)_m + beta^(c) * T_ps + epsilon^(c)_psm
 ##
-## For each country c, we regress per-capita fire PM2.5 exposure on GMT (T_ps)
-## with fire-model fixed effects across all 25 observations.
+## For each country c, we regress population-weighted per-capita fire PM2.5 exposure
+## on T_ps with fire-model fixed effects across all 25 observations.
 ##
-## alpha_c2 (slope) = change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase.
-## alpha_c1 (intercept) = OLS-fitted y-intercept; a mathematical artefact of the line fit,
-##   not a meaningful estimate of exposure at pre-industrial temperatures. All observed
-##   T_ps values are ~1°C or higher, so T=0 lies outside the data range.
+## beta^(c) (slope)      = change in per-capita fire PM2.5 (µg/m^3/yr) per 1°C GMT increase.
+## alpha^(c)_m (intercept) = fire-model-specific intercept for country c. T_ps = 0 lies
+##   outside the data range (all obs at ~1°C or higher), so alpha^(c)_m is extrapolated
+##   and should not be interpreted as a meaningful exposure estimate.
 ##
 ## Countries with fewer than 6 valid observations are dropped (cannot fit 6 parameters).
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -301,10 +303,12 @@ print(usa_data %>% select(fire_model, period_scenario, T_ps, exposure_percap) %>
 #   - The second argument, data =, specifies the data frame containing those variables.
 #   - lm() returns an object of class "lm" containing fitted coefficients, residuals,
 #     the model matrix, and metadata needed for summary(), predict(), and other methods.
-#   - The model is: y = alpha_c1 + alpha_c2 * T_ps + sum(delta_m * I[model=m]) + epsilon,
-#     where alpha_c1 is the classic-model baseline intercept, alpha_c2 is the GMT slope,
-#     and delta_m are fixed effects for jules, ssib4, CESM, and Zhao relative to classic.
+#   - The model is: PM_bar^(c)_psm = alpha^(c)_m + beta^(c) * T_ps + epsilon^(c)_psm,
+#     where alpha^(c)_m is the fire-model-specific intercept for country c (CLASSIC
+#     is the reference level; jules, ssib4, CESM, Zhao enter as dummies relative to it),
+#     and beta^(c) is the GMT slope (key damage function parameter).
 #   - OLS minimises the sum of squared residuals to find all 6 parameters.
+#   - See last section for how R actually implements this specification. 
 usa_model <- lm(exposure_percap ~ T_ps + fire_model, data = usa_data)
 
 # summary() on an lm object prints:
@@ -317,15 +321,9 @@ usa_model <- lm(exposure_percap ~ T_ps + fire_model, data = usa_data)
 cat("\n--- USA lm() summary ---\n")
 print(summary(usa_model))
 
-# Extract and label the two key coefficients explicitly for readability.
-# Note: alpha_c1 is the OLS y-intercept — the value the fitted line takes at T_ps = 0.
-# All observed T_ps values are ~1°C or above, so this is an extrapolation outside the
-# data range and should not be interpreted as a meaningful exposure estimate.
-usa_alpha_c1 <- coef(usa_model)[["(Intercept)"]]  # alpha_c1: OLS y-intercept (extrapolated)
-usa_alpha_c2 <- coef(usa_model)[["T_ps"]]          # alpha_c2: slope (µg/m³/yr per 1°C GMT)
+usa_beta_c <- coef(usa_model)[["T_ps"]]  # beta^(c): slope (µg/m^3/yr per 1°C GMT)
 
-cat("\nUSA alpha_c1 (OLS intercept, extrapolated outside data range):", round(usa_alpha_c1, 6), "µg/m³/yr\n")
-cat("USA alpha_c2 (slope, fPM change per 1°C GMT):", round(usa_alpha_c2, 6), "µg/m³/yr per °C\n")
+cat("USA beta^(c) (slope, fPM change per 1°C GMT):", round(usa_beta_c, 6), "µg/m^3/yr per °C\n")
 
 # Extract R-squared to assess how well GMT explains USA per-capita fPM variation
 # across all 25 observations (18 Park + 5 Pierce + 2 Zhao).
@@ -347,11 +345,9 @@ global_model <- lm(exposure_percap ~ T_ps + fire_model, data = global_data)
 cat("\n--- Global lm() summary ---\n")
 print(summary(global_model))
 
-global_alpha_c1 <- coef(global_model)[["(Intercept)"]]
-global_alpha_c2 <- coef(global_model)[["T_ps"]]
+global_beta_c <- coef(global_model)[["T_ps"]]  # beta^(c): slope (µg/m^3/yr per 1°C GMT)
 
-cat("\nGlobal alpha_c1 (OLS intercept, extrapolated outside data range):", round(global_alpha_c1, 6), "µg/m³/yr\n")
-cat("Global alpha_c2 (slope, fPM change per 1°C GMT):", round(global_alpha_c2, 6), "µg/m³/yr per °C\n")
+cat("Global beta^(c) (slope, fPM change per 1°C GMT):", round(global_beta_c, 6), "µg/m^3/yr per °C\n")
 
 global_r2 <- summary(global_model)$r.squared
 cat("Global R-squared:", round(global_r2, 4), "\n")
@@ -368,7 +364,7 @@ reg_results <- reg_data_combined %>%
   # Nest all observations for each country into a sub-dataframe
   nest() %>%
   mutate(
-    # Fit OLS with fire-model FEs: intercept (classic baseline) + slope on GMT + 4 model dummies
+    # Fit OLS: PM_bar^(c)_psm = alpha^(c)_m + beta^(c) * T_ps  (CLASSIC reference + 4 model FE dummies)
     model = purrr::map(data, ~ lm(exposure_percap ~ T_ps + fire_model, data = .x)),
 
     # Extract tidy coefficient table (term, estimate, std.error, statistic, p.value)
@@ -379,22 +375,19 @@ reg_results <- reg_data_combined %>%
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Extract alpha_c1 and alpha_c2 ############################################
+############ Extract beta^(c) #########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Unnest the tidy coefficient table and pivot so alpha_c1 and alpha_c2 are columns.
-# 'term' will be "(Intercept)" for alpha_c1 and "T_ps" for alpha_c2.
+# Unnest the tidy coefficient table and pivot so beta^(c) is a column.
+# Only the T_ps slope term is retained — the CLASSIC intercept and FE dummies
+# are not stored in the output.
 reg_coefs <- reg_results %>%
   select(country_code_iso3, country_name, tidied) %>%
   unnest(tidied) %>%
-  # Keep only the intercept (classic baseline) and slope terms.
-  # FE dummy terms (fire_modeljules, fire_modelssib4, etc.) are dropped here —
+  # Keep only the slope term. FE dummy terms and the intercept are dropped —
   # they absorb model-level mean differences but are not the output of interest.
-  filter(term %in% c("(Intercept)", "T_ps")) %>%
-  mutate(param = case_when(
-    term == "(Intercept)" ~ "alpha_c1",  # classic-model baseline intercept
-    term == "T_ps"        ~ "alpha_c2"   # slope: exposure change per 1°C GMT (key parameter)
-  )) %>%
+  filter(term == "T_ps") %>%
+  mutate(param = "beta_c") %>%
   select(country_code_iso3, country_name, param, estimate, std.error, statistic, p.value) %>%
   pivot_wider(
     id_cols     = c(country_code_iso3, country_name),
@@ -408,24 +401,24 @@ colnames(reg_coefs)
 cat("\nDimensions of regression coefficient table:", nrow(reg_coefs), "countries\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Summarise alpha_c2 distribution ##########################################
+############ Summarise beta^(c) distribution ##########################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Print summary statistics for alpha_c2 across all countries.
-# alpha_c2 > 0 means higher GMT --> more fire PM2.5 exposure (expected for most countries).
-cat("\n--- Summary of alpha_c2 (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
-summary(reg_coefs$estimate_alpha_c2)
+# Print summary statistics for beta^(c) across all countries.
+# beta^(c) > 0 means higher GMT --> more fire PM2.5 exposure (expected for most countries).
+cat("\n--- Summary of beta^(c) (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
+summary(reg_coefs$estimate_beta_c)
 
-# Count countries with positive vs. negative alpha_c2
-cat("\nCountries with positive alpha_c2 (more fire PM with warming):",
-    sum(reg_coefs$estimate_alpha_c2 > 0, na.rm = TRUE), "\n")
-cat("Countries with negative alpha_c2 (less fire PM with warming):",
-    sum(reg_coefs$estimate_alpha_c2 < 0, na.rm = TRUE), "\n")
+# Count countries with positive vs. negative beta^(c)
+cat("\nCountries with positive beta^(c) (more fire PM with warming):",
+    sum(reg_coefs$estimate_beta_c > 0, na.rm = TRUE), "\n")
+cat("Countries with negative beta^(c) (less fire PM with warming):",
+    sum(reg_coefs$estimate_beta_c < 0, na.rm = TRUE), "\n")
 
-print(reg_coefs %>% filter(estimate_alpha_c2 < 0) %>% select(country_code_iso3, estimate_alpha_c2), n = 50)
+print(reg_coefs %>% filter(estimate_beta_c < 0) %>% select(country_code_iso3, estimate_beta_c), n = 50)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Confidence intervals for alpha_c2 ########################################
+############ Confidence intervals for beta^(c) ########################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Compute the t critical value for a 95% confidence interval.
@@ -440,45 +433,76 @@ t_critical_largesample <- 1.96
 
 reg_coefs <- reg_coefs %>%
   mutate(
-    # 95% CI bounds using exact t_critical for df = 19
-    lower_alpha_c2        = estimate_alpha_c2 - t_critical * std.error_alpha_c2,
-    upper_alpha_c2        = estimate_alpha_c2 + t_critical * std.error_alpha_c2,
+    # 95% CI bounds for beta^(c) using exact t_critical for df = 19
+    lower_beta_c        = estimate_beta_c - t_critical * std.error_beta_c,
+    upper_beta_c        = estimate_beta_c + t_critical * std.error_beta_c,
 
-    # 95% CI bounds using hardcoded large-sample approximation (1.96)
-    lower_alpha_c2_1.96   = estimate_alpha_c2 - t_critical_largesample * std.error_alpha_c2,
-    upper_alpha_c2_1.96   = estimate_alpha_c2 + t_critical_largesample * std.error_alpha_c2,
+    # 95% CI bounds for beta^(c) using large-sample approximation (1.96)
+    lower_beta_c_1.96   = estimate_beta_c - t_critical_largesample * std.error_beta_c,
+    upper_beta_c_1.96   = estimate_beta_c + t_critical_largesample * std.error_beta_c,
 
     # Store both critical values as columns for reference
     t_critical_df19        = t_critical,
     t_critical_largesample = t_critical_largesample,
 
-    # gamma_alpha_c2: scaled slope used in the GIVE damage function. 0.0095 from Orellano et al 2024 RR
-    gamma_alpha_c2        = 0.0095 * estimate_alpha_c2
+    # gamma: beta^(c) scaled by 0.008 RR (Pope et al.) for GIVE damage function
+    gamma_beta_c        = 0.008 * estimate_beta_c
   ) %>%
   select(
-    country_code_iso3, country_name, gamma_alpha_c2,
+    country_code_iso3, country_name, gamma_beta_c,
     t_critical_df19, t_critical_largesample,
-    lower_alpha_c2, lower_alpha_c2_1.96,
-    estimate_alpha_c2,
-    upper_alpha_c2_1.96, upper_alpha_c2,
-    std.error_alpha_c2, statistic_alpha_c2, p.value_alpha_c2,
-    estimate_alpha_c1, std.error_alpha_c1, statistic_alpha_c1, p.value_alpha_c1
+    lower_beta_c, lower_beta_c_1.96,
+    estimate_beta_c,
+    upper_beta_c_1.96, upper_beta_c,
+    std.error_beta_c, statistic_beta_c, p.value_beta_c
   )
 
-cat("\nSample of alpha_c2 estimates with confidence bounds:\n")
-print(head(reg_coefs %>% select(country_code_iso3, estimate_alpha_c2,
-                                 lower_alpha_c2, upper_alpha_c2,
-                                 lower_alpha_c2_1.96, upper_alpha_c2_1.96), 10))
+cat("\nSample of beta^(c) estimates with confidence bounds:\n")
+print(head(reg_coefs %>% select(country_code_iso3, estimate_beta_c,
+                                 lower_beta_c, upper_beta_c,
+                                 lower_beta_c_1.96, upper_beta_c_1.96), 10))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Save output ##############################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Save the full coefficient table (alpha_c1, alpha_c2 with SEs and p-values) to CSV.
+# Save the coefficient table (beta^(c) with SEs and p-values) to CSV.
 # This is the primary output used downstream in the GIVE damage function.
 write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs_FE_all.csv"))
 
 cat("\nSaved regression coefficients to output/fpm_gmt_regression_coefs_FE_all.csv\n")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ R implementation of regression ##############################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# R implementation of PM_bar^(c)_psm = alpha^(c)_m + beta^(c) * T_ps + epsilon^(c)_psm:
+#
+# Because fire_model is a factor with classic as the reference level, R automatically
+# creates four indicator (dummy) variables — one for each non-reference model:
+#   D_jules = 1 if fire_model == "jules", 0 otherwise
+#   D_ssib4 = 1 if fire_model == "ssib4", 0 otherwise
+#   D_CESM  = 1 if fire_model == "CESM",  0 otherwise
+#   D_Zhao  = 1 if fire_model == "Zhao",  0 otherwise
+#
+# The expanded model estimated by lm() is:
+#   PM_bar = alpha^(c)_classic
+#            + delta_jules  * D_jules
+#            + delta_ssib4  * D_ssib4
+#            + delta_CESM   * D_CESM
+#            + delta_Zhao   * D_Zhao
+#            + beta^(c)     * T_ps
+#            + epsilon
+#
+# alpha^(c)_m for each model is therefore:
+#   classic --> (Intercept)
+#   jules   --> (Intercept) + fire_modeljules
+#   ssib4   --> (Intercept) + fire_modelssib4
+#   CESM    --> (Intercept) + fire_modelCESM
+#   Zhao    --> (Intercept) + fire_modelZhao
+#
+# beta^(c) is the T_ps coefficient — shared across all models for country c.
 
 
 # THE END 
