@@ -472,6 +472,10 @@ write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs_FE_all.csv"))
 
 cat("\nSaved regression coefficients to output/fpm_gmt_regression_coefs_FE_all.csv\n")
 
+# Save combined long-format regression input data for use in descriptive statistics script.
+write_csv(reg_data_combined, here("output", "reg_data_combined_fe_all.csv"))
+cat("Saved combined regression input data to output/reg_data_combined_fe_all.csv\n")
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ R implementation of regression ##############################################################
