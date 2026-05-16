@@ -92,29 +92,33 @@ cat(beta_c_sig, "\n")
 
 med_beta_c <- median(reg_coefs$estimate_beta_c, na.rm = TRUE)  # median beta_c across countries
 
-hist_beta_c <- ggplot(reg_coefs, aes(x = estimate_beta_c)) +
+# Shared HTML label: used as subtitle in standalone, as annotate in multiplot
+stats_label <- paste0("β<sub>c</sub> > 0: ", n_pos, " of ", n_total,
+                      " (", round(100 * n_pos / n_total), "%) | ",
+                      "p &lt; .05: ", n_sig, " of ", n_total,
+                      " (", round(100 * n_sig / n_total), "%)")
+
+# Base histogram: no annotation, no subtitle
+hist_base <- ggplot(reg_coefs, aes(x = estimate_beta_c)) +
   geom_histogram(bins = 50, fill = "steelblue", color = "white") +       # 50 bins; white borders separate bars
   geom_vline(xintercept = 0, linetype = "dashed", color = "red") +       # zero reference: no GMT effect
   geom_vline(xintercept = med_beta_c, linetype = "dotted", color = "black", linewidth = 0.8) +  # median marker
   annotate("text", x = med_beta_c, y = Inf,                              # y = Inf --> pin to top of panel
            label = paste0("Median = ", round(med_beta_c, 2)),
            vjust = 5, hjust = -0.1, size = 3.5, color = "black") +       # vjust pulls label down from top edge
-  # richtext allows HTML; <sup> renders (c) as superscript; fill/label.color = NA removes text box border
-  annotate("richtext", x = -Inf, y = -Inf,
-           label = paste0("β<sup>(c)</sup> > 0: ", n_pos, " of ", n_total,
-                          " (", round(100 * n_pos / n_total), "%) | ",
-                          "p &lt; .05: ", n_sig, " of ", n_total,
-                          " (", round(100 * n_sig / n_total), "%)"),
-           hjust = .15, vjust = 3.6, size = 3.5,
-           fill = NA, label.color = NA) +
   coord_cartesian(clip = "off") +                                         # allow drawing outside panel bounds
   labs(
-    title = expression("Distribution of " ~ beta^"(c)" ~ "across countries"),
-    x     = expression(beta^"(c)" ~ "(µg/m³/yr per °C)"),
+    title = expression("Distribution of " ~ beta[c] ~ "across countries"),
+    x     = expression(beta[c] ~ "(µg/m³/yr per °C)"),
     y     = "Number of countries"
   ) +
   theme_minimal() +
-  theme(plot.margin = margin(b = 0.5, unit = "cm"))                       # space below x-axis for the text
+  theme(plot.margin = margin(b = 0.5, unit = "cm"))
+
+# Standalone: stats as subtitle; element_markdown renders the HTML superscript
+hist_beta_c <- hist_base +
+  labs(subtitle = stats_label) +
+  theme(plot.subtitle = element_markdown(size = 10))
 
 hist_beta_c
 ggsave(here("images/regression_alpha/alpha_FE_all", "hist_beta_c_fe.png"), plot = hist_beta_c, width = 8, height = 5, dpi = 300)
@@ -236,14 +240,13 @@ map_beta_c <- world_beta %>%
   scale_y_continuous(expand = c(0, 0)) +                    # remove ggplot's default 5% y padding
   coord_fixed(1.3, xlim = c(-180, 180), ylim = c(-58, 83)) +  # fix aspect ratio; clip Antarctica
   theme_minimal() +
-  labs(title    = expression("Distribution of " ~ beta^"(c)" ~ "across countries"),
-       subtitle = "Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase",
+  labs(title = expression(beta[c] ~ "country estimates: Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase"),
        x = NULL, y = NULL) +
   theme(panel.grid       = element_blank(),                  # no graticule lines
         legend.position  = "bottom",                         # legend below map
         axis.text        = element_blank(),                  # hide lat/lon tick labels
         axis.ticks       = element_blank(),                  # hide tick marks
-        plot.margin      = margin(0, 0, 0, 0),               # no outer margin
+        plot.title       = element_text(size = 9.5),         # match fe_grid_all: fits long title at width = 6.5
         panel.background = element_blank())                    # no background fill (matches grid map style)
 
 
@@ -266,14 +269,19 @@ print("Beta map saved to images/regression_alpha/alpha_FE_all/")
 ## plot_annotation() title. A/B tags are added via tag_levels = "A".
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Strip individual titles; subtitles kept as per-panel descriptions
-hist_notitle <- hist_beta_c + labs(title = NULL)           # Panel A: caption carries summary stats
+# Strip individual titles; annotate carries stats text below x-axis in multiplot
+hist_notitle <- hist_base +
+  labs(title = NULL) +
+  annotate("richtext", x = -Inf, y = -Inf,
+           label = stats_label,
+           hjust = .15, vjust = 3.6, size = 3.5,
+           fill = NA, label.color = NA)                    # Panel A: stats as lower-left annotation
 map_notitle  <- map_beta_c  + labs(title = NULL,            # Panel B: subtitle absorbed into shared title
                                    subtitle = NULL)
 
 # Shared annotation applied to both layouts; subtitle folded into title
 shared_annotation <- plot_annotation(
-  title      = expression("Distribution of " ~ beta^"(c)" ~
+  title      = expression(beta[c] ~
                           "across countries: Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase"),
   tag_levels = "A"   # labels panels "A", "B" automatically
 )
@@ -425,7 +433,7 @@ for (iso in countries_to_plot) {
     scale_shape_manual(values = trajectory_shapes, name = "Trajectory") +
     labs(
       title    = paste0(iso, ": Per-Capita Fire PM2.5 (demeaned) vs. GMT"),
-      subtitle = bquote(beta^"(c)" == .(round(beta_c, 2)) %+-% .(round(se_beta_c, 2)) ~
+      subtitle = bquote(beta[c] == .(round(beta_c, 2)) %+-% .(round(se_beta_c, 2)) ~
                           "µg/m³/yr per °C  |  R² =" ~ .(round(r_squared, 2))),
       x        = "GMT Anomaly relative to 1850-1900 (°C)",
       y        = "Fire PM2.5 Exposure, demeaned within fire model (µg/m³/yr)"
@@ -470,7 +478,7 @@ df_multi <- purrr::map_dfr(countries_to_multiplot, function(iso) {
       model       = factor(model,      levels = names(model_colors)),
       trajectory  = factor(trajectory, levels = names(trajectory_shapes)),
       # HTML superscript rendered by element_markdown(); Unicode ± for plus-minus
-      strip_label = paste0(iso, "  |  β<sup>(c)</sup> = ", round(beta_c, 2),
+      strip_label = paste0(iso, "  |  β<sub>c</sub> = ", round(beta_c, 2),
                            " ± ", round(se_beta_c, 2),
                            " µg/m³/yr per °C")
     )

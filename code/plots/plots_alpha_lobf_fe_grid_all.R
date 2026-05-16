@@ -37,9 +37,9 @@ hist_beta_i <- ggplot(reg_coefs, aes(x = estimate_beta_i)) +
   geom_histogram(bins = 50, fill = "steelblue", color = "white") +
   geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
   labs(
-    title    = expression("Distribution of " ~ beta^"(i)" ~ "across grid cells"),
+    title    = expression("Distribution of " ~ beta[i] ~ "across grid cells"),
     subtitle = "Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase",
-    x        = expression(beta^"(i)" ~ "(µg/m³ per °C)"),
+    x        = expression(beta[i] ~ "(µg/m³ per °C)"),
     y        = "Number of grid cells"
   ) +
   theme_minimal()
@@ -122,7 +122,7 @@ cut_beta <- function(x) {
 ############ Map: beta_i ####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Country boundaries drawn as a white polygon overlay on top of the raster tiles.
+# Country boundaries drawn as a gray polygon overlay on top of the raster tiles.
 world_borders <- map_data("world")
 
 # beta_i is the OLS slope: change in fire PM2.5 concentration (µg/m^3)
@@ -146,7 +146,7 @@ map_beta_i <- reg_coefs %>%
   coord_fixed(0.90) +
   theme_minimal() +
   labs(
-    title = expression("Distribution of " ~ beta^"(i)" ~ "across grid cells: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
+    title = expression(beta[i] ~ "grid cell estimates: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
   ) +
   guides(fill = guide_legend(nrow = 1)) +
   theme(panel.grid       = element_blank(),
@@ -186,7 +186,7 @@ map_beta_i_usa <- reg_coefs_usa %>%
   coord_fixed(0.97, ylim = c(24, 49)) +  # clip at 49°N (US-Canada border) to hide tiles overhanging state polygons
   theme_minimal() +
   labs(
-    title = expression("Distribution of " ~ beta^"(i)" ~ "across grid cells: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
+    title = expression(beta[i] ~ "grid cell estimates: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
   ) +
   guides(fill = guide_legend(nrow = 1)) +
   theme(panel.grid       = element_blank(),
