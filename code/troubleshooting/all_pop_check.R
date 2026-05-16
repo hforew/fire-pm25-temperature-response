@@ -1,6 +1,42 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Combined pop_pm Dataset check ##############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Purpose:
+#   Sanity-check the population variables in the combined pop_pm dataset by
+#   aggregating them at three nested geographic scales — global, United States,
+#   and selected cities — and visualizing which 0.5-degree cells fall into each
+#   city's catchment area.
+#
+# What this script does:
+#   1. Reads the combined population and PM dataset (pop_pm_combined_final.csv)
+#      and identifies every column whose name contains "pop".
+#   2. Builds 0.5-degree polygon cells from each (lon, lat) center so cells can
+#      be spatially intersected with country / city geometries.
+#   3. Global table: sums each population column across all cells in the
+#      dataset (one row, "Global").
+#   4. United States table: sums each population column across cells that
+#      intersect the US country polygon from rnaturalearth (one row,
+#      "United States"). Note: this includes Alaska, Hawaii, and US territories.
+#   5. City table: for 12 selected cities worldwide, builds a 50 km buffer
+#      around each city center and sums each population column across all
+#      0.5-degree cells intersecting the buffer (one row per city).
+#   6. Combined table: row-binds the global, US, and city tables, rescales all
+#      population columns to units of 10,000, and renders an interactive
+#      DT::datatable for quick comparison across scales.
+#   7. Interactive leaflet map: overlays the 0.5-degree cells assigned to each
+#      city (color-coded by city, with toggleable layers) plus city-center
+#      markers, so the spatial footprint of each city aggregation is verifiable.
+#
+# Notes / caveats:
+#   - "Any intersecting cell" rule is used everywhere — a 0.5-degree cell is
+#     fully attributed to a region if it overlaps the region at all, so cells
+#     straddling boundaries can be double-counted across overlapping regions.
+#   - City buffers are computed in EPSG:3857 (Web Mercator), which introduces
+#     mild distortion at high latitudes (e.g. Anchorage, Moscow).
+#
+# Output:
+#   - Inline HTML widgets only
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 rm(list = ls())
 
 library(data.table)
