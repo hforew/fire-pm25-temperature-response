@@ -321,28 +321,32 @@ print(beta_table, n = Inf)
 
 exposure_bw <- bind_rows(
   reg_data_cntry %>% mutate(group = "Overall"),
-  reg_data_cntry %>% mutate(group = recode(as.character(fire_model), "Zhao" = "Multi"))
+  reg_data_cntry %>% mutate(group = recode(as.character(fire_model), "Zhao" = "Multi")) # relabel Zhao --> Multi
 ) %>%
   group_by(group) %>%
   summarise(
-    ymin   = quantile(exposure_percap, 0.10, na.rm = TRUE),
-    lower  = quantile(exposure_percap, 0.25, na.rm = TRUE),
-    middle = quantile(exposure_percap, 0.50, na.rm = TRUE),
-    upper  = quantile(exposure_percap, 0.75, na.rm = TRUE),
-    ymax   = quantile(exposure_percap, 0.90, na.rm = TRUE),
+    ymin   = quantile(exposure_percap, 0.10, na.rm = TRUE), # bottom whisker
+    lower  = quantile(exposure_percap, 0.25, na.rm = TRUE), # bottom of box
+    middle = quantile(exposure_percap, 0.50, na.rm = TRUE), # median line
+    upper  = quantile(exposure_percap, 0.75, na.rm = TRUE), # top of box
+    ymax   = quantile(exposure_percap, 0.90, na.rm = TRUE), # top whisker
     mean   = mean(exposure_percap,     na.rm = TRUE),
+    n      = n(),
     .groups = "drop"
   ) %>%
-  mutate(group = factor(group,
+  mutate(group = factor(group,                              # fix display order
                         levels = c("Overall", "CLASSIC", "JULES", "SSiB4", "CESM", "Multi")))
 
 p_exposure <- ggplot(exposure_bw, aes(x = group)) +
   geom_boxplot(aes(ymin = ymin, lower = lower, middle = middle,
                    upper = upper, ymax = ymax),
-               stat = "identity", fill = "steelblue", alpha = 0.5, width = 0.5) +
+               stat = "identity",                          # use pre-computed quantiles, not raw data
+               fill = "steelblue", alpha = 0.5, width = 0.5) +
   geom_point(aes(y = mean), shape = 19, size = 2.5, color = "darkred") +
-  labs(x = NULL, y = "Per-capita fPM2.5 (µg/m³/yr)",
-       title = "A. Fire PM2.5 exposure by fire model") +
+  geom_text(aes(y = Inf, label = paste0("n=", n)),         # Inf pins label to top of panel
+            vjust = 1.5, hjust = 0.5, size = 3) +
+  labs(x = NULL, y = "Per-capita Fire PM2.5 (µg/m³/yr)",
+       title = "A. Per-capita Fire PM2.5 exposure by fire model") +
   theme_bw(base_size = 11)
 
 # ~~~~ Panel B: GMT anomaly by data source (Cleveland dot plot) ~~~~
@@ -355,8 +359,8 @@ gmt_dots <- reg_data_cntry %>%
     fire_model == "CESM"                            ~ "Pierce et al.",
     fire_model == "Zhao"                            ~ "Zhao et al."
   )) %>%
-  distinct(source, T_ps) %>%
-  mutate(source = factor(source,
+  distinct(source, T_ps) %>%          # one row per unique GMT value per source
+  mutate(source = factor(source,      # fix display order
                          levels = c("Park et al.", "Pierce et al.", "Zhao et al.")))
 
 p_gmt <- ggplot(gmt_dots, aes(x = source, y = T_ps)) +
@@ -401,12 +405,12 @@ print(fig_wide)
 
 ggsave(here("images", "regression_alpha", "alpha_FE_all",
             "bw_exposure_gmt_by_model_long.png"),
-       fig_long, width = 8, height = 10, dpi = 150)
+       fig_long, width = 8.5, height = 10, dpi = 300)
 cat("\nSaved _long to images/regression_alpha/alpha_FE_all/bw_exposure_gmt_by_model_long.png\n")
 
 ggsave(here("images", "regression_alpha", "alpha_FE_all",
             "bw_exposure_gmt_by_model_wide.png"),
-       fig_wide, width = 14, height = 6, dpi = 150)
+       fig_wide, width = 8.5, height = 4, dpi = 300)
 cat("Saved _wide to images/regression_alpha/alpha_FE_all/bw_exposure_gmt_by_model_wide.png\n")
 
 

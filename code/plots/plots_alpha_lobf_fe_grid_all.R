@@ -16,8 +16,6 @@ rm(list = ls())
 
 library(here)
 library(tidyverse)
-library(ggplot2)
-library(ggrepel)
 library(maps)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -80,7 +78,6 @@ print_beta_stats <- function(x, label) {
   cat("  > 2 :", round(100 * mean(x > 2, na.rm = TRUE), 1), "%\n")
 }
 
-# Global: all land cells with a regression result
 print_beta_stats(reg_coefs$estimate_beta_i, "GLOBAL")
 
 # CONUS: filtered here for stats and reused for the CONUS map below
@@ -103,35 +100,22 @@ print_beta_stats(reg_coefs_usa$estimate_beta_i, "CONUS")
 band_labels <- c("<0", "0-0.10", "0.10-0.25", "0.25-0.50", "0.50-1.00", ">1.00")
 
 band_colors <- c(
-  "<0"        = "#7FD67F",  # light green  -- warming reduces fire PM2.5
-  "0-0.10"    = "#56C8FF",  # sky blue     -- low positive response
+  "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  "0-0.10"    = "#FFE566",  # light yellow -- low positive response
   "0.10-0.25" = "#C8A000",  # dark yellow  -- moderate-low
   "0.25-0.50" = "#CC5500",  # dark orange  -- moderate-high
   "0.50-1.00" = "#DD1111",  # red          -- high
   ">1.00"     = "#7A0000"   # dark red     -- extreme (Siberia, Congo, Amazon globally)
 )
 
-# Band boundaries: -Inf, 0, 0.1, 0.25, 0.5, 1.0, Inf (µg/m^3 per °C).
-# Chosen to concentrate resolution in the 0-0.5 range where ~74% of global
-# cells and ~79% of CONUS cells fall. Global max = 6.7 but CONUS max = 1.55,
-# so upper breaks above 1.0 would be empty for CONUS and waste color bands.
-# Boundaries are hardcoded inside cut_beta() below and in band_labels/band_colors.
-#   < 0          green      warming reduces fire PM2.5
-#   0 - 0.10     blue       low positive response
-#   0.10 - 0.25  dk.yellow  moderate-low
-#   0.25 - 0.50  dk.orange  moderate-high
-#   0.50 - 1.00  red        high
-#   > 1.00       dk.red     extreme (global hotspots: Siberia, Congo, Amazon)
-
 # Bins a continuous beta vector into the 6 labelled factor bands.
-# right = FALSE --> intervals are [lo, hi) so boundary values (0, 0.1, etc.)
-# fall in the upper band. include.lowest = TRUE closes the final [1.0, Inf] bin.
+# right = FALSE --> boundary values fall in the upper band; include.lowest closes [1.0, Inf].
 cut_beta <- function(x) {
   cut(x,
       breaks         = c(-Inf, 0, 0.1, 0.25, 0.5, 1.0, Inf),
       labels         = band_labels,
-      right          = FALSE,   # [lo, hi) intervals
-      include.lowest = TRUE)    # include Inf in last bin
+      right          = FALSE,
+      include.lowest = TRUE)
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -147,32 +131,35 @@ world_borders <- map_data("world")
 #   beta_i < 0 --> warming decreases local fire PM2.5
 
 map_beta_i <- reg_coefs %>%
-  mutate(fill_band = cut_beta(estimate_beta_i)) %>%  # bin slope into 6 factor bands
+  mutate(fill_band = cut_beta(estimate_beta_i)) %>%
   ggplot(aes(x = lon, y = lat, fill = fill_band)) +
-  geom_tile(width = 0.5, height = 0.5) +  # explicit 0.5deg tile size; avoids geom_raster() warning from ocean/unmapped gaps
+  geom_tile(width = 0.5, height = 0.5) +  # avoids geom_raster() warning from ocean/unmapped gaps
   geom_polygon(data = world_borders,
                aes(x = long, y = lat, group = group),
-               fill = NA, color = "white", linewidth = 0.15) +
+               fill = NA, color = "gray50", linewidth = 0.15) +
   scale_fill_manual(
-    values   = band_colors,           # exact color per band -- no gradient sampling
-    name     = expression(beta^"(i)"),  # legend title
+    values   = band_colors,
+    name     = NULL,
     drop     = FALSE,                 # show all 6 bands in legend even if a band is empty
     na.value = "lightgray"            # cells with no regression data
   ) +
-  coord_fixed(1.3) +
+  coord_fixed(0.90) +
   theme_minimal() +
   labs(
-    title    = expression("Distribution of " ~ beta^"(i)" ~ "across grid cells"),
-    subtitle = "Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase"
+    title = expression("Distribution of " ~ beta^"(i)" ~ "across grid cells: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
   ) +
-  theme(panel.grid  = element_blank(),
-        axis.title  = element_blank(),
-        axis.text   = element_blank(),
-        axis.ticks  = element_blank())
+  guides(fill = guide_legend(nrow = 1)) +
+  theme(panel.grid       = element_blank(),
+        panel.background = element_blank(),
+        axis.title       = element_blank(),
+        axis.text        = element_blank(),
+        axis.ticks       = element_blank(),
+        legend.position  = "bottom",
+        plot.title       = element_text(size = 9.5))
 
 map_beta_i
 ggsave(here("images/regression_alpha/alpha_FE_grid_all", "map_beta_i_fe_grid.png"),
-       map_beta_i, width = 12, height = 6)
+       map_beta_i, width = 6.5, height = 3.5, dpi = 300)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Map: beta_i — USA only ################################################
@@ -184,33 +171,36 @@ ggsave(here("images/regression_alpha/alpha_FE_grid_all", "map_beta_i_fe_grid.png
 usa_state_borders <- map_data("state")
 
 map_beta_i_usa <- reg_coefs_usa %>%
-  mutate(fill_band = cut_beta(estimate_beta_i)) %>%  # same cut_beta() as global map
+  mutate(fill_band = cut_beta(estimate_beta_i)) %>%
   ggplot(aes(x = lon, y = lat, fill = fill_band)) +
-  geom_tile(width = 0.5, height = 0.5) +  # same explicit tile size as global map
+  geom_tile(width = 0.5, height = 0.5) +
   geom_polygon(data = usa_state_borders,
                aes(x = long, y = lat, group = group),
-               fill = NA, color = "white", linewidth = 0.15) +
+               fill = NA, color = "gray50", linewidth = 0.15) +
   scale_fill_manual(
     values   = band_colors,           # same exact colors as global map -- directly comparable
-    name     = expression(beta^"(i)"),  # legend title
+    name     = NULL,
     drop     = FALSE,                 # show all 6 bands even if CONUS has none in ">1.00"
     na.value = "lightgray"            # cells with no regression data
   ) +
-  coord_fixed(1.3, ylim = c(24, 49)) +  # clip at 49°N (US-Canada border) to hide tiles overhanging state polygons
+  coord_fixed(0.97, ylim = c(24, 49)) +  # clip at 49°N (US-Canada border) to hide tiles overhanging state polygons
   theme_minimal() +
   labs(
-    title    = expression("Distribution of " ~ beta^"(i)" ~ "across grid cells (CONUS)"),
-    subtitle = "Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase"
+    title = expression("Distribution of " ~ beta^"(i)" ~ "across grid cells: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
   ) +
-  theme(panel.grid  = element_blank(),
-        axis.title  = element_blank(),
-        axis.text   = element_blank(),
-        axis.ticks  = element_blank())
+  guides(fill = guide_legend(nrow = 1)) +
+  theme(panel.grid       = element_blank(),
+        panel.background = element_blank(),
+        axis.title       = element_blank(),
+        axis.text        = element_blank(),
+        axis.ticks       = element_blank(),
+        legend.position  = "bottom",
+        plot.title       = element_text(size = 9.5))
 
 map_beta_i_usa
 ggsave(here("images/regression_alpha/alpha_FE_grid_all", "map_beta_i_fe_grid_usa.png"),
-       map_beta_i_usa, width = 10, height = 6)
+       map_beta_i_usa, width = 6.5, height = 3.5, dpi = 300)
 
 print("Beta grid maps saved to images/regression_alpha/alpha_FE_grid_all/")
 
-### THE END
+### THE END ##########

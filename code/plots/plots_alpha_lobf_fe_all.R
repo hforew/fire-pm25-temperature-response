@@ -20,6 +20,7 @@ library(maps)
 library(countrycode)
 library(ggtext)
 library(ggrepel)
+library(patchwork)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Import #####################################################
@@ -69,18 +70,51 @@ reg_data_combined <- reg_data_combined %>%
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Histogram of beta_c ####################################################
+##
+## Summarises the cross-country distribution of beta_c (OLS slope: change in per-capita
+## fire PM2.5 per 1°C GMT increase). Three headline stats are computed and printed to
+## console: total countries, share with positive beta_c (warming --> more fire PM),
+## and share with p < .05 (statistically distinguishable from zero). These stats are
+## also rendered as an annotation below the x-axis. The median is marked with a dotted
+## vertical line and text label.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+n_total <- nrow(reg_coefs)                                      # total countries in regression
+n_pos   <- sum(reg_coefs$estimate_beta_c > 0,    na.rm = TRUE)  # beta_c > 0: warming increases fire PM
+n_sig   <- sum(reg_coefs$p.value_beta_c  < 0.05, na.rm = TRUE)  # p < .05: slope sig. different from zero
+
+# Format summary strings for console output; %d = integer, %% = literal percent sign
+beta_c_pos <- sprintf("β(c) > 0: %d of %d (%d%%)", n_pos, n_total, round(100 * n_pos / n_total))
+beta_c_sig <- sprintf("p < .05: %d of %d (%d%%)",  n_sig, n_total, round(100 * n_sig / n_total))
+
+cat(beta_c_pos, "\n")
+cat(beta_c_sig, "\n")
+
+med_beta_c <- median(reg_coefs$estimate_beta_c, na.rm = TRUE)  # median beta_c across countries
+
 hist_beta_c <- ggplot(reg_coefs, aes(x = estimate_beta_c)) +
-  geom_histogram(bins = 50, fill = "steelblue", color = "white") +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  geom_histogram(bins = 50, fill = "steelblue", color = "white") +       # 50 bins; white borders separate bars
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +       # zero reference: no GMT effect
+  geom_vline(xintercept = med_beta_c, linetype = "dotted", color = "black", linewidth = 0.8) +  # median marker
+  annotate("text", x = med_beta_c, y = Inf,                              # y = Inf --> pin to top of panel
+           label = paste0("Median = ", round(med_beta_c, 2)),
+           vjust = 5, hjust = -0.1, size = 3.5, color = "black") +       # vjust pulls label down from top edge
+  # richtext allows HTML; <sup> renders (c) as superscript; fill/label.color = NA removes text box border
+  annotate("richtext", x = -Inf, y = -Inf,
+           label = paste0("β<sup>(c)</sup> > 0: ", n_pos, " of ", n_total,
+                          " (", round(100 * n_pos / n_total), "%) | ",
+                          "p &lt; .05: ", n_sig, " of ", n_total,
+                          " (", round(100 * n_sig / n_total), "%)"),
+           hjust = .15, vjust = 3.6, size = 3.5,
+           fill = NA, label.color = NA) +
+  coord_cartesian(clip = "off") +                                         # allow drawing outside panel bounds
   labs(
-    title    = expression("Distribution of " ~ beta^"(c)" ~ "across countries"),
-    subtitle = "Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase",
-    x        = expression(beta^"(c)" ~ "(µg/m³/yr per °C)"),
-    y        = "Number of countries"
+    title = expression("Distribution of " ~ beta^"(c)" ~ "across countries"),
+    x     = expression(beta^"(c)" ~ "(µg/m³/yr per °C)"),
+    y     = "Number of countries"
   ) +
-  theme_minimal()
+  theme_minimal() +
+  theme(plot.margin = margin(b = 0.5, unit = "cm"))                       # space below x-axis for the text
 
 hist_beta_c
 ggsave(here("images/regression_alpha/alpha_FE_all", "hist_beta_c_fe.png"), plot = hist_beta_c, width = 8, height = 5, dpi = 300)
@@ -149,8 +183,8 @@ print_beta_stats(reg_coefs$estimate_beta_c, "GLOBAL")
 band_labels <- c("<0", "0-0.10", "0.10-0.25", "0.25-0.50", "0.50-1.00", ">1.00")
 
 band_colors <- c(
-  "<0"        = "#7FD67F",  # light green  -- warming reduces fire PM2.5
-  "0-0.10"    = "#56C8FF",  # sky blue     -- low positive response
+  "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  "0-0.10"    = "#FFE566",  # light yellow -- low positive response
   "0.10-0.25" = "#C8A000",  # dark yellow  -- moderate-low
   "0.25-0.50" = "#CC5500",  # dark orange  -- moderate-high
   "0.50-1.00" = "#DD1111",  # red          -- high
@@ -187,29 +221,80 @@ cut_beta <- function(x) {
 # into country-level fire PM2.5 exposure changes and associated mortality impacts.
 
 map_beta_c <- world_beta %>%
-  mutate(fill_band = cut_beta(estimate_beta_c)) %>%
+  mutate(fill_band = cut_beta(estimate_beta_c)) %>%          # bin beta_c into 6 discrete colour bands
   ggplot(aes(x = long, y = lat, group = group, fill = fill_band)) +
-  geom_polygon(color = "white", linewidth = 0.1) +
+  geom_polygon(color = "gray50", linewidth = 0.15) +          # gray50 borders separate country polygons
   scale_fill_manual(
-    values   = band_colors,
-    name     = expression(beta^"(c)"),
-    drop     = FALSE,
-    na.value = "lightgray"
+    values       = band_colors,
+    name         = NULL,                                      # no legend title
+    drop         = FALSE,                                     # show all bands even if empty
+    na.value     = "lightgray",                              # countries with no regression data --> gray
+    na.translate = FALSE,                                     # exclude NA swatch from legend
+    guide        = guide_legend(nrow = 1)                    # single-row legend
   ) +
-  # coord_fixed(1.3) preserves geographic aspect ratio.
-  coord_fixed(1.3) +
+  scale_x_continuous(expand = c(0, 0)) +                    # remove ggplot's default 5% x padding
+  scale_y_continuous(expand = c(0, 0)) +                    # remove ggplot's default 5% y padding
+  coord_fixed(1.3, xlim = c(-180, 180), ylim = c(-58, 83)) +  # fix aspect ratio; clip Antarctica
   theme_minimal() +
   labs(title    = expression("Distribution of " ~ beta^"(c)" ~ "across countries"),
        subtitle = "Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase",
        x = NULL, y = NULL) +
-  theme(panel.grid = element_blank())
+  theme(panel.grid       = element_blank(),                  # no graticule lines
+        legend.position  = "bottom",                         # legend below map
+        axis.text        = element_blank(),                  # hide lat/lon tick labels
+        axis.ticks       = element_blank(),                  # hide tick marks
+        plot.margin      = margin(0, 0, 0, 0),               # no outer margin
+        panel.background = element_blank())                    # no background fill (matches grid map style)
 
 
 map_beta_c
 ggsave(here("images/regression_alpha/alpha_FE_all", "map_beta_c_fe.png"),
-       map_beta_c, width = 12, height = 6)
+       map_beta_c, width = 6.5, height = 3.5, dpi = 300)
 
 print("Beta map saved to images/regression_alpha/alpha_FE_all/")
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Histogram + Map multiplot (Panel A / Panel B) ############################
+##
+## Combines hist_beta_c (Panel A) and map_beta_c (Panel B) using patchwork.
+## Two layouts are produced:
+##   _long  -- A stacked above B (portrait orientation)
+##   _wide  -- A left of B (landscape orientation); map given 2x the width
+##
+## Individual panel titles and subtitles are stripped and replaced with a single
+## plot_annotation() title. A/B tags are added via tag_levels = "A".
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Strip individual titles; subtitles kept as per-panel descriptions
+hist_notitle <- hist_beta_c + labs(title = NULL)           # Panel A: caption carries summary stats
+map_notitle  <- map_beta_c  + labs(title = NULL,            # Panel B: subtitle absorbed into shared title
+                                   subtitle = NULL)
+
+# Shared annotation applied to both layouts; subtitle folded into title
+shared_annotation <- plot_annotation(
+  title      = expression("Distribution of " ~ beta^"(c)" ~
+                          "across countries: Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase"),
+  tag_levels = "A"   # labels panels "A", "B" automatically
+)
+
+# _long: A above B, equal heights
+multiplot_long <- (hist_notitle / map_notitle) + shared_annotation
+
+# _wide: A left (40%), B right (60%); widths = c(2, 3) gives the 40/60 split
+multiplot_wide <- (hist_notitle | map_notitle) +
+  plot_layout(widths = c(2, 3)) +
+  shared_annotation
+
+print(multiplot_long)
+ggsave(here("images/regression_alpha/alpha_FE_all", "multiplot_beta_c_long.png"),
+       multiplot_long, width = 12, height = 14, dpi = 300)
+
+print(multiplot_wide)
+ggsave(here("images/regression_alpha/alpha_FE_all", "multiplot_beta_c_wide.png"),
+       multiplot_wide, width = 8.5, height = 3.5, units = "in", dpi = 300)
+
+print("Multiplots saved to images/regression_alpha/alpha_FE_all/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -339,10 +424,9 @@ for (iso in countries_to_plot) {
     scale_color_manual(values = model_colors,      name = "Model") +
     scale_shape_manual(values = trajectory_shapes, name = "Trajectory") +
     labs(
-      title    = paste0(iso, ": Per-Capita Fire PM2.5 vs. GMT"),
+      title    = paste0(iso, ": Per-Capita Fire PM2.5 (demeaned) vs. GMT"),
       subtitle = bquote(beta^"(c)" == .(round(beta_c, 2)) %+-% .(round(se_beta_c, 2)) ~
-                          "µg/m³/yr per °C  |  n =" ~ .(n_obs) ~
-                          "|  R² =" ~ .(round(r_squared, 2))),
+                          "µg/m³/yr per °C  |  R² =" ~ .(round(r_squared, 2))),
       x        = "GMT Anomaly relative to 1850-1900 (°C)",
       y        = "Fire PM2.5 Exposure, demeaned within fire model (µg/m³/yr)"
     ) +
@@ -362,7 +446,7 @@ print("Line of best fit plots saved to images/regression_alpha/alpha_FE_all/")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Line of Best Fit: multi-country grid (2 x 3) ############################
 ##
-## Six-panel faceted plot: 2 rows x 3 columns, free y-axis scales, single legend.
+## Six-panel faceted plot: 2 rows x 3 columns, common y-axis scale, single legend.
 ## Strip label: country code + beta_c + n.
 ## y-axis: exposure_percap_dm (demeaned within fire model group).
 ## Fitted line passes through the origin with slope beta_c.
@@ -388,7 +472,7 @@ df_multi <- purrr::map_dfr(countries_to_multiplot, function(iso) {
       # HTML superscript rendered by element_markdown(); Unicode ± for plus-minus
       strip_label = paste0(iso, "  |  β<sup>(c)</sup> = ", round(beta_c, 2),
                            " ± ", round(se_beta_c, 2),
-                           " µg/m³/yr per °C  |  n = ", n())
+                           " µg/m³/yr per °C")
     )
 })
 
@@ -426,7 +510,7 @@ p_multi <- ggplot(df_multi,
   # ncol = 3 --> 3x2 grid; common y-axis across all panels for comparable visual slopes.
   facet_wrap(~ strip_label, ncol = 3) +
   labs(
-    title = "Per-Capita Fire PM2.5 vs. GMT",
+    title = "Per-Capita Fire PM2.5 (demeaned) vs. GMT",
     x     = "GMT Anomaly relative to 1850-1900 (°C)",
     y     = "Fire PM2.5 Exposure, demeaned within fire model (µg/m³/yr)"
   ) +
@@ -442,8 +526,8 @@ p_multi <- ggplot(df_multi,
 
 print(p_multi)
 ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multiplot_fe.png"),
-       p_multi, width = 14, height = 8, dpi = 300)
+       p_multi, width = 8.5, height = 5, dpi = 300)
 
 print("Multi-country grid plot saved to images/regression_alpha/alpha_FE_all/lof_multiplot_fe.png")
 
-### THE END
+############ THE END  ############################
