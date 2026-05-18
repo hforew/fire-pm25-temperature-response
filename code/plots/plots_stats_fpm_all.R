@@ -16,10 +16,10 @@ rm(list = ls())
 ##
 ## Pierce (CESM)
 ##   fpm_2000                  CESM          Historical
-##   fpm_2050_45               CESM          SSP1-4.5
-##   fpm_2050_85               CESM          SSP3-8.5
-##   fpm_2100_45               CESM          SSP1-4.5
-##   fpm_2100_85               CESM          SSP3-8.5
+##   fpm_2050_45               CESM          RCP4.5
+##   fpm_2050_85               CESM          RCP8.5
+##   fpm_2100_45               CESM          RCP4.5
+##   fpm_2100_85               CESM          RCP8.5
 ##
 ## Park (Historical)
 ##   park_classic_1960s_fpm    CLASSIC       Historical
@@ -99,7 +99,7 @@ fpm_lookup <- tibble(
   ),
   trajectory = c(
     "SSP2-4.5", "SSP5-8.5",
-    "Historical", "SSP1-4.5", "SSP3-8.5", "SSP1-4.5", "SSP3-8.5",
+    "Historical", "RCP4.5", "RCP8.5", "RCP4.5", "RCP8.5",
     rep("Historical", 18)
   ),
   year = c(
@@ -256,10 +256,10 @@ ggsave(here("images", "pm", "map_park_multiplot.png"),
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Layout: 2 columns x 5 rows.
-#   Col 1 (Pierce/CESM): all 5 rows -- Historical, SSP1-4.5/SSP3-8.5 2040s, SSP1-4.5/SSP3-8.5 2090s
+#   Col 1 (Pierce/CESM): all 5 rows -- Historical, RCP4.5/RCP8.5 2040s, RCP4.5/RCP8.5 2090s
 #   Col 2 (Zhao/Multi):  rows 4-5 only -- SSP2-4.5 and SSP5-8.5 (~2090s)
 #   Rows 1-3 of col 2 will render as empty panels; this is intentional.
-# Rows 4-5 share labels across both columns because Pierce SSP1-4.5/SSP3-8.5 2090s
+# Rows 4-5 share labels across both columns because Pierce RCP4.5/RCP8.5 2090s
 # and Zhao SSP2-4.5/SSP5-8.5 are roughly comparable future periods.
 
 pierce_zhao_cols <- c(
@@ -283,8 +283,8 @@ pz_meta <- tibble(
   col_label = c(rep("Pierce (CESM)", 5), rep("Zhao (Multi)", 2)),
   row_label = c(
     pz_row_labels,
-    pz_row_labels[4],  # Zhao SSP2-4.5 --> same row as Pierce SSP1-4.5 2090s
-    pz_row_labels[5]   # Zhao SSP5-8.5 --> same row as Pierce SSP3-8.5 2090s
+    pz_row_labels[4],  # Zhao SSP2-4.5 --> same row as Pierce RCP4.5 2090s
+    pz_row_labels[5]   # Zhao SSP5-8.5 --> same row as Pierce RCP8.5 2090s
   )
 )
 

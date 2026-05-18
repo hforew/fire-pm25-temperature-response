@@ -345,7 +345,7 @@ scenario_lookup <- tibble(
   ),
   trajectory = c(
     rep("Historical", 18),
-    "Historical", "SSP1-4.5", "SSP3-8.5", "SSP1-4.5", "SSP3-8.5",
+    "Historical", "RCP4.5", "RCP8.5", "RCP4.5", "RCP8.5",
     "SSP2-4.5", "SSP5-8.5"
   )
 )
@@ -360,8 +360,8 @@ model_colors <- c(
 
 trajectory_shapes <- c(
   "Historical" = 16,
-  "SSP1-4.5"   = 17,
-  "SSP3-8.5"   = 15,
+  "RCP4.5"   = 17,
+  "RCP8.5"   = 15,
   "SSP2-4.5"   = 18,
   "SSP5-8.5"   = 8
 )
@@ -414,7 +414,7 @@ for (iso in countries_to_plot) {
 
   p <- ggplot(df, aes(x = T_ps, y = exposure_percap_dm, color = model, shape = trajectory)) +
     # Each point is one observation: 18 Park (decade x fire model) +
-    # 5 Pierce (baseline, 2040s SSP1-4.5/SSP3-8.5, 2090s SSP1-4.5/SSP3-8.5) + 2 Zhao (~2095 SSP2-4.5/SSP5-8.5).
+    # 5 Pierce (baseline, 2040s RCP4.5/RCP8.5, 2090s RCP4.5/RCP8.5) + 2 Zhao (~2095 SSP2-4.5/SSP5-8.5).
     # y values are demeaned within fire model group so all groups are centered at zero.
     geom_point(size = 3) +
     # Labels for all labelled points (Park 2010s, Pierce, Zhao).
