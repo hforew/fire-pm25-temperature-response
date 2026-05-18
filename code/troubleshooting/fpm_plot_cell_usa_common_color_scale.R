@@ -1,6 +1,33 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ fPM data plot at cell level USA #########################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Purpose:
+#   Visualize fire-related PM2.5 (fPM) estimates at the grid-cell level across the
+#   United States for multiple data sources and time periods,
+#   enabling side-by-side spatial comparison between fPM products.
+#
+# What this script does:
+#   1. Reads the combined population and PM dataset (pop_pm_combined_final.csv) and
+#      subsets all fPM variables together with their cell center coordinates (lon, lat).
+#   2. Groups fPM variables by source — Zhao, Park, and Other — and sorts each
+#      group chronologically by the year embedded in the variable name.
+#   3. Builds 0.5-degree polygon cells from each (lon, lat) center and keeps only
+#      cells overlapping the US mainland, excluding Alaska, Hawaii, and
+#      US territories via a bounding-box crop.
+#   4. Plots each fPM variable as a choropleth map with state borders overlaid,
+#      using a shared dark-coffee -> yellow -> white color palette. Color scale
+#      limits are shared within each source group (capped at the 99.9th percentile)
+#      so maps within a group are directly comparable.
+#   5. Arranges plots into one row per source group (oldest -> newest, left -> right)
+#      and exports each row as a standalone.
+#
+# Output:
+#   images/fpm_cell_usa/
+#     - fpm_us_zhao.html
+#     - fpm_us_park.html
+#     - fpm_us_other.html
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 library(here)
 library(data.table)
 library(sf)

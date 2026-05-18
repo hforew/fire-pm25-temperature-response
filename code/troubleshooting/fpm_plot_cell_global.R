@@ -1,6 +1,32 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ fPM Global Cell Maps by Variable Group ######################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Purpose:
+#   Visualize fire-related PM2.5 (fPM) estimates at the grid-cell level on a
+#   global map for multiple data sources and time periods, enabling side-by-side
+#   spatial comparison of fPM products worldwide.
+#
+# What this script does:
+#   1. Reads the combined population and PM dataset (pop_pm_combined_final.csv) and
+#      subsets all fPM variables together with their cell center coordinates
+#      (lon, lat).
+#   2. Groups fPM variables by source — Zhao, Park, and Other — and sorts each
+#      group chronologically by the year embedded in the variable name.
+#   3. Builds 0.5-degree polygon cells from each (lon, lat) center across the
+#      full global grid (no spatial filtering — every cell in the dataset is kept).
+#   4. Plots each fPM variable as a global choropleth map with country borders
+#      overlaid, using a shared dark-coffee -> yellow -> white color palette.
+#      Each panel uses its own color scale so within-panel spatial patterns are
+#      emphasized. Map extent: lon [-180, 180], lat [-60, 85].
+#   5. Arranges plots into one row per source group (oldest -> newest, left ->
+#      right) and exports each row as a standalone.
+#
+# Output:
+#   images/fpm_cell_global/
+#     - fpm_global_zhao.html
+#     - fpm_global_park.html
+#     - fpm_global_other.html
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 rm(list = ls())
 
 library(here)
