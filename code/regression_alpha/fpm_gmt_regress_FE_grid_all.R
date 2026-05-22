@@ -2,12 +2,12 @@
 ## FPM–GMT RELATIONSHIP: Grid-cell level fixed-effect regression
 ##
 ## Goal: For each grid cell i, estimate the linear regression with fire-model fixed effects:
-##   fPM_ips = alpha^(i)_m + beta^(i) * T_ps + epsilon^(i)_ps
+##   fPM_itsm = alpha_im + beta_i * T_ts + epsilon_itsm
 ##
-## where fPM_ips is fire PM2.5 concentration (µg/m^3) at cell i, period p, scenario s,
-## and fire model m; T_ps is GMT anomaly relative to the 1850-1900 pre-industrial baseline (°C);
-## beta^(i) is the slope (change in fPM concentration per 1°C GMT at cell i), and
-## alpha^(i)_m are fire-model-specific intercepts (fixed effects absorbing model-level
+## where fPM_itsm is fire PM2.5 concentration (µg/m^3) at cell i, time period t, scenario s,
+## and fire model m; T_ts is GMT anomaly relative to the 1850-1900 pre-industrial baseline (°C);
+## beta_i is the slope (change in fPM concentration per 1°C GMT at cell i), and
+## alpha_im are fire-model-specific intercepts (fixed effects absorbing model-level
 ## mean differences in concentration levels).
 ##
 ## Five fire-model fixed effect levels:
@@ -20,7 +20,7 @@
 ##   - Park et al.:  18 obs (3 fire models x 6 decades)
 ##   - Zhao et al.:   2 obs (SSP2-4.5 and SSP5-8.5 ~2095)
 ##
-## Output: one row per grid cell with beta^(i), SE, p-value, lon, lat.
+## Output: one row per grid cell with beta_i, SE, p-value, lon, lat.
 ##         Used for spatial mapping in a separate plotting script.
 ##
 ## Note: response is raw fPM concentration (µg/m^3), not per-capita exposure.
@@ -171,7 +171,7 @@ print(zero_fpm, n = Inf)
 ##
 ## Convert from wide (one row per cell, one col per period/scenario) to long
 ## (one row per cell x period/scenario), then attach the GMT scalar for each row.
-## Result: 7 rows per cell, columns: row_id, lon, lat, period_scenario, fpm, T_ps,
+## Result: 7 rows per cell, columns: row_id, lon, lat, period_scenario, fpm, T_ts (code variable: T_ps),
 ##         fire_model.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -273,13 +273,13 @@ reg_results <- reg_data %>%
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Extract beta^(i) #####################################################
+############ Extract beta_i ########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # unnest(tidied) expands the list-column so each coefficient term gets its own row.
 # Only the T_ps slope term is retained — the CLASSIC intercept and FE dummies
 # are not stored in the output.
-# pivot_wider rotates beta^(i) from rows into columns, producing one output row
+# pivot_wider rotates beta_i from rows into columns, producing one output row
 # per cell with estimate, SE, t-stat, and p-value.
 reg_coefs <- reg_results %>%
   select(row_id, lon, lat, country_code_iso3, country_name, tidied) %>%
@@ -317,7 +317,7 @@ glimpse(reg_coefs)
 ############ R implementation of regression ###########################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# R implementation of fPM_ips = alpha^(i)_m + beta^(i) * T_ps + epsilon^(i)_ps:
+# R implementation of fPM_itsm = alpha_im + beta_i * T_ts + epsilon_itsm:
 #
 # Because fire_model is a factor with classic as the reference level, R automatically
 # creates four indicator (dummy) variables — one for each non-reference model:
@@ -327,22 +327,22 @@ glimpse(reg_coefs)
 #   D_Zhao  = 1 if fire_model == "Zhao",  0 otherwise
 #
 # The expanded model estimated by lm() is:
-#   fPM = alpha^(i)_classic
+#   fPM = alpha_i_classic
 #         + delta_jules  * D_jules
 #         + delta_ssib4  * D_ssib4
 #         + delta_CESM   * D_CESM
 #         + delta_Zhao   * D_Zhao
-#         + beta^(i)     * T_ps
+#         + beta_i       * T_ts
 #         + epsilon
 #
-# alpha^(i)_m for each model is therefore:
+# alpha_im for each model is therefore:
 #   classic --> (Intercept)
 #   jules   --> (Intercept) + fire_modeljules
 #   ssib4   --> (Intercept) + fire_modelssib4
 #   CESM    --> (Intercept) + fire_modelCESM
 #   Zhao    --> (Intercept) + fire_modelZhao
 #
-# beta^(i) is the T_ps coefficient — shared across all models for cell i.
+# beta_i is the T_ts coefficient — shared across all models for cell i.
 
 
 ### THE END

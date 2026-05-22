@@ -42,13 +42,17 @@ pop_pm_country <- pop_pm_country %>%
 ############ Fire PM2.5 exposure by country and scenario ########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Total exposure formula:
-#   exposure_cps = sum_i( fPM_ics * pop_bar_ic )
+# Notation: i = grid cell, c = country, t = time period, s = scenario, m = fire model
+#   PM_itsm   = fire PM2.5 in cell i; already a period avg
+#   pop_bar_ic = baseline pop in cell i of country c; avg 2001-2010 from Pierce et al.
+#   pop_bar_c  = sum_i( pop_bar_ic )
 #
-# Per-capita exposure formula:
-#   exposure_cps^per-capita = sum_i( fPM_ics * pop_bar_ic ) / pop_bar_c
+# Total exposure:   PM_ctsm    = sum_i( PM_itsm * pop_bar_ic )
+# Per-capita:       PM_bar_ctsm = PM_ctsm / pop_bar_c
 #
-# fpm_* columns are already decadal averages, so 1/10 * sum_t collapses to the column value
+# Park et al.:   t in {1960s, 70s, 80s, 90s, 2000s, 2010s}, s in {historical}, m in {CLASSIC, JULES, SSiB4}
+# Pierce et al.: t in {2000s, 2040s, 2090s}, s in {historical, RCP4.5, RCP8.5}, m in {CESM}
+# Zhao et al.:   t in {2095-99}, s in {SSP2-4.5, SSP5-8.5}, m in {ML}
 
 # pierce data FPM + Zhao et al. 2025
 fpm_cols <- c(
@@ -61,7 +65,7 @@ fpm_cols <- c(
   "fpm_2095_SSP585_Zhao"
 )
 
-# Park et al. fPM column names: park_{model}_{decade}_fpm (18 columns: 3 models x 6 decades)
+# Park et al. PM column names: park_{model}_{decade}_fpm (18 columns: 3 models x 6 decades)
 decades       <- c("1960s", "1970s", "1980s", "1990s", "2000s", "2010s")
 models        <- c("classic", "jules", "ssib4")  # three land-surface model variants in Park et al.
 park_fpm_cols <- as.vector(outer(models, decades, function(m, d) paste0("park_", m, "_", d, "_fpm")))
@@ -73,22 +77,19 @@ pop_wght_pm_cntry <- pop_pm_country %>%
     pop_bar_c = sum(pop_bar, na.rm = TRUE),
     # Sum grid-cell population to country level for each year 2001-2010
     across(all_of(pop_yr_cols), ~ sum(.x, na.rm = TRUE)),
-    # Total fire PM2.5 exposure in country c:
-    # exposure_cps = sum_i( fPM_ics * pop_bar_ic )
-    # i.e. weighted sum of grid-cell fire PM by baseline population
+    # PM_ctsm = sum_i( PM_itsm * pop_bar_ic )  -- Pierce + Zhao
     across(
       all_of(fpm_cols),
       ~ sum(.x * pop_bar, na.rm = TRUE),
       .names = "exposure_{.col}"
     ),
-    # Per-capita fire PM2.5 exposure in country c:
-    # exposure_cps^per-capita = sum_i( fPM_ics * pop_bar_ic ) / pop_bar_c
+    # PM_bar_ctsm = PM_ctsm / pop_bar_c  -- Pierce + Zhao
     across(
       all_of(fpm_cols),
       ~ sum(.x * pop_bar, na.rm = TRUE) / pop_bar_c,
       .names = "exposure_percap_{.col}"
     ),
-    # Park et al. fPM exposure: all 18 columns weighted by pop_bar (same baseline as future scenarios).
+    # Park et al. PM exposure: all 18 columns weighted by pop_bar (same baseline as future scenarios).
     # Using pop_bar holds population geography fixed at 2001-2010, isolating PM concentration changes.
     across(
       all_of(park_fpm_cols),
@@ -213,7 +214,7 @@ bind_rows(
 colnames(pop_wght_pm_cntry)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Descriptive Statistics: Per-Capita fPM Exposure (excl. JULES) #############
+############ Descriptive Statistics: Per-Capita PM Exposure (excl. JULES) #############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # select all per-capita exposure cols, drop JULES (excluded from analysis)
@@ -259,7 +260,7 @@ park_percap_cols %>%
   print(n = Inf)
 
 # sanity check on CAF (Central African Republic), which has the highest per-capita
-# fPM across all Park decades: verify high values reflect real grid-cell fPM,
+# PM across all Park decades: verify high values reflect real grid-cell PM,
 # not a data/join artifact. mean_fpm ~42, pop ~3.5M → per-capita ~48 is expected.
 pop_pm_country %>%
   filter(country_code_iso3 == "CAF") %>%
@@ -345,14 +346,14 @@ usa_ssib4_min_stats <- pop_pm_country %>%
 cat("USA SSiB4 highest per-capita exposure:",
     usa_ssib4_max$decade, "—", round(usa_ssib4_max$percap, 3), "µg/m³\n")
 
-cat("\nGrid-cell fPM stats for USA SSiB4", usa_ssib4_max$decade, "(highest):\n")
+cat("\nGrid-cell PM stats for USA SSiB4", usa_ssib4_max$decade, "(highest):\n")
 print(usa_ssib4_max_stats)
 
 
 cat("USA SSiB4 lowest  per-capita exposure:",
     usa_ssib4_min$decade, "—", round(usa_ssib4_min$percap, 3), "µg/m³\n")
 
-cat("\nGrid-cell fPM stats for USA SSiB4", usa_ssib4_min$decade, "(lowest):\n")
+cat("\nGrid-cell PM stats for USA SSiB4", usa_ssib4_min$decade, "(lowest):\n")
 print(usa_ssib4_min_stats)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
