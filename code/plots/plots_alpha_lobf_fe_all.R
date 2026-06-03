@@ -454,7 +454,8 @@ print("Line of best fit plots saved to images/regression_alpha/alpha_FE_all/")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 multiplot_pos_beta <- c("IND", "CHN", "USA", "IDN", "PAK", "RUS")
-multiplot_neg_beta <- c("NGA", "ARG", "AGO", "ZAF", "AUS", "GHA")
+# multiplot_neg_beta <- c("NGA", "ARG", "AGO", "ZAF", "AUS", "GHA")
+multiplot_neg_beta <- c("NGA", "ARG","AUS")
 
 # Builds a 6-country faceted LOBF plot for a given vector of ISO3 codes.
 # Returns a ggplot object; caller saves to disk.
@@ -562,3 +563,4 @@ ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multi_pos_neg_beta_fe.p
 print("Multi-country grids saved to images/regression_alpha/alpha_FE_all/")
 
 ############ THE END  ############################
+

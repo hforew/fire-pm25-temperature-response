@@ -7,6 +7,11 @@
 #      assigned to Pierce et al. projection periods (2006-2010, 2041-2050, 2091-2100)
 #   2. OWID observed — decadal means assigned to Park et al. 2024 simulations
 #   3. MimiSSP (SSP245/585) — mean over 2095-2099 assigned to Zhao et al. 2025 simulations
+
+# Temp data sources:
+# 1: Pierce et al. 2017
+# 2: OWID  https://ourworldindata.org/grapher/temperature-anomaly?v=1&csvType=full&useColumnShortNames=false
+# 3: MimiSSPs https://github.com/anthofflab/MimiSSPs.jl
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Remove all objects from the environment

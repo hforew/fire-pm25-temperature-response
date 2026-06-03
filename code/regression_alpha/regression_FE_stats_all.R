@@ -225,9 +225,12 @@ by_fire_model <- reg_data_cntry %>%
   summarise(
     Mean_exposure = round(mean(exposure_percap,             na.rm = TRUE), 4),
     SD            = round(sd(exposure_percap,               na.rm = TRUE), 4),
+    p10           = round(quantile(exposure_percap, 0.10,   na.rm = TRUE), 4),
     p25           = round(quantile(exposure_percap, 0.25,   na.rm = TRUE), 4),
     Median        = round(median(exposure_percap,           na.rm = TRUE), 4),
+    Mean          = round(mean(exposure_percap,             na.rm = TRUE), 4),
     p75           = round(quantile(exposure_percap, 0.75,   na.rm = TRUE), 4),
+    p90           = round(quantile(exposure_percap, 0.90,   na.rm = TRUE), 4),
     p95           = round(quantile(exposure_percap, 0.95,   na.rm = TRUE), 4),
     Obs           = n(),
     .groups = "drop"
@@ -236,6 +239,23 @@ by_fire_model <- reg_data_cntry %>%
 
 cat("\n--- Table 3: By-fire-model descriptive statistics ---\n")
 print(by_fire_model, n = Inf)
+
+all_obs_stats <- reg_data_cntry %>%
+  summarise(
+    Mean_exposure = round(mean(exposure_percap,             na.rm = TRUE), 4),
+    SD            = round(sd(exposure_percap,               na.rm = TRUE), 4),
+    p10           = round(quantile(exposure_percap, 0.10,   na.rm = TRUE), 4),
+    p25           = round(quantile(exposure_percap, 0.25,   na.rm = TRUE), 4),
+    Median        = round(median(exposure_percap,           na.rm = TRUE), 4),
+    Mean          = round(mean(exposure_percap,             na.rm = TRUE), 4),
+    p75           = round(quantile(exposure_percap, 0.75,   na.rm = TRUE), 4),
+    p90           = round(quantile(exposure_percap, 0.90,   na.rm = TRUE), 4),
+    p95           = round(quantile(exposure_percap, 0.95,   na.rm = TRUE), 4),
+    Obs           = n()
+  )
+
+cat("\n--- Table 3b: Descriptive statistics — all observations ---\n")
+print(all_obs_stats)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Table 4: Historical vs future comparison #################################
