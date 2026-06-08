@@ -445,7 +445,7 @@ reg_coefs <- reg_coefs %>%
     t_critical_df19        = t_critical,
     t_critical_largesample = t_critical_largesample,
 
-    # gamma: beta_c scaled by 0.008 RR (Pope et al.) for GIVE damage function
+    # gamma: beta_c scaled by 0.008 RR (Pope et al.) 
     gamma_beta_c        = 0.008 * estimate_beta_c
   ) %>%
   select(
@@ -461,6 +461,8 @@ cat("\nSample of beta^(c) estimates with confidence bounds:\n")
 print(head(reg_coefs %>% select(country_code_iso3, estimate_beta_c,
                                  lower_beta_c, upper_beta_c,
                                  lower_beta_c_1.96, upper_beta_c_1.96), 10))
+
+# note, only country_code_iso3, estimate_beta_c, std.error_beta_c, p.value_beta_c used downstream
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Save output ##############################################################

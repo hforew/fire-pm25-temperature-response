@@ -146,8 +146,8 @@ map_beta_i <- reg_coefs %>%
   coord_fixed(0.90) +
   theme_minimal() +
   labs(
-    title = expression(beta[i] ~ "grid cell estimates: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
-  ) +
+    title = "Grid cell estimates: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase"
+      ) +
   guides(fill = guide_legend(nrow = 1)) +
   theme(panel.grid       = element_blank(),
         panel.background = element_blank(),
@@ -186,7 +186,7 @@ map_beta_i_usa <- reg_coefs_usa %>%
   coord_fixed(0.97, ylim = c(24, 49)) +  # clip at 49°N (US-Canada border) to hide tiles overhanging state polygons
   theme_minimal() +
   labs(
-    title = expression(beta[i] ~ "grid cell estimates: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase")
+    title = "Grid cell estimates: Change in fire PM2.5 concentration (µg/m³) per 1°C GMT increase"
   ) +
   guides(fill = guide_legend(nrow = 1)) +
   theme(panel.grid       = element_blank(),

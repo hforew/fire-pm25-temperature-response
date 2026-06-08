@@ -13,6 +13,21 @@
     % \scriptsize
     % \tiny
 
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+
+\pagestyle{fancy}
+\fancyhf{}
+
+% centered red draft text
+\fancyhead[C]{\textcolor{red}{\textbf{Draft -- Do Not Distribute}}}
+
+% page number centered at bottom
+\fancyfoot[C]{\thepage}
+
+% remove header line
+\renewcommand{\headrulewidth}{0pt}
+
 \usepackage[english]{babel}
 \usepackage{csquotes} % should use w/ babel
 
@@ -27,7 +42,7 @@
     citebordercolor={red},
     urlbordercolor={red}]{hyperref}
 
-\setlength{\parindent}{20pt} % ZERO paragrph indent
+\setlength{\parindent}{20pt} % paragrph indent
 
 
 %Import the natbib package and sets a bibliography  and citation styles
@@ -41,69 +56,81 @@
 % \doublespacing
 \onehalfspacing
 
-\title{Valuing climate-related fire PM2.5 mortality damages}
+\title{Valuing global climate-related fire PM$_{2.5}$ mortality damages}
 % \author{Henry Williams, Anders Fremstad, Shuhang Lou,  }
 \date{\today}
 
 \begin{document}
 
 \maketitle
-\thispagestyle{empty} % no # on first page 
+\thispagestyle{empty} 
+\pagenumbering{gobble} % no page number for abstract & contents
+
+\begin{abstract}
+The social cost of carbon dioxide (SC-CO$_2$) quantifies the monetized damages from a marginal unit of CO$_2$ emissions and is a central input to climate policy. Existing global estimates account for damages including temperature-related mortality, agriculture, energy, and sea-level rise, but omit damages from fire PM$_{2.5}$ mortality from increased wildfire activity driven by climate change. We estimate a global SC-CO$_2$ incorporating fire PM$_{2.5}$ mortality as a fifth damage sector in the GIVE integrated assessment model. To parameterize the damage function, we pool fire PM$_{2.5}$ concentration data from multiple global fire model simulations and estimate country-level relationships between fire PM$_{2.5}$ exposure and global mean temperature (GMT) change using a fixed-effects regression. We find that incorporating fire PM$_{2.5}$ mortality increases the global SC-CO$_2$ by 23\%, from \$208 to \$255 per ton CO$_2$ at a 2\% discount rate. FUND regions contributing the largest fire PM$_{2.5}$ damage components are the Former Soviet Union, United States, and Western Europe, reflecting large estimated increases in fire PM$_{2.5}$ exposure per degree of warming and large exposed populations.
+\end{abstract}
+
 \clearpage
 
 \tableofcontents
 
 \clearpage
-\setcounter{page}{1}
-
+\pagenumbering{arabic}
 \setcounter{page}{1}
 
 
 \label{sec:summary}
 \section{Summary}
 
-{\color{red}
-(section in progress)
-}
+Long-term exposure to ambient PM$_{2.5}$ is associated with increased all-cause mortality \autocite{pope_fine_2020}. Wildfire is a significant and growing source of PM$_{2.5}$ exposure, with
+climate change projected to amplify fire activity and smoke concentrations across many regions \autocite{pierce_estimating_2017, zhao_global_2025}. Yet the mortality damages from warming-induced fire PM$_{2.5}$ are absent from existing global estimates of the social cost of carbon dioxide (SC-CO$_2$).
 
-....
+The GIVE integrated assessment model estimates the SC-CO$_2$ with four damage sectors---temperature-related mortality, agriculture, energy, and sea-level rise \autocite{rennert_comprehensive_2022}---but omits fire PM$_{2.5}$ mortality as a pathway for warming damages. Recent work by \textcite{qiu_valuing_2026} estimates a partial SC-CO$_2$ accounting for fire PM$_{2.5}$ mortality in the United States, finding it to be a quantitatively important damage component. No global estimate yet exists.
 
-The GIVE IAM estimates the social cost of carbon (SCC) with four damage sectors \autocite{rennert_comprehensive_2022}. We add a fifth damage sector for fire PM2.5 mortality. We parameterize key relationships to define a GIVE damage function identifying how fire PM2.5 mortality changes with global mean temperature (GMT) change. 
+In this study, we develop a global damage function linking global mean temperature (GMT) change to fire PM$_{2.5}$ mortality, which we incorporate as a fifth damage sector in GIVE. We estimate country-level relationships between GMT change and population-weighted fire PM$_{2.5}$ exposure---$\beta_c$ from Equation \eqref{eq:regression}---using a fixed-effects regression pooling data from multiple global fire model simulations, and use these estimates alongside a concentration-response coefficient to compute monetized mortality damages and a global SC-CO$_2$ (Section \ref{sec:method}).
 
-Key parameters include 1) the relationship between GMT change and country-level average fire PM2.5 exposure per person and 2) relationship between PM2.5 exposure and mortality. We estimate the first while using an existing study for the second. 
+We additionally estimate the GMT-fire PM$_{2.5}$ relationship at the grid-cell level to characterize where warming most strongly amplifies fire PM$_{2.5}$ exposure, $\beta_i$. Following \textcite{rennert_comprehensive_2022}, we assess uncertainty in our SC-CO$_2$ estimates via Monte Carlo simulation, sampling over both the concentration-response coefficient and the country-level GMT-exposure coefficients (Section \ref{sec:method_uncertainty}). We discuss the strengths and limitations of our approach relative to \textcite{qiu_valuing_2026} (Section \ref{sec:app_qiu_method}) and compare our U.S. partial SC-CO$_2$ estimate to theirs (Section \ref{sec:app_usa}).
 
-...
-
-\label{sec:results}
+\pagebreak
 \section{Results}
+\label{sec:results}
 
-...
+We present results in two parts. First, we map grid-cell-level $\beta_i$ estimates---the estimated change in fire PM$_{2.5}$ concentration ($\mu$g/m$^3$/yr) per 1\textdegree C increase in GMT at each grid cell---to characterize where warming most strongly amplifies fire PM$_{2.5}$ exposure (Figure~\ref{fig:beta_grid_map}). Second, we report the global SC-CO$_2$ attributable to fire PM$_{2.5}$ mortality using our GIVE fire PM$_{2.5}$ damage function (Figure~\ref{fig:global_results_scco2}). This function uses country-level $\beta_c$ estimates---the change in population-weighted per-capita fire PM$_{2.5}$ exposure ($\mu$g/m$^3$/yr) per 1\textdegree C increase in GMT for country $c$---from our regression (Figure~\ref{fig:beta_hist_map}; Section~\ref{sec:method_regression}). 
 
-{\color{red}
-(section in progress)
-}
+In Figure~\ref{fig:beta_grid_map}, the highest $\beta_i$ values are concentrated in boreal North America, boreal Asia, the Congo Basin, and the Amazon basin---regions\footnote{Large parts of Russia and Canada exhibit the most intense responses, consistent with recent evidence of surging fire activity across high-latitude boreal forests driven by warming and increasing drought \autocite{zhao_global_2025}. Fire activity in the Congo Basin tropical forests has also increased, with year-to-year variation synchronized with rising temperatures and vapor pressure deficit, alongside deforestation \autocite{wimberly_increasing_2024}.} where climate change has been shown to increase fire activity through rising temperatures and drying of fuel loads \autocite{park_attributing_2024, zhao_global_2025, wimberly_increasing_2024}. Moderate positive $\beta_i$ is broadly distributed across temperate North America, Europe, and parts of South and Southeast Asia. A minority of cells show near-zero or negative $\beta_i$, concentrated in parts of sub-Saharan Africa and Australia. In sub-Saharan Africa, there is evidence that competing mechanisms\footnote{Higher temperatures may increase ignition potential while also driving evapotranspiration that may reduce grass productivity and fuel loads \autocite{park_attributing_2024}.} may offset one another as well as disagreement among fire-vegetation models on the impact of climate change in this region \autocite{park_attributing_2024}. Australia shows unexpectedly flat or negative $\beta_i$, driven by flat or declining predicted fire PM$_{2.5}$ in the input data from \textcite{zhao_global_2025} and \textcite{pierce_estimating_2017} (Figure \ref{fig:lof}).
 
+Figure~\ref{fig:global_results_scco2} reports the global SC-CO$_2$ attributable to fire PM$_{2.5}$ mortality, alongside contributions from existing GIVE damage sectors. Adding to existing uncertainty captured in GIVE, we incorporate conditional uncertainty in the fire PM$_{2.5}$ damage function parameters (Section~\ref{sec:method_uncertainty}). The fire PM$_{2.5}$ SC-CO$_2$ has a mean of \$47/ton CO$_2$ (95\% CI: \$10.2--\$102.1) at a 2\% discount rate (Panel A). Panel B places the fire PM$_{2.5}$ estimate in context: at \$47/ton CO$_2$, fire PM$_{2.5}$ represents the third-largest damage sector after temperature mortality (\$96.1) and agriculture (\$99.8), and increases the total global SC-CO$_2$ from {\color{red}\$208 to \$255}---an increase of 23\%. A direct comparison of our U.S. partial SC-CO$_2$ with \textcite{qiu_valuing_2026} is reported in Section~\ref{sec:app_usa}. Sectoral and total SC-CO$_2$ estimates exhibit substantial regional heterogeneity, as reported in Table~\ref{tab:scco2_region_n100}.
 
-\begin{figure}[h]
+The SC-CO$_2$ results are driven by the \emph{marginal} excess death associated with fire PM$_{2.5}$, computed by subtracting projected excess death in a baseline model from the same projection with one additional ton of CO$_2$, where excess death is a function of GMT change (Equation \eqref{eq:damage}). Globally, warming induces an average of 264,844 excess deaths per year at 1.5$^\circ$C, rising to 528,136 at 3$^\circ$C and 651,380 at 4$^\circ$C. We compare our U.S.\ excess death estimates and damage function shape to \textcite{qiu_valuing_2026} in Section~\ref{sec:app_usa}: relative to the \textcite{qiu_valuing_2026} quadratic, our linear function projects more deaths at low warming levels and less deaths at high warming levels.
+
+\begin{figure}[h!]
     \centering
     \includegraphics[width=1\textwidth]{images_main/map_beta_i_fe_grid.png}
-    \caption{Your caption here}
-    \label{fig:my_label}
+\caption{Grid-cell estimates of $\beta_i$, the change in fire PM$_{2.5}$ concentration ($\mu$g/m$^3$/yr) per 1$^\circ$C increase in GMT, estimated from a grid-cell-level fixed-effects regression pooling data from \textcite{park_attributing_2024}, \textcite{pierce_estimating_2017}, and \textcite{zhao_global_2025}.}   
+\label{fig:beta_grid_map}
 \end{figure}
 
 
-\begin{figure}[h]
+\pagebreak
+\begin{figure}[h!]
     \centering
     \includegraphics[width=1\textwidth]{images_main/global_fire_SCCO2_combined_aU_gU_n100.png}
-    \caption{Your caption here}
-    \label{fig:my_label}
+    \caption{Global SC-CO$_2$ estimates at a 2\% discount rate from 100 Monte Carlo simulations. (A) Distribution of the fire PM$_{2.5}$ SC-CO$_2$ component; the dashed line marks the mean (\$47/ton CO$_2$; 95\% CI: \$10.2--\$102.1). (B) SC-CO$_2$ by damage sector; the dot marks the mean, the box spans the 25th--75th percentile, and whiskers span the 10th--90th percentile.}
+    \label{fig:global_results_scco2}
 \end{figure}
 
 
-\label{sec:discussion}
 \section{Discussion}
+\label{sec:discussion}
 
-...
+We estimate that incorporating fire PM$_{2.5}$ mortality as a fifth damage sector in the GIVE integrated assessment model increases the global SC-CO$_2$ by 23\%, from \$208 to \$255 per ton CO$_2$ at a 2\% discount
+rate. At \$47/ton CO$_2$, fire PM$_{2.5}$ mortality is the third-largest damage sector in GIVE, after temperature mortality and agriculture, and represents a quantitatively important omission from existing global
+SC-CO$_2$ estimates. These results extend \textcite{qiu_valuing_2026}, who estimate a partial U.S.\ SC-CO$_2$ of \$11.2 from fire PM$_{2.5}$ mortality, to a global estimate. The magnitude of the global fire
+PM$_{2.5}$ damage component---and its substantial regional heterogeneity (Table~\ref{tab:scco2_region_n100})---suggests that omitting this pathway from integrated assessment models likely understates the societal cost of greenhouse gas emissions and the benefits of climate mitigation.
+
+Our estimates are subject to several limitations. The concentration-response coefficient $\gamma$ is drawn from a meta-analysis of long-term all-source PM$_{2.5}$ exposure in Europe, North America, and Asia \autocite{pope_fine_2020}, and is applied uniformly across all countries, abstracting from regional heterogeneity in population susceptibility and background pollution levels. The GMT-fire PM$_{2.5}$ slope $\beta_c$ is identified from 25 observations per country spanning a small number of fire models and warming levels. This allows us to estimate a linear relationship between GMT and PM$_{2.5}$ exposure, but it does not allow us to test for curvature. Our Monte Carlo intervals are conditional on the linear functional form, the set of source studies, and the assumption that fire-model fixed effects absorb cross-model differences in levels rather than slopes. Our analysis cannot capture the full structural uncertainty in the GMT-fire PM$_{2.5}$ relationship (Section~\ref{sec:method_uncertainty}). {\color{red}Need to speak to separability of temp-related death and fire pm death, see ``separable'' in \autocite{qiu_valuing_2026}} We discuss these limitations in detail in Sections \ref{sec:method_uncertainty} and ~\ref{sec:app_qiu_method}
+
+A key design feature of our approach is reliance on process-based Earth System Model (ESM) output to characterize the GMT-fire PM$_{2.5}$ relationship (Section~\ref{sec:method_regression}). Unlike empirical climate-fire models, the ESMs underlying \textcite{pierce_estimating_2017}, \textcite{park_attributing_2024}, and \textcite{zhao_global_2025} explicitly represent physical mechanisms linking warming to fire activity---including dynamic vegetation response, carbon and nitrogen biogeochemistry, and changes in fuel load---that are not captured by statistical approaches trained on historical observations alone. These feedbacks between fire activity, vegetation, and future fuel availability are embedded in the simulation output from which we estimate $\beta_c$, so our damage function implicitly incorporates their influence on the GMT-fire PM$_{2.5}$ relationship without requiring a separate empirical correction. \textcite{qiu_valuing_2026}, by contrast, estimate and apply an empirical fire-fuel feedback to their projections, and acknowledge that their framework does not capture climate's influence on vegetation productivity or lightning-related ignitions \autocite[942]{qiu_wildfire_2025}. This structural advantage of process-based modeling is one reason we view our global damage function as a defensible complement to the U.S.-focused empirical approach of \textcite{qiu_valuing_2026}, despite the more limited data available for our regression.
 
 \pagebreak
 \section{Methods}
@@ -111,8 +138,7 @@ Key parameters include 1) the relationship between GMT change and country-level 
 
 \subsection{GMT change and fire PM2.5 exposure}
 \label{sec:method_regression}
-
-To relate fire-attributable PM$_{2.5}$ exposure to global mean temperature (GMT) change, we estimate a country-level fixed effects regression for each country $c$:
+To relate fire-attributable PM$_{2.5}$ exposure to global mean temperature (GMT) change,\footnote{We interpret GMT as a policy-relevant index of global climate change rather than as the direct physical driver of fire PM$_{2.5}$. Fire activity and smoke exposure respond mechanistically to regional temperature, vapor pressure deficit, precipitation, fuel availability, vegetation, ignition, suppression, land use, and atmospheric transport \autocite{pierce_estimating_2017, park_attributing_2024, zhao_global_2025, wimberly_increasing_2024}. Therefore, $\beta_c$ is not ``the effect of GMT'' in a mechanistic sense. It is a reduced-form mapping from global warming level to the fire-PM$_{2.5}$ exposure implied by the available model ensemble. This parameterization is appropriate given the limited availability of globally harmonized fire-PM$_{2.5}$ projections and allows us to construct a country-level damage-function parameter for GIVE, where GMT is the state variable linking emissions to climate damages.} we estimate a country-level fixed effects regression for each country $c$:
 \begin{align}
 \label{eq:regression}
 \bar{PM}_{ctsm}
@@ -123,29 +149,15 @@ To relate fire-attributable PM$_{2.5}$ exposure to global mean temperature (GMT)
 +
 \varepsilon_{ctsm}, 
 \end{align}
+where $\bar{PM}_{ctsm}$ is population-weighted\footnote{See Section \ref{sec:app_pop_weight} for population-weighting detail.} per-capita fire PM${2.5}$ exposure ($\mu$g/m$^3$/yr) for country $c$, time period $t$, climate scenario $s$, and fire model $m$; $T_{ts}$ is the GMT anomaly relative to the 1850-1900 pre-industrial baseline ($^\circ$C); $\alpha_{cm}$ is a country-fire-model-specific intercept; and $\varepsilon_{ctsm}$ is a residual. The coefficient of interest, $\beta_c$, captures the change in population-weighted per-capita fire PM$_{2.5}$ exposure associated with a 1°C increase in GMT for country $c$.  We assume that this relationship is linear and constant over time\footnote{\textcite{qiu_valuing_2026} estimate a quadratic damage function relating GMST to wildfire-smoke mortality rates in the United States. A more flexible functional form is appropriate in their setting because their analysis is U.S.-specific and uses a much richer simulation design: they combine an empirically estimated North American climate-fire-smoke model with projections from 28 CMIP6 climate models, yielding 784 climate simulations spanning approximately 0.95--6.93$^\circ$C of warming. By contrast, our objective is to estimate country-specific GMT-fire PM$_{2.5}$ exposure relationships globally using harmonized output from a small number of heterogeneous fire-PM modeling studies. For most countries, this provides relatively few distinct warming levels and limited within-model variation with which to identify curvature. We therefore impose a linear specification as a parsimonious approximation to the GMT--fire PM$_{2.5}$ relationship. This avoids fitting curvature that is weakly identified by our data and avoids imposing stronger assumptions about high-warming extrapolation. In this context, the linear specification is also conservative relative to convex specifications.}.
 
-where $\bar{PM}_{ctsm}$ is population-weighted\footnote{See Section \ref{sec:app_pop_weight} for population-weighting detail.} per-capita fire PM${2.5}$ exposure ($\mu$g/m$^3$/yr) for country $c$, time period $t$, climate scenario $s$, and fire model $m$; $T_{ts}$ is the GMT anomaly relative to the 1850–1900 pre-industrial baseline ($^\circ$C); $\alpha_{cm}$ is a country-fire-model-specific intercept; and $\varepsilon_{ctsm}$ is a residual. The coefficient of interest, $\beta_c$, captures the change in population-weighted per-capita fire PM$_{2.5}$ exposure associated with a 1°C increase in GMT for country $c$.  We assume that this relationship is linear and constant over time. 
-{\color{red}
-[justify/elaborate assumption?]
-}
-
+We estimate equation~\eqref{eq:regression} at two spatial scales. At the country level, the dependent variable is population-weighted per-capita fire PM$_{2.5}$ exposure $\bar{PM}_{ctsm}$, yielding the country-specific coefficient $\beta_c$ that enters the GIVE damage function. At the grid-cell level, the dependent variable is grid-cell fire PM$_{2.5}$ exposure $PM_{itsm}$, yielding a grid-cell-specific coefficient $\beta_i$---the estimated change in fire PM$_{2.5}$ concentration ($\mu$g/m$^3$/yr) per 1\textdegree C increase in GMT at grid cell $i$---used solely to characterize the spatial pattern of GMT-fire PM$_{2.5}$ sensitivity (Figure~\ref{fig:beta_grid_map}).
 
 The dependent variable is constructed by combining three sources of gridded fire PM$_{2.5}$ data, each paired with its corresponding GMT value. \textcite{park_attributing_2024} provide historical decadal mean fire PM$_{2.5}$ for the 1960s through 2010s under three fire models (CLASSIC, JULES, SSiB4), yielding 18 observations per country (3 models $\times$ 6 decades). \textcite{pierce_estimating_2017} provide projections for a baseline period (2001–2010) and two future periods (2041-2050, 2091-2100) under RCP4.5 and RCP8.5 using the CESM fire model, contributing 5 observations. \textcite{zhao_global_2025} provide two additional projections for 2095-2099 under SSP2-4.5 and SSP5-8.5, for a total of 25 observations per country. These gridded fire PM$_{2.5}$ exposure data are aggregated to population-weighted per-capita country-level exposures.
 
-The five fire models differ systematically in their absolute estimates of
-PM$_{2.5}$ exposure---differences that reflect model structure rather than the
-GMT-fire relationship of interest. A regression that does not account for these
-differences would misattribute to GMT the variation in exposure levels driven by
-fire model. We address this by including fire-model fixed effects $\alpha_{cm}$,
-which absorb model-specific mean exposure differences so that $\beta_c$ is
-identified from within-model covariation between GMT and fire PM$_{2.5}$ across
-periods and scenarios\footnote{Figure \ref{fig:lof} in the Appendix illustrates
-this for select countries.}. This specification assumes that the slope $\beta_c$
-is constant across fire models: that is, all five models imply the same
-sensitivity of fire PM$_{2.5}$ to warming, and differ only in their mean exposure levels. If fire models disagree on the slope as well as the intercept, the estimated $\beta_c$ represents an average across models, and the regression standard errors do not reflect how much $\beta_c$ would differ under an alternative fire model \emph{(See Section \ref{sec:method_uncertainty})}.
+The five fire models differ systematically in their absolute estimates of PM$_{2.5}$ exposure due to differences in model structure rather than the GMT-fire relationship of interest in this paper. Without accounting for these differences, we would misattribute to GMT the variation in exposure levels driven by fire models. We address this by including fire-model fixed effects $\alpha_{cm}$, which absorb model-specific mean exposure differences so that $\beta_c$ is identified from within-model covariation between GMT and fire PM$_{2.5}$ across periods and scenarios\footnote{Figure \ref{fig:lof} in the Appendix illustrates this for select countries.}. This specification estimates the average slope $\beta_c$ within all five fire models. If fire models disagree on the slope, the regression standard errors reflect this disagreement only indirectly---as residual variance around the pooled slope---rather than isolating between-model slope variation as a distinct uncertainty component (Section \ref{sec:method_uncertainty}).
 
-The resulting $\beta_c$ estimate is used directly in the GIVE integrated assessment model as the country-level damage function parameter linking GMT change to fire PM${2.5}$ exposure and, through a concentration-response coefficient, to associated mortality. Across 175 countries, $\beta_c$ is positive for 86\% of countries (median = 0.18 $\mu$g/m$^3$/yr per $^\circ$C), indicating that warming broadly increases population exposure to fire PM$_{2.5}$. Estimates are statistically significant at the 5\% level for 60\% of countries. Spatially, the largest responses are concentrated in northern North and South America, northern Asia, central Africa, and parts of Southeast Asia, while a minority of countries---predominantly in sub-Saharan Africa---exhibit negative $\beta_c$ \emph{(see Figure \ref{fig:beta_hist_map})}. {\color{red}[revise spatial description]}
-
+The resulting $\beta_c$ estimate is used in the GIVE integrated assessment model as the country-level damage function parameter linking GMT change to fire PM${2.5}$ exposure and its associated mortality. Across 174 countries, $\beta_c$ is positive for 86\% of countries (median = 0.18 $\mu$g/m$^3$/yr per $^\circ$C), indicating that warming broadly increases population exposure to fire PM$_{2.5}$. Estimates are statistically significant at the 5\% level for 60\% of countries. Spatially, the largest responses are concentrated in northern North and South America, northern Asia, central Africa, and parts of Southeast Asia, while a minority of countries---predominantly in sub-Saharan Africa as well as Australia---exhibit negative $\beta_c$ (Figure \ref{fig:beta_hist_map}). 
 
 \begin{figure}[h!]
     \centering
@@ -155,127 +167,93 @@ The resulting $\beta_c$ estimate is used directly in the GIVE integrated assessm
 \end{figure}
 
 \subsection{PM2.5 exposure and mortality}
-
-To define a fire PM$_{2.5}$ damage function in GIVE also requires a parameter relating PM$_{2.5}$ exposure and mortality. Following \textcite{qiu_wildfire_2025} and \textcite{qiu_valuing_2026}
+Defining a fire PM$_{2.5}$ damage function in GIVE also requires a parameter relating PM$_{2.5}$ exposure and mortality. Following \textcite{qiu_wildfire_2025} and \textcite{qiu_valuing_2026}
 \footnote{These studies use the all-source PM2.5 \textcite{pope_fine_2020} result for exposure levels outside historical observations in the U.S., those $>6$ $\mu$g/m$^3$, while using their own fire PM2.5-mortality response estimate for exposure $<6$ $\mu$g/m$^3$. We instead apply the \textcite{pope_fine_2020} result for all exposure levels. Since there is evidence of greater toxicity from fire PM2.5 \autocite{qiu_wildfire_2025}, we believe our estimated impact to be conservative. 
 }, we source this parameter from the \textcite{pope_fine_2020} meta-analysis of 33 selected studies in Europe, North America, and Asia of long-term exposure to PM$_{2.5}$. Using a random effects model, they estimate a hazard ratio (HR) of 1.08 (95\% CI =1.06-1.11) for all-cause mortality per 10~$\mu$g/m$^3$. This estimate is a bit lower than the \textcite{orellano_long-term_2024} meta-analysis, which reports a central estimate of 1.095 (95\%~CI: 1.064--1.127) per 10~$\mu$g/m$^3$. 
-{\color{red}[Debate about the linearity of this effect...]
-}
+
 We use the \textcite{pope_fine_2020} estimate to calculate the percent increase in all-cause mortality rates per $\mu$g/m$^3$ as $ \gamma = \frac{1.08-1}{10}
-= 0.008$. This 0.8\% increase per $\mu$g/m$^3$ is applied to all countries globally. {\color{red}[justify/elaborate assumption?]
-}
+= 0.008$. This 0.8\% increase per $\mu$g/m$^3$ is applied to all countries globally. 
 
 \subsection{GIVE fire PM2.5 Damage Function}
-
-Our GIVE damage function takes a linear form analogous to the temperature-related mortality function applied in. \textcite{rennert_comprehensive_2022}.  
-
-We translate warming-induced fire PM$_{2.5}$ exposure into monetized mortality damages using a damage function that mirrors the structure of the temperature-related mortality component already embedded in GIVE \autocite{rennert_comprehensive_2022}. For country $c$ at time $t$, monetized damages are
+Our GIVE damage function takes a linear form analogous to the existing temperature-related mortality module in \textcite{rennert_comprehensive_2022}. We translate warming-induced fire PM$_{2.5}$ exposure into monetized mortality damages similarly. For country $c$ at time $t$, monetized damages are
 \begin{align}
+\label{eq:damage}
 C_{ct} = V_{ct} \cdot M_{ct} \cdot \gamma \cdot \beta_c \cdot T_t,
 \end{align}
-
-where $V_{ct}$ is the value of a statistical life (VSL) in USD, $M_{ct}$ is the baseline all-cause mortality count, $\gamma = 0.008$ is the concentration-response coefficient (the proportional increase in mortality risk per 1~$\mu$g/m$^3$ increase in long-term PM$_{2.5}$ exposure), $\beta_c$ is the country-specific regression coefficient estimated in equation~(1) (the change in population-weighted per-capita fire PM$_{2.5}$ exposure per 1\textdegree C increase in GMT), and $T_t$ is the GMT anomaly relative to the pre-industrial baseline (\textdegree C).
+where $V_{ct}$ is the value of a statistical life (VSL) in USD, $M_{ct}$ is the baseline all-cause mortality count, $\gamma = 0.008$ is the concentration-response coefficient (the proportional increase in mortality risk per 1~$\mu$g/m$^3$ increase in long-term PM$_{2.5}$ exposure), $\beta_c$ is the country-specific regression coefficient estimated in equation~\eqref{eq:regression} (the change in population-weighted per-capita fire PM$_{2.5}$ exposure per 1\textdegree C increase in GMT), and $T_t$ is the GMT anomaly relative to the pre-industrial baseline (\textdegree C).
 
 The product $M_{ct} \cdot \gamma \cdot \beta_c \cdot T_t$ gives the number of excess deaths attributable to warming-induced fire PM$_{2.5}$ in country $c$ at time $t$. Multiplying by $V_{ct}$ converts these excess deaths to monetary damages. The VSL is sourced from \autocite{rennert_comprehensive_2022}: a baseline U.S. VSL for 2020 is adjusted for each country and year using GDP per capita with an income elasticity of one. The baseline all-cause mortality count, $M_{ct}$, is likewise sourced from \autocite{rennert_comprehensive_2022}, which projects these values for country and year from 2025 to 2300. 
-{\color{red} [justify/explain linear expression for excess deaths?]
-}
 
-\label{sec:method_uncertainty}
 \subsection{Uncertainty}
+\label{sec:method_uncertainty}
 
-Following \textcite{rennert_comprehensive_2022}, we assess uncertainty in our
-SC-CO$_2$ estimates via Monte Carlo simulation. In GIVE, each simulation draws from uncertain
-socioeconomic and emissions trajectories (RFF-SPs), climate model parameters (FaIR),
-sea-level model parameters (BRICK), and damage function coefficients
-\autocite{rennert_comprehensive_2022}. To the damage function uncertainty already
-present in GIVE, we add sampling over the two parameters specific to our fire
-PM$_{2.5}$ component: the concentration-response coefficient $\gamma$ and the
-country-level GMT-exposure coefficient $\beta_c$.
+Following \textcite{rennert_comprehensive_2022}, we assess uncertainty in our SC-CO$_2$ estimates via Monte Carlo simulation. In GIVE, each simulation draws from uncertain socioeconomic and emissions trajectories (RFF-SPs), climate model parameters (FaIR), sea-level model parameters (BRICK), and damage function coefficients \autocite{rennert_comprehensive_2022}. To the damage function uncertainty already present in GIVE, we add sampling over the two parameters specific to our fire PM$_{2.5}$ component: the concentration-response coefficient $\gamma$ and the country-level GMT-exposure coefficient $\beta_c$. 
 
-For $\gamma$, we draw from a normal distribution with mean $\bar{\gamma} = 0.008$ and standard error $SE(\gamma)= 0.00128$ derived from the 95\% confidence interval of the \textcite{pope_fine_2020} hazard
-ratio (HR $= 1.08$; 95\%~CI: $1.06$--$1.11$ per 10~$\mu$g/m$^3$), converted to
+For $\gamma$, we draw from a normal distribution with mean $\bar{\gamma} = 0.008$ and standard error $SE(\gamma)= 0.00128$ derived from the 95\% confidence interval of the \textcite{pope_fine_2020} hazard ratio (HR $= 1.08$; 95\%~CI: $1.06$--$1.11$ per 10~$\mu$g/m$^3$), converted to
 per-unit exposure as $\gamma = (\text{HR} - 1)/10$ \footnote{We have: 
 $    SE(\gamma)
     = \frac{\gamma_{\text{upper}} - \gamma_{\text{lower}}}{2 \times 1.96}
     = \frac{0.011 - 0.006}{3.92}
     \approx 0.00128
 $. 
-}. For $\beta_c$, we draw
-independently for each country from a normal distribution with mean $\hat{\beta}_c$
-and standard error $\widehat{SE}(\hat{\beta}_c)$ from the country-level fixed-effects
-regression in equation  \ref{eq:regression}.
+}. For $\beta_c$, we draw independently for each country from a normal distribution with mean $\hat{\beta}_c$ and standard error $\widehat{SE}(\hat{\beta}_c)$ from the country-level fixed-effects regression in equation~\eqref{eq:regression}.
 
-Several sources of uncertainty are not captured by this approach. We apply the
-\textcite{pope_fine_2020} concentration-response estimate globally, abstracting from
-regional heterogeneity in population susceptibility and background pollution levels.
-As noted in Section \ref{sec:method_regression}, the regression standard errors underlying
-our $\beta_c$ draws do not reflect how much $\beta_c$ would differ under an
-alternative fire model; this between-model slope variation is absent from our Monte Carlo confidence intervals. Finally, we treat the linear functional form linking GMT to fire PM$_{2.5}$ exposure as known, so uncertainty about potential nonlinearities in this relationship is not reflected in our confidence intervals. These omissions likely cause us to understate the true uncertainty in our SC-CO$_2$ estimates.
+Several sources of uncertainty are not captured by this approach. We apply the \textcite{pope_fine_2020} concentration-response estimate globally, abstracting from regional heterogeneity in population susceptibility and background pollution levels. As noted in Section~\ref{sec:method_regression}, the regression standard errors underlying our $\beta_c$ draws reflect between-model slope disagreement only indirectly---as residual variance around the pooled slope---rather than isolating it as a distinct uncertainty component; the Monte Carlo confidence intervals therefore do not decompose how much $\beta_c$ would differ under an alternative fire model. Finally, we treat the linear functional form linking GMT to fire PM$_{2.5}$ exposure as known, so uncertainty about potential nonlinearities in this relationship is not reflected in our confidence intervals. %These omissions likely cause us to understate the true uncertainty in our SC-CO$_2$ estimates. 
+
+These intervals should therefore be interpreted as conditional uncertainty intervals rather than full structural uncertainty bounds. They reflect uncertainty in the concentration-response coefficient and sampling uncertainty in the estimated country-level GMT-fire PM$_{2.5}$ coefficients, conditional on the set of source studies used, our harmonization procedure, the linear GMT-exposure specification, the assumption that model fixed effects absorb cross-model differences in levels rather than slopes, and the global transferability of the PM$_{2.5}$ mortality coefficient. They do not fully capture uncertainty from alternative fire models, alternative functional forms, regional heterogeneity in smoke toxicity or population vulnerability, future adaptation, or changes in within-country population exposure. As a result, the reported intervals likely understate the full uncertainty surrounding the fire PM$_{2.5}$ contribution to the SC-CO$_2$.
 
 \pagebreak
 \section{Appendix: Data}
 
 \subsection{Fire PM2.5 Source Data and Regridding}
 
-\textcite{pierce_estimating_2017}
-\\
-Generated global model output of fire emissions and associated PM$_{2.5}$ and O$_3$ fields under multiple future climate and population scenarios, with global coverage and particular emphasis on the United States. The dataset characterizes how climate driven changes in fire activity influence PM$_{2.5}$ concentrations relative to trends in anthropogenic emissions.
-\\
-\textcite{park_attributing_2024}
-\\
-Produced gridded global fire PM$_{2.5}$ fields spanning the 1960s through the 2010s by coupling three fire–vegetation models under both factual and counterfactual climate conditions and routing the resulting emissions through a chemical transport model. The PM$_{2.5}$ outputs are integrated with population exposure and baseline mortality data within a health risk framework to attribute fire-related PM$_{2.5}$ impacts to climate change.
-\\
-\textcite{zhao_global_2025}
-\\
-Constructed projected global wildfire emission datasets using an machine learning model of burned area, spanning the historical period through 2095–2099 under multiple Shared Socio-economic Pathway (SSP) scenarios. The emissions were translated into fire PM$_{2.5}$ concentration fields and aerosol radiative forcing estimates, forming the basis for downstream assessments of health and climate impacts.
+\textcite{pierce_estimating_2017}, \textcite{park_attributing_2024}, and \textcite{zhao_global_2025} each generate global gridded fire PM$_{2.5}$ datasets and project how climate change alters fire activity and associated concentrations, but differ in their temporal coverage, methodology, and treatment of non-climate drivers. All studies simulate gridded emissions estimates from fire, which are fed into chemical transport models to produce fire PM$_{2.5}$ contributions. The fire PM$_{2.5}$ contributions are isolated as the difference between simulations with and without fire emissions conducted under the same scenario. 
 
-We regrid PM$_{2.5}$ data from these multiple sources and native resolutions onto a unified $0.5^\circ \times 0.5^\circ$ global grid ($720 \times 360$), and subsequently merge the gridded fields with population data using longitude–latitude matching. The only difference across the three scripts lies in the resampling method: the \textcite{park_attributing_2024} dataset is interpolated using bilinear interpolation, the \textcite{pierce_estimating_2017} dataset is remapped using nearest-neighbor matching, and the \textcite{zhao_global_2025} dataset is aggregated using area-weighted averaging. All other processing steps are identical, including the definition of the target grid, coordinate harmonization, and the final left join with population data based on exact longitude–latitude pairs. The resulting grid is defined at the center of each $0.5^\circ$ cell, with longitude spanning $-179.75^\circ$ to $179.75^\circ$ and latitude spanning $-89.75^\circ$ to $89.75^\circ$, at $0.5^\circ$ intervals.
+\textcite{pierce_estimating_2017} use Community Earth System Model (CESM)---a coupled chemistry-climate-land model---to simulate fire activity and PM$_{2.5}$ concentrations for a baseline period (2001--2010) and future periods (2041--2050 and 2091--2100) under RCP4.5 and RCP8.5. Their simulation design isolates the effect of climate change on fire activity by including both scenarios in which population density varies with SSP trajectories and scenarios in which it is held constant at year-2000 levels. In the chemical transport step, anthropogenic and biogenic emissions are likewise held constant within each snapshot period. We use only the population-constant simulations, as our regression targets the GMT--fire PM$_{2.5}$ relationship net of demographic change (Section~\ref{sec:method_regression}).
+
+\textcite{park_attributing_2024} simulate historical fire PM$_{2.5}$ from the 1960s through the 2010s using three fire--vegetation models (CLASSIC, SSiB4, and JULES) driven by historically observed climate forcings. For chemical transport, anthropogenic emissions are set to observed historical values for each decade from Community Emissions Data System Inventory (CEDS), and meteorological conditions in the chemical transport model are fixed at a single reference year, to attribute to climate change the variation in fire PM$_{2.5}$ across decades.\footnote{Specifically, \textcite{park_attributing_2024} fix GEOS-Chem meteorological conditions at 2016 values for all simulation periods (Table~1 of \textcite{park_attributing_2024}).} We use the factual simulations, which span six decadal means across three fire models, yielding 18 observations per country.
+
+\textcite{zhao_global_2025} develop a machine learning model of burned area---trained on Global Fire Emissions Database version 4.1s (GFEDv4.1s) observed burned area, ERA5 climate reanalysis, and Earth system model (ESM) estimates---and driven by Coupled Model Intercomparison Project Phase 6 (CMIP6)-projected climate variables to produce global fire gridded emissions estimates for 2095--2099 under SSP2-4.5 and SSP5-8.5. These emissions are routed through the GEOS-Chem chemical transport model to produce fire PM$_{2.5}$ concentrations. Land-use inputs follow scenario-specific Land Use Harmonization 2 (LUH2) trajectories, so land use varies with the warming scenario. Anthropogenic emissions likewise vary with the SSP scenario, following CMIP6 protocols. 
+
+We regrid PM$_{2.5}$ data from these multiple sources and native resolutions onto a unified $0.5^\circ \times 0.5^\circ$ global grid ($720 \times 360$), and subsequently merge the gridded fields with population data using longitude–latitude matching. The only difference across the three scripts lies in the resampling method: the \textcite{park_attributing_2024} dataset is interpolated using bilinear interpolation, the \textcite{pierce_estimating_2017} dataset is remapped using nearest-neighbor matching, and the \textcite{zhao_global_2025} dataset is aggregated using area-weighted averaging. All other processing steps are identical, including the definition of the target grid, coordinate harmonization, and the final left join with population data based on exact longitude-latitude pairs. The resulting grid is defined at the center of each $0.5^\circ$ cell, with longitude spanning $-179.75^\circ$ to $179.75^\circ$ and latitude spanning $-89.75^\circ$ to $89.75^\circ$, at $0.5^\circ$ intervals.
 
 \subsection{Global Mean Temperature Change}
 
-...
+Global mean temperature change values relative to pre-industrial times are associated with each PM$_{2.5}$ simulation. For the \textcite{park_attributing_2024} simulations, we assign historically observed GMT changes \autocite{owid_global_2026}. For \textcite{zhao_global_2025}, we assign GMT changes projected under SSP2-4.5 and SSP5-8.5 \autocite{anthoff_mimisspsjl_2026}. For \textcite{pierce_estimating_2017}, we use their gridded GMT change data relative to 2005, to which we apply a pre-industrial offset \autocite{owid_global_2026}.  
 
 \subsection{Appendix: Population Weighting}
 \label{sec:app_pop_weight}
 
-For grid cell $i$ in country $c$, let $PM_{itsm}$ denote fire
-PM$_{2.5}$ exposure ($\mu$g/m$^3$/yr) under time period $t$, scenario
-$s$, and fire model $m$. Each observation is already a period average:
-a decade mean for \textcite{park_attributing_2024} and
-\textcite{pierce_estimating_2017}, and a five-year mean for
-\textcite{zhao_global_2025}.
+For grid cell $i$ in country $c$, let $PM_{itsm}$ denote fire PM$_{2.5}$ exposure ($\mu$g/m$^3$/yr) under time period $t$, scenario $s$, and fire model $m$. Each observation is already a period average: a decade mean for \textcite{park_attributing_2024} and \textcite{pierce_estimating_2017}, and a five-year mean for \textcite{zhao_global_2025}.
 
-Baseline population $\bar{pop}_{ic}$ is the average annual population
-in cell $i$ of country $c$ over 2001-2010, sourced from
-\textcite{pierce_estimating_2017}. Population is held fixed at this
-baseline across all periods and scenarios to isolate changes in fire
-PM$_{2.5}$ concentrations. Country-level baseline population is
+Baseline population $\bar{pop}_{ic}$ is the average annual population in cell $i$ of country $c$ over 2001-2010, sourced from \textcite{pierce_estimating_2017}. Population is held fixed at this baseline across all periods and scenarios to isolate changes in fire PM$_{2.5}$ concentrations. Country-level baseline population is
 $\bar{pop}_c = \sum_i \bar{pop}_{ic}$.
 
-Population-weighted per-capita fire PM$_{2.5}$ exposure for country
-$c$, period $t$, scenario $s$, and fire model $m$ is:
+Population-weighted per-capita fire PM$_{2.5}$ exposure for country $c$, period $t$, scenario $s$, and fire model $m$ is:
 \begin{align}
 \bar{PM}_{ctsm} = \frac{\sum_i PM_{itsm} \cdot \bar{pop}_{ic}}{\bar{pop}_c}, \nonumber
-\end{align}
+\end{align} 
 which is the dependent variable in equation~\eqref{eq:regression}.
 
 \section{Appendix: Regression Descriptive Statistics}
 
-...
+Figure~\ref{fig:desc_stats} summarizes the distribution of the two regression inputs across the 4,350 country-period-scenario-model observations used in equation~\eqref{eq:regression}. Panel A shows the cross-country distribution of population-weighted per-capita fire PM$_{2.5}$ exposure ($\mu$g/m$^3$/yr) by fire model. Pooled across all observations, the distribution is heavily right-skewed: the median is 0.67 while the mean is 1.92, and the 90th percentile (4.75) is more than six times the 10th percentile (0.08). Mean exposure differs substantially across fire models---ranging from 1.07 (JULES) to 2.53 (CLASSIC)---motivating the inclusion of fire-model fixed effects to absorb these level differences before estimating the GMT-exposure slope. CESM exposure levels are generally higher than the Park and Zhao models across the distribution: the CESM 25th percentile (0.779~$\mu$g/m$^3$/yr) exceeds the median of all three Park models (0.35--0.55) and the Zhao median (0.64).
+
+Panel B shows the discrete GMT anomaly values ($^\circ$C relative to the pre-industrial baseline) assigned to each data source. The six \textcite{park_attributing_2024} historical decade means span 0.25--1.09$^\circ$C, anchoring the low end of the temperature range. The five \textcite{pierce_estimating_2017} projections extend from 1.04$^\circ$C (baseline period) to 4.47$^\circ$C (RCP8.5, 2091--2100), and the two \textcite{zhao_global_2025} projections contribute values of 2.92$^\circ$C (SSP2-4.5) and 4.96$^\circ$C (SSP5-8.5). Together the three sources span approximately 0.25--5.0$^\circ$C, enabling identification of $\beta_c$ across a wide range of warming levels.
 
 \begin{figure}[h!]
     \centering
     \includegraphics[width=1\textwidth]{images_appendix/bw_exposure_gmt_by_model_wide.png}
-    \caption{Your caption here}
-    \label{fig:my_label}
+    \caption{Distribution of regression inputs. (A) Cross-country distribution of population-weighted per-capita fire PM$_{2.5}$ exposure ($\mu$g/m$^3$/yr) for the full sample and by fire model; box spans the 25th--75th percentile, center line is the median, whiskers extend to the 10th--90th percentile, and the red dot marks the mean. (B) Discrete GMT anomaly values ($^\circ$C relative to the 1850--1900 pre-industrial baseline) used as regressors, by data source; each dot is one unique $T_{ts}$ value.}    
+    \label{fig:desc_stats}
 \end{figure}
 
 \pagebreak
 \section{Appendix: Regression Results}
 
-Figure \ref{fig:lof} plots per-capita fire PM${2.5}$ exposure against GMT anomaly for twelve large-population countries, separating those where warming amplifies fire smoke exposure ($\beta_c > 0$, rows 1-2) from those where it attenuates it ($\beta_c < 0$, rows 3-4). Two features stand out. First, Russia exhibits a markedly larger GMT sensitivity than all other countries in the sample ($\beta_c = 1.73 \pm 0.49\ \mu$g/m$^3$/yr per $^\circ$C), with the fire-model lines diverging visibly across the observed temperature range; the remaining positive-$\beta_c$ countries show substantially smaller and more uniform slopes (0.15--0.28 $\mu$g/m$^3$/yr per $^\circ$C). Second, in the negative-$\beta_c$ panels the standard errors are large relative to the point estimates --- for Argentina, Ghana, and Australia the confidence intervals comfortably span zero --- indicating that the negative GMT-fire PM${2.5}$ relationship is imprecisely estimated in these regions and should be interpreted cautiously. 
+Figure \ref{fig:lof} plots per-capita fire PM${2.5}$ exposure against GMT anomaly for nine large-population countries, separating those where warming amplifies fire smoke exposure ($\beta_c > 0$, rows 1-2) from those where it attenuates it ($\beta_c < 0$, row 3). Two features stand out. First, Russia exhibits a markedly larger GMT sensitivity than all other countries in the sample ($\beta_c = 1.73 \pm 0.49\ \mu$g/m$^3$/yr per $^\circ$C) as well as substantial variation in exposure levels across models; the remaining positive-$\beta_c$ countries show substantially smaller and more uniform slopes (0.15--0.28). Second, in the negative-$\beta_c$ panels the standard errors are large relative to the point estimates --- for Nigeria, Argentina, and Australia the confidence intervals comfortably span zero --- indicating that the negative GMT-fire PM${2.5}$ relationship is imprecisely estimated in these regions and should be interpreted cautiously. 
 
-Across all panels, the vertical spread between the five parallel model lines reveals that fire-model choice affects absolute exposure levels substantially, often by more than the GMT-driven variation captured by $\beta_c$ itself. {\color{red} More to say here? }
+Across many countries, the vertical spread between the five parallel model lines reveals that fire-model choice affects absolute exposure levels substantially, often by more than the GMT-driven variation captured by $\beta_c$ itself. Note that $\beta_c$ is estimated for 174 countries. We also estimate $\beta$ globally, which is applied to select small countries captured in the GIVE model for which our country list did not have a match.
 
 \pagebreak
 \begin{figure}[h!]
@@ -287,24 +265,27 @@ Across all panels, the vertical spread between the five parallel model lines rev
 
 \pagebreak
 \section{Appendix: FUND Region Decomposition}
+\label{sec:app_region}
 
-...
+Table~\ref{tab:scco2_region_n100} decomposes the mean SC-CO$_2$ by FUND region and damage sector. The largest fire PM$_{2.5}$ components are concentrated in the Former Soviet Union (\$11.29/tCO$_2$), United States (\$6.56), Middle East (\$5.10), and Western Europe (\$5.00)---regions combining large positive $\beta_c$ estimates with substantial exposed populations. Australia and New Zealand exhibit a negative fire PM$_{2.5}$ contribution (\$-0.51), reflecting negative $\beta_c$ estimates for those countries (Figure~\ref{fig:beta_hist_map}). The largest total SC-CO$_2$ values are in South Asia (\$45.30), Middle East (\$41.13), and China (\$31.69), driven primarily by temperature mortality and agriculture damages.
+
+A notable feature of the regional decomposition is that lower-income regions---despite facing large physical damages---tend to show lower monetized values for mortality-related sectors (fire PM$_{2.5}$ and temperature mortality), because VSL is scaled to GDP per capita. This means that damages in South Asia or Sub-Saharan Africa are substantially discounted relative to those in the United States or Western Europe, even when physical mortality impacts are comparable or larger. The equity implications of VSL-based damage valuation are an important issue beyond the scope of this paper.
 
 % latex table generated in R 4.4.1 by xtable 1.8-4 package
 % Fri May 15 17:12:09 2026
 \begin{table}[ht]
 \centering
 \caption{SC-CO2 by FUND Region (\$/tCO2)} 
-\label{tab:scco2_region}
+\label{tab:scco2_region_n100}
 \begin{tabular}{lrrrrrr}
   \toprule
-FUND Region & Total & Fire PM & Temp mortality & Agriculture & Energy & Sea-level rise \\ 
+Fund Region & Total & Fire PM & Temp mortality & Agriculture & Energy & Sea-level rise \\ 
   \midrule
 Former Soviet Union & 23.57 & 11.29 & 4.45 & 7.72 & 0.04 & 0.06 \\ 
   United States & 22.35 & 6.56 & 13.20 & 1.59 & 0.62 & 0.38 \\ 
   Middle East & 41.13 & 5.10 & 17.57 & 17.06 & 1.34 & 0.07 \\ 
   Western Europe & 8.53 & 5.00 & 2.56 & 0.72 & 0.10 & 0.16 \\ 
-  China & 31.69 & 4.43 & 13.12 & 13.39 & 0.65 & 0.11 \\ 
+  China & 31.69 & 4.43 & 13.12 & 13.38 & 0.65 & 0.11 \\ 
   South Asia & 45.30 & 4.11 & 9.95 & 30.08 & 0.99 & 0.16 \\ 
   Eastern Europe & 3.82 & 2.15 & 1.25 & 0.38 & 0.01 & 0.02 \\ 
   North Africa & 16.92 & 1.90 & 7.24 & 7.14 & 0.58 & 0.05 \\ 
@@ -317,31 +298,163 @@ Former Soviet Union & 23.57 & 11.29 & 4.45 & 7.72 & 0.04 & 0.06 \\
   Small Island States & 0.46 & 0.07 & 0.23 & 0.07 & 0.03 & 0.06 \\ 
   Australia, New Zealand & -0.06 & -0.51 & 1.16 & -1.00 & 0.02 & 0.27 \\ 
   \hline \hline
-  Total & 254.60 & 47.00 & 96.13 & 99.76 & 9.48 & 2.23 \\ 
+  Total & 254.60 & 47.00 & 96.13 & 99.75 & 9.48 & 2.23 \\ 
    \bottomrule
 \end{tabular}
 \end{table}
 
-\pagebreak
+
+\section{Appendix: \textcite{qiu_valuing_2026} method}
+\label{sec:app_qiu_method}
+
+\subsection*{Summary of \textcite{qiu_wildfire_2025} and \textcite{qiu_valuing_2026}}
+
+\textcite{qiu_wildfire_2025} develop a fully data-driven modeling chain
+linking climate change to wildfire smoke mortality in the USA. They (i) ``construct an ensemble of statistical and machine learning models that predict wildfire emissions as a function of climate and land use variables over North America''; (ii) ``use surface wildfire smoke PM2.5 estimates derived from satellite data and machine learning models to establish an empirical relationship between wildfire emissions and smoke PM2.5 concentrations across the contiguous USA at a 10-km resolution''; and (iii) use a Poisson distributed-lag model to estimate the effects of annual smoke PM$_{2.5}$ on county-level all-cause mortality rates from 2006-2019 \autocite[936]{qiu_wildfire_2025}. Future projections are generated by applying this empirical chain to bias-corrected climate projections from 28 CMIP6 GCMs under three SSP scenarios. \textcite{qiu_valuing_2026} use this framework to estimate a quadratic damage function relating GMT change to smoke-related mortality in the USA, incorporating an empirical fire-fuel feedback that reduces projected fire emissions at higher warming levels, and incorporate the result into GIVE to compute a partial SC-CO$_2$.
+
+\subsection*{Strengths and limitations of each approach}
+
+\paragraph{Our approach.}
+The principal strength of our approach is global coverage. Whereas
+\textcite{qiu_wildfire_2025} require 10-km resolution smoke PM$_{2.5}$ predictions for the USA, soil moisture from NLDAS-2---which is ``available only in the contiguous USA''---and county-level mortality data covering the contiguous United States, the process-based fire models we draw upon
+\autocite{pierce_estimating_2017, park_attributing_2024, zhao_global_2025}
+generate globally gridded fire PM$_{2.5}$ concentrations that can be translated into country-level damage function parameters for all GIVE regions.
+
+A further advantage is that process-based Earth System Models capture
+physical mechanisms omitted by empirical models. \textcite[4]{pierce_estimating_2017} note that CLM4.5 ``uses a global dynamic vegetation model with carbon and nitrogen biogeochemistry\ldots to treat the response of vegetation to future climate and fires,'' thus incorporating how warming-driven fires can affect fuel load and future fire activity. \textcite{park_attributing_2024} likewise uses models incorporating similar physical mechanisms. In their machine learning approach, \textcite{zhao_global_2025} also incorporate a predicted biomass change ratio based on ESM-simulations.  \textcite[942]{qiu_wildfire_2025} acknowledge that their approach ``does not account for potential indirect effects of climate on wildfire through channels such as climate's influence on vegetation productivity or lightning-related ignitions.''  \textcite[5]{qiu_valuing_2026} partially address this by incorporating an empirical fire-fuel feedback---which alters future fire probability---but acknowledge that their estimates ``do not capture the effects of past fires on future fire severity, intensity, and shifts in vegetation composition or species, which may influence projected fire emissions, smoke, and mortality.'' Additionally, \textcite{pierce_estimating_2017} isolate the impact of climate change through a simulation holding population density constant across scenarios, directly targeting the GMT-fire PM$_{2.5}$ relationship of interest.
+
+The principal limitation of our approach is limited data. Whereas
+\textcite{qiu_valuing_2026} estimate their damage function from 784 climate simulations (28 GCMs $\times$ 4 SSPs $\times$ 20 time periods), our country-level regression draws on 25 observations per country---sufficient to identify a linear slope but not curvature. Additionally, our uncertainty intervals are conditional: they reflect sampling uncertainty in $\beta_c$ and $\gamma$ but do not fully capture disagreement across fire models in the GMT-PM$_{2.5}$ slope, or uncertainty arising from alternative functional forms (Section \ref{sec:method_uncertainty}).
+
+\paragraph{Qiu et al.}
+A principal strength of \textcite[941]{qiu_wildfire_2025} is that they model ``the full causal chain linking climate to health through wildfires (climate change-wildfire–air pollution–mortality), and [they propagate] uncertainty from each step to understand uncertainty in likely health impacts.'' As they note, ``one advantage of our data-driven climate-fire model over process-based model projections is its ability to isolate the factors of climate variables from other factors that influence wildfires'' \autocite[941]{qiu_wildfire_2025}. In contrast, in the \textcite{pierce_estimating_2017} model, land-use change assumptions (deforestation) influence future fire PM2.5 concetrations---a factor for which our regression does not control---but Pierce et al. also suggest that climate variables are the primary driver of concentrations \autocite{ford_future_2018}. Additionally, the Qiu et al fire-smoke model constrains smoke PM$_{2.5}$ directly from satellite observations, avoiding the reliance on chemical transport modeling assumptions that can yield estimates differing ``by an order of magnitude when compared with surface observations.'' Their approach also supports identification of a quadratic GMT-mortality relationship, and \textcite{qiu_valuing_2026} incorporate an empirically estimated fire-fuel feedback that reduces the SC-CO$_2$ by 68\% relative to a no-feedback specification. This feedback effect is not explicitly captured in our regression but is accounted for in our PM2.5 simluation data, as noted above. 
+
+The principal limitation of \textcite{qiu_valuing_2026} is geographic scope. Their data requirements---particularly for satellite-derived smoke PM$_{2.5}$ at 10-km resolution and NLDAS-2 soil moisture---seem to confine the approach to North America, precluding global application. As noted above, an additional limitation is not fully capturing climate-vegetation dynamics or lightning ignitions, both of which process-based models represent explicitly \autocite{pierce_estimating_2017}.
+
+\subsection*{Why \textcite{qiu_valuing_2026} estimate stronger fire
+PM$_{2.5}$ effects}
+
+Several design choices in \textcite{qiu_wildfire_2025} and
+\textcite{qiu_valuing_2026} produce higher exposure-response per $\mu$g/m$^3$ and higher excess mortality estimates at higher warming levels.
+
+\textit{Smoke-specific concentration-response function.}
+\textcite{qiu_wildfire_2025} empirically estimate a smoke-specific
+exposure-response function, which they find to have a larger impact on all-cause mortality than all-source PM$_{2.5}$. Their results are larger than those used in prior work---including our application of \textcite{pope_fine_2020}: a 0.8\% increase in all-cause mortality per $\mu$g/m$^3$ of \emph{all-source} PM$_{2.5}$ exposure---because smoke PM$_{2.5}$ may have distinct chemical composition and toxicity. \textcite{qiu_wildfire_2025} state that this higher estimated exposure-response largely accounts for their higher mortality estimates.
+
+\textit{Distributed-lag mortality.}
+\textcite[940]{qiu_wildfire_2025} use a distributed-lag model and find that
+``exposure to annual mean smoke concentrations of 0.75-1 $\mu$g/m$^3$
+increases the mortality rate by 1.5\% in the same year, but by 2.7\% ...
+if we also account for deaths occurring in the following year.''
+\textcite{qiu_valuing_2026} adopt this approach, accounting for exposure in the current and prior year. Our approach applies a single-period all-source CRF and does
+not capture this multi-year mortality effect.
+
+\textit{Quadratic damage function.}
+\textcite{qiu_valuing_2026} estimate a quadratic GMT-mortality relationship
+from 784 simulations spanning 0.95-6.93$^\circ$C of warming.
+As shown in our comparison (Table~\ref{tab:excess_deaths}), the quadratic
+function exceeds our linear function in levels above approximately
+3.4$^\circ$C, producing substantially more projected deaths at high warming
+levels (e.g., 115,667 vs.\ 71,494 at 6$^\circ$C).
+
 \section{Appendix: USA Results}
+\label{sec:app_usa}
 
-...
+\textcite{qiu_valuing_2026} estimate a partial SC-CO$_2$ for the U.S. accounting for fire PM2.5 mortality. This section compares our U.S. results against theirs. First, Figure~\ref{fig:beta_grid_map_usa} shows $\beta_i$ estimates across the contiguous United States. Values are positive throughout nearly the entire country, with the strongest responses concentrated in the northern interior---the upper Midwest, Great Lakes region, and northern Rockies---consistent with the high $\beta_c$ estimated for the United States and Canada at the country level. The weakest responses are in the Southeast and Gulf Coast. The West shows moderate values.
 
+{\color{red}[discussion of lit. substantiating spatial pattern and Qiu comparison]}
+
+\pagebreak
 \begin{figure}[h!]
     \centering
     \includegraphics[width=1\textwidth]{images_appendix/map_beta_i_fe_grid_usa.png}
-    \caption{Your caption here}
-    \label{fig:my_label}
+    \caption{Grid-cell estimates of $\beta_i$, the change in fire PM$_{2.5}$ concentration ($\mu$g/m$^3$/yr) per 1$^\circ$C increase in GMT, estimated from a grid-cell-level fixed-effects regression pooling data from \textcite{park_attributing_2024}, \textcite{pierce_estimating_2017}, and \textcite{zhao_global_2025}.}
+    \label{fig:beta_grid_map_usa}
 \end{figure}
 
-...
+The U.S. fire PM$_{2.5}$ SC-CO$_2$ has a mean of \$6.57/ton CO$_2$ (95\% CI: \$-1.90--\$23.70) at a 2\% discount rate (Figure~\ref{fig:usa_results_scco2}, Panel A). Panel B places the fire PM$_{2.5}$ estimate in context: at \$6.57/ton CO$_2$, fire PM$_{2.5}$ is the second-largest damage sector after temperature mortality (\$13.20) in the U.S.\ SC-CO$_2$, and increases the total U.S.\ SC-CO$_2$ from \$15.83 to \$22.40---an increase of 41\%. Our main U.S.result of \$6.57 is below the \$11.39 estimated by \textcite{qiu_valuing_2026} (Table~\ref{tab:scco2_compare_n100}).\footnote{We replicate the \textcite{qiu_valuing_2026} results using 100 Monte Carlo simulations rather than their published 10,000; the difference is negligible, with their published fire PM$_{2.5}$ SC-CO$_2$ of \$11.2 closely matching our replication value of \$11.39. Minor differences in the unchanged sectors (temperature mortality, agriculture, energy, and sea-level rise) reflect the fact that incorporating an additional damage sector reduces net consumption, which alters the endogenous discount rate and thus affects all sector estimates marginally.} Differences between our results and those of \textcite{qiu_valuing_2026} are driven by different damage functions, which are discussed below along with associated excess death estimates. 
 
+
+\pagebreak
 \begin{figure}[h!]
     \centering
     \includegraphics[width=1\textwidth]{images_appendix/usa_fire_SCCO2_combined_aU_gU_n100.png}
-    \caption{Your caption here}
-    \label{fig:my_label}
+    \caption{U.S. partial SC-CO$_2$ estimates at a 2\% discount rate from 100 Monte Carlo simulations. (A) Distribution of the fire PM$_{2.5}$ SC-CO$_2$ component; the dashed line marks the mean (\$6.57/ton CO$_2$; 95\% CI: \$-1.90--\$23.70). (B) SC-CO$_2$ by damage sector; the dot marks the mean, the box spans the 25th--75th percentile, and whiskers span the 10th--90th percentile.}
+    \label{fig:usa_results_scco2}
 \end{figure}
+
+% latex table generated in R 4.4.1 by xtable 1.8-4 package
+% Thu May 28 14:15:35 2026
+
+\begin{table}[h!]
+\centering
+\caption{USA SC-CO2 Comparison with Qiu et al. 2026 (\$/tCO2)} 
+\label{tab:scco2_compare_n100}
+\begin{tabular}{lrrr}
+  \toprule
+Sector & SC-CO2 & SC-CO2 Qiu et al. & Difference \\ 
+  \midrule
+Temperature-related mortality & 13.24 & 13.17 & 0.07 \\ 
+  Fire PM2.5 mortality & 6.57 & 11.39 & -4.82 \\ 
+  Agriculture & 1.59 & 1.58 & 0.01 \\ 
+  Energy & 0.62 & 0.62 & 0.00 \\ 
+  Sea-level rise & 0.38 & 0.38 & 0.00 \\ 
+  \hline \hline
+  Total & 22.40 & 27.14 & -4.74 \\ 
+   \bottomrule
+\end{tabular}
+\end{table}
+
+
+\pagebreak
+
+Figure~\ref{fig:damage_functions} compares our linear damage function to the \textcite{qiu_valuing_2026} quadratic function. This is illustrative only, evaluated at a fixed U.S. population of 340 million and a baseline death rate of 8.9 per 1,000. Note also that the Qiu et al. $\beta$s are averaged across their 10,000 trial runs. Table~\ref{tab:excess_deaths} reports the actual average excess deaths produced by the GIVE model---comparing our results to \textcite{qiu_valuing_2026}---where population evolves over time.
+
+Two features of Figure~\ref{fig:damage_functions} stand out. First, the dotted vertical line marks 1.7$^\circ$C---the GMT at which the \emph{marginal} excess death toll of the Qiu et al. quadratic first exceeds that of our linear function. Below this threshold, each additional degree of warming causes more \emph{marginal} deaths under our function than under \textcite{qiu_valuing_2026}. Warming of $>$1.7$^\circ$C occurs over most years modeled in GIVE---from 2025 to 2300---driving higher SC-CO$_2$ results under the quadratic function. Second, the two curves cross in \emph{levels} at 3.4$^\circ$C, after which the Qiu et al. quadratic projects more excess deaths than our linear function for all higher warming levels.
+
+GIVE outputs excess death results for each year, country, and iteration $n$.  Table~\ref{tab:excess_deaths} reports U.S.\ annual excess deaths averaged across all year-iteration pairs with GMT change falling within a $\pm 0.10^\circ$C window of each reported level. For example, the 1.5$^\circ$C row averages over all year-iteration pairs with $T \in [1.4, 1.6]$. These results confirm with model output the levels crossover shown in Figure~\ref{fig:damage_functions}. At 1.5$^\circ$C our function projects 12,681 excess deaths annually against 1,128 for \textcite{qiu_valuing_2026}, and at 2$^\circ$C the gap remains large (18,335 vs.\ 7,172). The estimates cross in levels between 3 and 4$^\circ$C (23,160 vs.\ 20,142 at 3$^\circ$C; 36,228 vs.\ 37,611 at 4$^\circ$C), after which the Qiu et al. function projects more excess deaths than our linear function at all higher warming levels (115,667 vs.\ 71,494 at 6$^\circ$C).
+
+It is important to note that \textcite{qiu_valuing_2026} express excess deaths as a function of GMT with population scaled in millions: their damage function takes the form $(\beta_1 \cdot T + \beta_2 \cdot T^2) \cdot \text{pop}_{\text{millions}}$. Our function uses the baseline mortality count $M_{ct}$. Additionally, we present excess fire PM2.5 deaths attributable to climate change---shown in Table~\ref{tab:excess_deaths} from Equation \eqref{eq:damage}. Rather than reporting a similar result based on their quadratic damage function, which enters GIVE, \textcite{qiu_valuing_2026} report \emph{total} excess deaths from fire PM2.5, as computed using the \textcite{qiu_wildfire_2025} approach. At 3$^\circ$C, \textcite{qiu_valuing_2026} report 64,000 total annual deaths, as compared to the 20,142 annual deaths attributable to climate change that we report in Table ~\ref{tab:excess_deaths} replicating their results. 
+
+% latex table generated in R 4.4.1 by xtable 1.8-4 package
+% Thu May 28 14:29:48 2026
+\begin{table}[h!]
+\centering
+\caption{Average Excess Deaths by Warming Level, Comparison with Qiu et al. 2026} 
+\label{tab:excess_deaths}
+\begin{tabular}{rrr}
+  \toprule
+Temperature & Average Excess Deaths & Average Excess Deaths Qiu et al. \\ 
+  \midrule
+1.5 & 12,681 & 1,128 \\ 
+  2 & 18,335 & 7,172 \\ 
+  3 & 23,160 & 20,142 \\ 
+  4 & 36,228 & 37,611 \\ 
+  5 & 40,329 & 60,897 \\ 
+  6 & 71,494 & 115,667 \\ 
+   \bottomrule
+\end{tabular}
+\caption*{U.S.\ annual excess deaths attributable to fire PM$_{2.5}$ at each warming level, averaged across all year-iteration pairs with GMT change within $\pm 0.10^\circ$C of the reported level. Qiu et al.\ values are replicated within GIVE using 100 Monte Carlo simulations.}
+\end{table}
+
+\pagebreak
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=1\textwidth]{images_appendix/damage_functions_visual.png}
+    \caption{Excess fire PM2.5 mortality in the USA as a function of global mean temperature (GMT) change, comparing a linear damage function (this paper) and the quadratic damage function of \textcite{qiu_valuing_2026}. The dotted vertical line marks the GMT at which the marginal death toll of the quadratic function exceeds that of the linear (1.7$^\circ$C). Both functions are evaluated at a fixed U.S. population of 340 million and baseline death rate of 8.9 per 1,000. The $\beta$s for the \textcite{qiu_valuing_2026} quadratic are representative---averaging over 10,000 values---not the exact parameters entering GIVE. The linear $\beta_c$ is our estimated coefficient for the USA.}
+    \label{fig:damage_functions}
+\end{figure}
+
+\pagebreak
+\section{Appendix: Sentivity Test - Single Model Regressions}
+\label{sec:app_sensitivty_regress}
+
+Here we present sensitivity tests where $\beta_c$ and $\beta_i$ are estimated using observations from a single ESM, rather than pooling all models. Instead of estimating Equation $\eqref{eq:regression}$, we have: 
+
+
+
+\subsection{CESM - \textcite{pierce_estimating_2017}}
+
 
 
 \pagebreak
