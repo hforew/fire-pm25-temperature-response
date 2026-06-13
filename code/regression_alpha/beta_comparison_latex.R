@@ -165,23 +165,32 @@ print(
   file = here("output", "latex", "beta_summary.tex")
 )
 
-# LaTeX math column headers for beta_comparison_select
+# Double-header table for beta_comparison_select.
+# xtable does not natively support spanning headers, so the two-row header is
+# injected as raw LaTeX via add.to.row; include.colnames = FALSE suppresses
+# the default single-row header.
 latex_beta_select <- beta_comparison_select |>
   mutate(country_code_iso3 = as.character(country_code_iso3))  # drop factor for xtable
 
-colnames(latex_beta_select) <- c("Country",
-  "$\\beta_{FE}$",    "$p_{FE}$",
-  "$\\beta_{CESM}$",  "$p_{CESM}$",
-  "$\\beta_{CL}$",    "$p_{CL}$",
-  "$\\beta_{JU}$",    "$p_{JU}$",
-  "$\\beta_{SS}$",    "$p_{SS}$")
+# Row 1: model group labels spanning 2 cols each (beta + p)
+# Row 2: Country | beta | p | beta | p | ...
+# \cmidrule(lr){} draws partial rules under each group in row 1
+header_row <- paste0(
+  " & \\multicolumn{2}{c}{FE} & \\multicolumn{2}{c}{CESM} & ",
+  "\\multicolumn{2}{c}{CLASSIC} & \\multicolumn{2}{c}{JULES} & ",
+  "\\multicolumn{2}{c}{SSiB4} \\\\\n",
+  "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}\\cmidrule(lr){6-7}",
+  "\\cmidrule(lr){8-9}\\cmidrule(lr){10-11}\n",
+  "Country & $\\beta$ & $p$ & $\\beta$ & $p$ & $\\beta$ & $p$ & ",
+  "$\\beta$ & $p$ & $\\beta$ & $p$ \\\\\n",
+  "\\midrule\n"
+)
 
 print(
   xtable(
     latex_beta_select,
-    caption = paste0("Country-level $\\beta_c$ estimates and p-values across regression",
-                     " specifications for selected countries.",
-                     " CL = CLASSIC, JU = JULES, SS = SSiB4."),
+    caption = paste0("$\\beta_c$ estimates and p-values across",
+                     " specifications for largest countries."),
     label  = "tab:beta_select",                              # \ref{tab:beta_select} in LaTeX
     # length 12: 1 row-name slot + 11 data cols; 0dp for country, 3dp for all numeric
     digits = c(0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
@@ -189,7 +198,9 @@ print(
   booktabs                   = TRUE,                         # \toprule/\midrule/\bottomrule rules
   caption.placement          = "top",                        # caption above table
   include.rownames           = FALSE,                        # suppress R row indices (1,2,3...)
-  sanitize.colnames.function = identity,                     # pass col names to LaTeX as-is (no escaping)
+  include.colnames           = FALSE,                        # suppressed; replaced by add.to.row header
+  add.to.row                 = list(pos = list(0),           # inject header before first data row
+                                    command = header_row),
   sanitize.text.function     = identity,                     # pass cell values to LaTeX as-is (no escaping)
   file = here("output", "latex", "beta_select.tex")
 )
