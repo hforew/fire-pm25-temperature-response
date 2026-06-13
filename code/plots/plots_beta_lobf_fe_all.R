@@ -218,8 +218,8 @@ map_beta_c <- world_beta %>%
         legend.position  = "bottom",                         # legend below map
         axis.text        = element_blank(),                  # hide lat/lon tick labels
         axis.ticks       = element_blank(),                  # hide tick marks
-        plot.title       = element_text(size = 9.5),         # match fe_grid_all: fits long title at width = 6.5
-        panel.background = element_blank())                    # no background fill (matches grid map style)
+        plot.title       = element_text(size = 9.5),
+        panel.background = element_blank())
 
 
 map_beta_c
@@ -233,11 +233,8 @@ print("Beta map saved to images/regression_alpha/alpha_FE_all/")
 ############ Histogram + Map multiplot (Panel A / Panel B) ############################
 ##
 ## Combines hist_beta_c (Panel A) and map_beta_c (Panel B) using patchwork.
-## Two layouts are produced:
-##   _long  -- A stacked above B (portrait orientation)
-##   _wide  -- A left of B (landscape orientation); map given 2x the width
-##
-## Individual panel titles and subtitles are stripped and replaced with a single
+## Layout: A left (40%), B right (60%); map given 2x the width.
+## Individual panel titles are stripped and replaced with a single
 ## plot_annotation() title. A/B tags are added via tag_levels = "A".
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -248,33 +245,24 @@ hist_notitle <- hist_base +
            label = stats_label,
            hjust = .15, vjust = 3.6, size = 3.5,
            fill = NA, label.color = NA)                    # Panel A: stats as lower-left annotation
-map_notitle  <- map_beta_c  + labs(title = NULL,            # Panel B: subtitle absorbed into shared title
-                                   subtitle = NULL)
+map_notitle  <- map_beta_c  + labs(title = NULL)
 
-# Shared annotation applied to both layouts; subtitle folded into title
 shared_annotation <- plot_annotation(
   title      = expression(beta[c] ~
                           "across countries: Change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase"),
-  tag_levels = "A"   # labels panels "A", "B" automatically
+  tag_levels = "A"
 )
-
-# _long: A above B, equal heights
-multiplot_long <- (hist_notitle / map_notitle) + shared_annotation
 
 # _wide: A left (40%), B right (60%); widths = c(2, 3) gives the 40/60 split
 multiplot_wide <- (hist_notitle | map_notitle) +
   plot_layout(widths = c(2, 3)) +
   shared_annotation
 
-print(multiplot_long)
-ggsave(here("images/regression_alpha/alpha_FE_all", "multiplot_beta_c_long.png"),
-       multiplot_long, width = 12, height = 14, dpi = 300)
-
 print(multiplot_wide)
 ggsave(here("images/regression_alpha/alpha_FE_all", "multiplot_beta_c_wide.png"),
        multiplot_wide, width = 8.5, height = 3.5, units = "in", dpi = 300)
 
-print("Multiplots saved to images/regression_alpha/alpha_FE_all/")
+print("Multiplot saved to images/regression_alpha/alpha_FE_all/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -379,13 +367,11 @@ for (iso in countries_to_plot) {
   beta_c   <- coef_row$estimate_beta_c
   se_beta_c <- coef_row$std.error_beta_c
 
-  # Pull R² from the glanced model-fit statistics and observation count from df
+  # Pull R² from the glanced model-fit statistics
   r_squared <- reg_results %>%
     filter(country_code_iso3 == iso) %>%
     unnest(glanced) %>%
     pull(r.squared)
-  n_obs <- nrow(df)
-
   # Extract per-model FE intercepts from the tidy coefficient table.
   # (Intercept) = classic baseline; other models add their delta offset.
   tidied_c      <- reg_results %>% filter(country_code_iso3 == iso) %>% unnest(tidied)  # one row per coefficient term
@@ -441,23 +427,20 @@ print("Line of best fit plots saved to images/regression_alpha/alpha_FE_all/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Line of Best Fit: multi-country grids (pos beta / neg beta) ##############
+############ Line of Best Fit: global + 5 most populous countries ######################
 ##
-## Two six-panel faceted plots separating countries by sign of beta_c:
-##   pos beta -- warming increases per-capita fire PM2.5 exposure
-##   neg beta -- warming decreases per-capita fire PM2.5 exposure
-## Layout: 2 rows x 3 columns, common y-axis scale, single legend.
+## Six-panel faceted LOBF plot: global aggregate plus CHN, IND, USA, IDN, PAK
+## (the five most populous countries).
+## Layout: 2 rows x 3 columns, single legend.
 ## Strip label: country code + beta_c + SE.
 ## y-axis: exposure_percap (raw per-capita fire PM2.5 exposure).
 ## Five parallel dotted fitted lines per panel: one per fire model, each using its
 ## FE intercept (alpha_classic + delta_m) and the shared slope beta_c.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-multiplot_pos_beta <- c("IND", "CHN", "USA", "IDN", "PAK", "RUS")
-# multiplot_neg_beta <- c("NGA", "ARG", "AGO", "ZAF", "AUS", "GHA")
-multiplot_neg_beta <- c("NGA", "ARG","AUS")
+multiplot_countries <- c("global", "CHN", "IND", "USA", "IDN", "PAK")
 
-# Builds a 6-country faceted LOBF plot for a given vector of ISO3 codes.
+# Builds a faceted LOBF plot for a given vector of ISO3 codes.
 # Returns a ggplot object; caller saves to disk.
 build_lobf_multi <- function(countries) {
 
@@ -526,7 +509,7 @@ build_lobf_multi <- function(countries) {
     scale_shape_manual(values = trajectory_shapes, name = "Trajectory") +
     guides(shape = guide_legend(order = 1),   # trajectory first
            color = guide_legend(order = 2)) + # model second
-    facet_wrap(~ strip_label, ncol = 3) +     # 3 cols --> 2 rows for 6 countries, 4 rows for 12
+    facet_wrap(~ strip_label, ncol = 3) +     # 3 cols --> 2 rows for 6 countries
     labs(
       title = "Per-Capita Fire PM2.5 Exposure vs. GMT",
       x     = "GMT Anomaly relative to 1850-1900 (°C)",
@@ -543,24 +526,13 @@ build_lobf_multi <- function(countries) {
     )
 }
 
-p_multi_pos <- build_lobf_multi(multiplot_pos_beta)
-p_multi_neg <- build_lobf_multi(multiplot_neg_beta)
+p_multi <- build_lobf_multi(multiplot_countries)
 
-print(p_multi_pos)
-ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multi_pos_beta_fe.png"),
-       p_multi_pos, width = 8.5, height = 5, dpi = 300)
+print(p_multi)
+ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multi_fe.png"),
+       p_multi, width = 8.5, height = 5, dpi = 300)
 
-print(p_multi_neg)
-ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multi_neg_beta_fe.png"),
-       p_multi_neg, width = 8.5, height = 5, dpi = 300)
-
-p_multi_all <- build_lobf_multi(c(multiplot_pos_beta, multiplot_neg_beta))
-
-print(p_multi_all)
-ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multi_pos_neg_beta_fe.png"),
-       p_multi_all, width = 8.5, height = 9, dpi = 300)
-
-print("Multi-country grids saved to images/regression_alpha/alpha_FE_all/")
+print("Multi-country grid saved to images/regression_alpha/alpha_FE_all/")
 
 ############ THE END  ############################
 
