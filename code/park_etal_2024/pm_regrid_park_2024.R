@@ -45,7 +45,7 @@ file_paths_withoutfire <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "withoutfire", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
 )
 
-# Scenario 2: classic
+# Scenario 2: classic factual
 file_paths_classic <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
   here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
@@ -55,7 +55,7 @@ file_paths_classic <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "classic", "obsclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
 )
 
-# Scenario 3: jules
+# Scenario 3: jules factual
 file_paths_jules <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
   here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
@@ -65,7 +65,7 @@ file_paths_jules <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "jules", "obsclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
 )
 
-# Scenario 4: ssib4
+# Scenario 4: ssib4 factual
 file_paths_ssib4 <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
   here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
@@ -73,6 +73,36 @@ file_paths_ssib4 <- c(
   here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
   here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
   here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "obsclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
+)
+
+# Scenario 5: classic counterclim
+file_paths_classic_cf <- c(
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "counterclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "counterclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "counterclim", "05x05_CEDS_1985_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "counterclim", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "counterclim", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "classic", "counterclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
+)
+
+# Scenario 6: jules counterclim
+file_paths_jules_cf <- c(
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "counterclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "counterclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "counterclim", "05x05_CEDS_1985_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "counterclim", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "counterclim", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "jules", "counterclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
+)
+
+# Scenario 7: ssib4 counterclim
+file_paths_ssib4_cf <- c(
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "counterclim", "05x05_CEDS_1965_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "counterclim", "05x05_CEDS_1975_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "counterclim", "05x05_CEDS_1985_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "counterclim", "05x05_CEDS_1995_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "counterclim", "05x05_CEDS_2005_on_off_pm25_Surface_Re_yearavg.nc4"),
+  here("input", "Park_etal_2024", "GEOSChem_output", "ssib4", "counterclim", "05x05_CEDS_2015_on_off_pm25_Surface_Re_yearavg.nc4")
 )
 
 
@@ -231,14 +261,20 @@ extract_pm25_data <- function(file_paths, years, scenario_name,
 ############ Extract Data for All Scenarios #################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-withoutfire <- extract_pm25_data(file_paths_withoutfire, years, "withoutfire",
-                                 target_lon, target_lat)
-classic     <- extract_pm25_data(file_paths_classic,     years, "classic",
-                                 target_lon, target_lat)
-jules       <- extract_pm25_data(file_paths_jules,       years, "jules",
-                                 target_lon, target_lat)
-ssib4       <- extract_pm25_data(file_paths_ssib4,       years, "ssib4",
-                                 target_lon, target_lat)
+withoutfire    <- extract_pm25_data(file_paths_withoutfire, years, "withoutfire",
+                                    target_lon, target_lat)
+classic        <- extract_pm25_data(file_paths_classic,     years, "classic",
+                                    target_lon, target_lat)
+jules          <- extract_pm25_data(file_paths_jules,        years, "jules",
+                                    target_lon, target_lat)
+ssib4          <- extract_pm25_data(file_paths_ssib4,        years, "ssib4",
+                                    target_lon, target_lat)
+classic_counter <- extract_pm25_data(file_paths_classic_cf, years, "classic_counter",
+                                     target_lon, target_lat)
+jules_counter   <- extract_pm25_data(file_paths_jules_cf,   years, "jules_counter",
+                                     target_lon, target_lat)
+ssib4_counter   <- extract_pm25_data(file_paths_ssib4_cf,   years, "ssib4_counter",
+                                     target_lon, target_lat)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ SANITY CHECK: PM2.5 by year for all 3 models ##################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -246,6 +282,7 @@ ssib4       <- extract_pm25_data(file_paths_ssib4,       years, "ssib4",
 # Force 6 decimal places in console output
 options(pillar.sigfig = 7, digits = 7)
 
+# factual
 classic %>%
   group_by(year) %>%
   summarise(
@@ -256,6 +293,18 @@ classic %>%
   ) %>%
   print()
 
+# counterfactual
+classic_counter %>%
+  group_by(year) %>%
+  summarise(
+    min    = min   (pm25_classic_counter, na.rm = TRUE),
+    max    = max   (pm25_classic_counter, na.rm = TRUE),
+    mean   = mean  (pm25_classic_counter, na.rm = TRUE),
+    median = median(pm25_classic_counter, na.rm = TRUE)
+  ) %>%
+  print()
+
+# factual
 jules %>%
   group_by(year) %>%
   summarise(
@@ -266,6 +315,18 @@ jules %>%
   ) %>%
   print()
 
+# counterfactual
+jules_counter %>%
+  group_by(year) %>%
+  summarise(
+    min    = min   (pm25_jules_counter, na.rm = TRUE),
+    max    = max   (pm25_jules_counter, na.rm = TRUE),
+    mean   = mean  (pm25_jules_counter, na.rm = TRUE),
+    median = median(pm25_jules_counter, na.rm = TRUE)
+  ) %>%
+  print()
+
+# factual
 ssib4 %>%
   group_by(year) %>%
   summarise(
@@ -276,15 +337,29 @@ ssib4 %>%
   ) %>%
   print()
 
+# counterfactual
+ssib4_counter %>%
+  group_by(year) %>%
+  summarise(
+    min    = min   (pm25_ssib4_counter, na.rm = TRUE),
+    max    = max   (pm25_ssib4_counter, na.rm = TRUE),
+    mean   = mean  (pm25_ssib4_counter, na.rm = TRUE),
+    median = median(pm25_ssib4_counter, na.rm = TRUE)
+  ) %>%
+  print()
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Merge All Scenarios by Year, Lon, Lat #########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Merge all four datasets by year, lon, lat
+# Merge all scenarios by year, lon, lat
 pm25_all <- withoutfire %>%
-  left_join(classic, by = c("year", "lon", "lat")) %>%
-  left_join(jules, by = c("year", "lon", "lat")) %>%
-  left_join(ssib4, by = c("year", "lon", "lat"))
+  left_join(classic,         by = c("year", "lon", "lat")) %>%
+  left_join(jules,           by = c("year", "lon", "lat")) %>%
+  left_join(ssib4,           by = c("year", "lon", "lat")) %>%
+  left_join(classic_counter, by = c("year", "lon", "lat")) %>%
+  left_join(jules_counter,   by = c("year", "lon", "lat")) %>%
+  left_join(ssib4_counter,   by = c("year", "lon", "lat"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ PM2.5 Wide Format (separate dataset, PM not fPM) ##############
@@ -326,13 +401,16 @@ pm25_wide <- pm25_all %>%
 ############ Calculate Fire PM (Difference from Without Fire) ##############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Calculate fire PM for each model by subtracting withoutfire PM
 # Fire PM = Model PM - Without Fire PM
+# Climate-attributable fire PM = factual - counterfactual
 pm25_all <- pm25_all %>%
   mutate(
-    classic_fpm = pm25_classic - pm25_withoutfire,
-    jules_fpm = pm25_jules - pm25_withoutfire,
-    ssib4_fpm = pm25_ssib4 - pm25_withoutfire
+    classic_fpm     = pm25_classic - pm25_withoutfire,
+    jules_fpm       = pm25_jules   - pm25_withoutfire,
+    ssib4_fpm       = pm25_ssib4   - pm25_withoutfire,
+    classic_fpm_cli = pm25_classic - pm25_classic_counter,
+    jules_fpm_cli   = pm25_jules   - pm25_jules_counter,
+    ssib4_fpm_cli   = pm25_ssib4   - pm25_ssib4_counter
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -340,14 +418,15 @@ pm25_all <- pm25_all %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Dataset 1: Complete dataset with all PM columns and fire PM columns
-# Columns: year, lon, lat, pm25_withoutfire, pm25_classic, pm25_jules, pm25_ssib4, 
-#          classic_fpm, jules_fpm, ssib4_fpm
 pm25_all_complete <- pm25_all
 
 # Dataset 2: Dataset with only fire PM columns (removed all pm25_* columns)
-# Columns: year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm
+# Columns: year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm,
+#          classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli
 pm25_fpm_only <- pm25_all %>%
-  select(year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm)
+  select(year, lon, lat,
+         classic_fpm, jules_fpm, ssib4_fpm,
+         classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Convert Fire PM to Wide Format by Year ########################
