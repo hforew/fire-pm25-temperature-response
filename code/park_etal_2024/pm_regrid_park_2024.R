@@ -434,24 +434,34 @@ pm25_fpm_only <- pm25_all %>%
 
 # Convert pm25_fpm_only from long to wide format
 # Each model x year combination becomes a separate column
-# Example: classic_1965_fpm, classic_1975_fpm, ..., jules_1965_fpm, etc.
+# fpm:     classic_1965_fpm, jules_1965_fpm, ...
+# fpm_cli: classic_1965_fpm_cli, jules_1965_fpm_cli, ...
+# Two separate pivots to avoid gsub collision between _fpm and _fpm_cli
 
-pm25_fpm_wide <- pm25_fpm_only %>%
+fpm_wide <- pm25_fpm_only %>%
+  select(year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm) %>%
   pivot_longer(
     cols = c(classic_fpm, jules_fpm, ssib4_fpm),
     names_to = "model",
     values_to = "fpm"
   ) %>%
-  mutate(
-    # Create column name: model_year_fpm (e.g., classic_1965_fpm)
-    model_year = paste0(gsub("_fpm", "", model), "_", year, "_fpm")
-  ) %>%
+  mutate(model_year = paste0(gsub("_fpm", "", model), "_", year, "_fpm")) %>%
   select(-model, -year) %>%
-  pivot_wider(
-    names_from = model_year,
-    values_from = fpm
+  pivot_wider(names_from = model_year, values_from = fpm)
+
+fpm_cli_wide <- pm25_fpm_only %>%
+  select(year, lon, lat, classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli) %>%
+  pivot_longer(
+    cols = c(classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli),
+    names_to = "model",
+    values_to = "fpm_cli"
   ) %>%
-  # Add "park_" prefix to all columns except lon and lat
+  mutate(model_year = paste0(gsub("_fpm_cli", "", model), "_", year, "_fpm_cli")) %>%
+  select(-model, -year) %>%
+  pivot_wider(names_from = model_year, values_from = fpm_cli)
+
+pm25_fpm_wide <- fpm_wide %>%
+  left_join(fpm_cli_wide, by = c("lon", "lat")) %>%
   rename_with(
     ~ paste0("park_", .x),
     .cols = -c(lon, lat)
