@@ -1,10 +1,17 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Plot PM2.5 maps - Classic model only, global #################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Read regridded PM2.5 (0.5 deg x 0.5 deg) from Park et al. 2024,
-# subset to the Classic model only, and render one global map per decade
-# with visible 0.5 deg grid cells over country boundaries.
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Render GLOBAL PM2.5 maps from Park et al. 2024 — Classic model only,
+#       one map per decade, with visible 0.5° grid cells over country borders.
+#   1. Read regridded PM2.5 CSV; keep only the Classic-model columns
+#      (park_classic_<decade>_pm25); list how many were found.
+#   2. Load Natural Earth country boundaries for overlay.
+#   3. Plot each decade with ggplot/geom_tile (0.5° cells + country borders),
+#      share one color scale (0 to 99.9th pctile), save each as base64 PNG, and
+#      assemble them into a single self-contained HTML page.
+# Input  : output/pm25_park2024.csv
+# Output : images/fpm_cell_usa/pm_classic_global_park.html
+
 
 rm(list = ls())
 

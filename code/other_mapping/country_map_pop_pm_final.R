@@ -2,6 +2,18 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Map data frame with latitude and longitude coordinates to countries ##########
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Take a gridded (lon, lat) population/PM dataset on a 0.5° mesh and tag every
+#       cell with the country it falls in, then restrict to GIVE countries.
+#   1. Build a 0.5° square polygon around each cell center (half-width 0.25°)
+#   2. Intersect cells with Natural Earth country polygons in an equal-area CRS
+#      (EPSG:6933) so overlap areas are comparable; assign cell -> country of
+#      MAX overlap area. No overlap => ocean (land_any = FALSE).
+#   3. Manual ISO3 repairs (France, Norway), filter to GIVE country list,
+#      QC against Park et al. population, write final CSV, and render checks
+#      (static ggplot world map + interactive Leaflet map for USA/CAN/MEX).
+# Inputs : input/GIVE/GIVE_countries.csv ; output/pop_pm_combined_final.csv
+# Country boundaries : Natural Earth 1:10m (rnaturalearth, scale = 10)
+# Output : output/pop_pm_with_countries_final.csv ; images/country_mapping_check_rev.png
 
 rm(list = ls())
 

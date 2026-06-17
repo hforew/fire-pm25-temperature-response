@@ -10,6 +10,13 @@
 # Compare the CLM-derived national populations with official World Bank population data
 # for the same year and visualize over- and under-estimation on an interactive map.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Validate the CLM gridded population product against World Bank totals for 2010.
+#   1. Read CLM 'hdm' (pop density) for compare_year; multiply by grid-cell area -> total pop.
+#   2. Assign each 0.5° cell to a country by POINT-IN-POLYGON on the cell center
+#      (st_intersects), not by area overlap; aggregate cell pop -> country totals.
+#   3. Pull official pop (World Bank SP.POP.TOTL) live via API; merge, compute
+#      diff & % diff, render a diverging green-white-red Leaflet choropleth.
+# Inputs : CLM hdm NetCDF (Li 2018 SSP1 CMIP6, 0.5°) ; gridcell_area_0.5deg.nc ; World Bank API
 
 
 rm(list = ls())

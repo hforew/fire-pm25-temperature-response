@@ -4,6 +4,20 @@
 #                                                        [-90.05,   89.95] lat#
 # Target: 0.5 deg, centers x.25/x.75, edges x.0/x.5, extent [-180,180]x[-90,90]#
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Turn the Zhao et al. 2025 0.1° population .npz into a 0.5° long-format CSV,
+#       conserving total population through the regrid.
+#   1. Load the .npz via reticulate/numpy;
+#      sum over the age dimension to a 2-D total-pop matrix (~3.82 B).
+#   2. Flip lat S->N to terra's N->S, wrap as the SOURCE 0.1° raster (centers x.0),
+#      build the TARGET 0.5° raster (centers x.25/x.75), and resample with
+#      method = "sum" (area-weighted) so the global total is preserved (~0% diff).
+#   3. Convert to long data.table (lon, lat, pop), run sanity checks — global before/after,
+#      US total and 5 city totals using any-touch overlap (extract touches = TRUE) — and
+#      write the CSV.
+# Input  : input/Zhao_etal_2025/gridded_output_EM/pop_0.1x0.1_2010.npz
+# Output : output/pop_regrid_zhao_20252010.csv
+
+
 rm(list = ls())
 
 

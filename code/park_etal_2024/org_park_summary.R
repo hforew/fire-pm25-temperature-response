@@ -1,6 +1,13 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### PM2.5 yearly statistics from NetCDF ###########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: For each land-surface scheme, summarize global PM2.5 levels across six snapshot period.
+#   1. Build file paths for three GEOS-Chem scenarios (classic / jules / ssib4),
+#      each with one yearly-average NetCDF per year (1965–2015, every 10 yr).
+#   2. Read the 'PM25' grid from each file, flattening whatever dims it has
+#      (4-D, 3-D, or 2-D) down to a single vector of cell values.
+#   3. Per scenario, print a year-by-year table of min / max / mean / median PM2.5.
+# Inputs : Park et al. 2024, GEOS-Chem CEDS "on_off" surface PM2.5, 0.5° yearly avg (.nc4)
 
 rm(list = ls())
 

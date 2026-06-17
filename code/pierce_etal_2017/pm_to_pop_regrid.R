@@ -1,6 +1,18 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Re-grid PM data to pop data resolution ##########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Re-grid coarse PM2.5 (1.25°) onto the 0.5° population grid by nearest neighbor,
+#       then merge PM2.5 + population into one per-cell table.
+#   1. Read annual-average PM2.5 (288x192 = 55,296 cells) and the pop grid
+#      (720x360 = 259,200 cells); shift PM2.5 edge coords to cell centers
+#      (+1.25/2 lon, +0.9424/2 lat) so both grids are center-referenced.
+#   2. For each 0.5° pop cell, find the nearest 1.25° PM2.5 center by Euclidean
+#      distance (which.min) and copy that cell's pm_/fpm_ columns over.
+#   3. Join the regridded PM2.5 back onto the full pop table on exact lon/lat;
+#      verify every pop row matched, and write both outputs.
+# Inputs : output/annual_ave_pm25.csv ; output/pop_df_rev.csv
+# Outputs: output/pm25_regridded_0.5deg.csv ; output/pop_pm_combined.csv
+
 
 # Remove all objects from the environment
 rm(list = ls())
