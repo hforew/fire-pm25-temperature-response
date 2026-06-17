@@ -1,10 +1,16 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ City Population Extraction from Regridded Data ################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Data source: pop_regrid_park_2024.csv (259,200 cells, 0.5-degree global grid)
-# Target column: park_2015_pop
-# Overlap rule: any cell edge contact counts (cell center ± 0.25°)
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Pull 2015 gridded population for five US cities from the regridded Park grid
+#       and show their 0.5° cells on an interactive map.
+#   1. Load pop_regrid_park_2024.csv (259,200 cells, global 0.5° grid).
+#   2. For each city bbox, keep cells whose 0.5° footprint (center ± 0.25°) touches
+#      the box — any edge contact counts — and sum park_2015_pop; print cell count + total.
+#   3. Rebuild each kept cell as a square polygon, stack all cities, and render a
+#      color-by-city Leaflet map with per-cell popups (centroid lon/lat + pop_2015).
+# Input  : output/pop_regrid_park_2024.csv
+# Target : park_2015_pop ; Cities: NYC, Denver, LA, Honolulu, Anchorage
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Packages #######################################################

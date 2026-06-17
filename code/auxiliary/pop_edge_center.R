@@ -1,7 +1,16 @@
-
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Confirm if PM data grid cell centers or edges ##########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Auto-detect, for several NetCDF grids, whether lon/lat are cell EDGES or CENTERS,
+#       and preview the first 10 rows of every data variable — a reusable QC utility.
+#   1. pick_coord_name(): find the lat/lon dim (or var) name by regex, tolerant of naming.
+#   2. edge_or_center(): infer type from the first value vs resolution — first = -180/-90
+#      means EDGE, first = -180+d/2 / -90+d/2 means CENTER, else "unknown".
+#   3. get_var_vec10(): slice the first n values along the preferred axis.
+#   4. check_nc_print10_allvars(): open a file, report dlat/dlon + edge/center for each axis,
+#      drop coord/bounds/time vars, and print lon/lat + all data vars for the first 10 rows.
+#   5. Run it over 4 files (two CLM hdm, two area grids).
+
 
 # Remove all objects from the environment
 rm(list = ls())

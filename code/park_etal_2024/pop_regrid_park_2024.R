@@ -1,6 +1,17 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Read and Process Population Grid Data #########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Convert the Park et al. 2024 MATLAB population grid into a tidy regridded CSV.
+#   1. Read pop_grid_6515.mat (360 lat x 720 lon x 6 years); attach lon/lat coords
+#      (lat N-to-S, lon -179.5 to 180) and reshape each year to long format.
+#   2. Regrid every year onto a standard 0.5° target grid (centers at .25/.75) using
+#      area-weighted SUM resampling, which preserves each year's total population.
+#   3. Join years into wide format (one park_<year>_pop column each); verify totals,
+#      sum US population over any cell touching the US boundary, and write the CSV.
+# Input  : input/Park_etal_2024/pop_grid_6515.mat
+# Output : output/pop_regrid_park_2024.csv
+
+
 # Remove all objects from the environment
 rm(list = ls())
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

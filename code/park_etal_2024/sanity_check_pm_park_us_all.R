@@ -1,10 +1,17 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Plot PM2.5 maps for CONUS (0.5 deg cells, clipped to US) #####
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Read regridded PM2.5 (0.5 deg x 0.5 deg) from Park et al. 2024,
-# keep cells overlapping CONUS, clip cell geometry to the US land boundary,
-# and render one map per scenario x decade with visible 0.5 deg grid cells.
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Render CONUS PM2.5 maps from Park et al. 2024 — one map per scenario x decade,
+#       with 0.5° grid cells clipped exactly to the US land boundary.
+#   1. Read regridded PM2.5 CSV; coarse-filter to cells whose centers fall in the
+#      CONUS bbox (expanded 0.25° each side, since a center-c cell spans c±0.25).
+#   2. Get Natural Earth US states, drop Alaska/Hawaii, dissolve to one CONUS polygon;
+#      build a 0.5° square per cell and st_intersection-clip them to that boundary.
+#   3. Plot each PM column with ggplot/geom_sf (visible grid + state + CONUS borders),
+#      share one color scale (0 to 99.9th pctile), save each as base64 PNG, and
+#      assemble them into a single self-contained HTML page.
+# Input  : output/pm25_park2024.csv
+# Output : images/fpm_cell_usa/pm_cell_usa_park.html
 
 rm(list = ls())
 

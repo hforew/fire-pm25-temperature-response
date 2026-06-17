@@ -1,6 +1,19 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Confirm if PM data grid cell centers or edges ##########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Confirm whether the PM2.5 and population NetCDF lon/lat values are cell
+#       CENTERS or cell EDGES — this decides how PM2.5 must be shifted before regridding.
+#   1. PM2.5: read lon/lat, check spacing, and test the first
+#      value against the center vs edge prediction (-179.375° vs -180°).
+#      -> RESULT: EDGES (lon[1] = -180°, lat runs -90° to 90°, pole to pole).
+#   2. Population (SSP1, 0.5°): read lon/lat plus the explicit EDGEW/E/S/N variables;
+#      test first value against center prediction (-179.75°) and cross-check vs edge+0.25°.
+#      -> RESULT: CENTERS (lon[1] = -179.75°, lat[1] = -89.75°, confirmed by EDGE vars).
+#   3. Implication: PM2.5 (edges) must be converted to cell centers to align with the
+#      population grid (centers) before any regrid.
+# Inputs : CESM_09x125_PM25_2000_Baseline.nc ; SSP1 population NetCDF (pop_ssp1)
+
+
 
 # Remove all objects from the environment
 rm(list = ls())

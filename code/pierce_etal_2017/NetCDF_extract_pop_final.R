@@ -1,6 +1,20 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ###################Population grid cell data ##################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Build a per-cell population table (2001–2010) from the CLM SSP1 NetCDF,
+#       converting density to totals via grid-cell area, in wide format.
+#   1. Open the chosen CLM hdm file + the 0.5° area file; pull LONGXY/LATIXY coords
+#      and the 'year' axis; match target_years 2001–2010 to their time indices.
+#   2. QC the time dimension: confirm years aren't identical across slices (pick one
+#      populated 2009 cell, print its 2001–2010 series), then loop all years into a
+#      long table of (lon, lat, pop_density, pop_year) with per-year sanity stats.
+#   3. Read cell area (m^2 -> km^2), join, compute pop_tot = density * area; pivot to
+#      wide (pop_dens_<yr>, pop_tot_<yr>), check global + USA totals (point-in-USA via
+#      st_intersects), and write the CSV.
+# Inputs : CLM Li 2018 SSP1 CMIP6 hdm 0.5° NetCDF ; landmask_area/gridcell_area_0.5deg.nc
+# Output : output/pop_df_rev.csv
+
+
 rm(list = ls())
 
 library(ncdf4)

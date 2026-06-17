@@ -11,6 +11,20 @@
 #   fpm_2095_SSP245_Zhao = SSP245 (with fire - without fire)
 #   fpm_2095_SSP585_Zhao = SSP585 (with fire - without fire)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Regrid Zhao et al. 2025 PM2.5 (0.1°) to the 0.5° grid, derive fire-attributable
+#       PM, and merge into the master pop_pm dataset along with Zhao 2010 population.
+#   1. Build the 0.5° target grid (720x360); for each of 4 Zhao scenario CSVs
+#      (SSP245/585 x with/without fire) area-weight-resample 0.1°->0.5° (terra "average").
+#   2. Join the 4 layers; compute fire PM as (with fire − without fire) for each SSP,
+#      drop the no-fire temporaries; run sanity maps (log10) + global summary stats
+#      (note fpm can go slightly negative from nonlinear chemistry, clipped for log).
+#   3. Left-join Zhao PM and Zhao 2010 pop onto pop_pm_combined_with_park2024 by lon/lat,
+#      report match %, reorder columns (pop_* first), sort, and write the final CSV.
+# Inputs : Zhao_etal_2025/gridded_output/*.csv ; pop_pm_combined_with_park2024.csv ;
+#          pop_regrid_zhao_20252010.csv
+# Output : output/pop_pm_combined_final.csv
+# Adds   : pm_2095_SSP245_Zhao, pm_2095_SSP585_Zhao, fpm_2095_SSP245_Zhao, fpm_2095_SSP585_Zhao
+
 rm(list = ls())
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Packages ###
