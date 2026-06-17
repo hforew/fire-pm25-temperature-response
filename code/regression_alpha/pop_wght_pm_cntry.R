@@ -68,7 +68,8 @@ fpm_cols <- c(
 # Park et al. PM column names: park_{model}_{decade}_fpm (18 columns: 3 models x 6 decades)
 decades       <- c("1960s", "1970s", "1980s", "1990s", "2000s", "2010s")
 models        <- c("classic", "jules", "ssib4")  # three land-surface model variants in Park et al.
-park_fpm_cols <- as.vector(outer(models, decades, function(m, d) paste0("park_", m, "_", d, "_fpm")))
+park_fpm_cols     <- as.vector(outer(models, decades, function(m, d) paste0("park_", m, "_", d, "_fpm")))
+park_fpm_cli_cols <- as.vector(outer(models, decades, function(m, d) paste0("park_", m, "_", d, "_fpm_cli")))
 
 pop_wght_pm_cntry <- pop_pm_country %>%
   group_by(country_code_iso3, country_name) %>%  # one group per country
@@ -98,6 +99,17 @@ pop_wght_pm_cntry <- pop_pm_country %>%
     ),
     across(
       all_of(park_fpm_cols),
+      ~ sum(.x * pop_bar, na.rm = TRUE) / pop_bar_c,
+      .names = "exposure_percap_{.col}"
+    ),
+    # Park et al. climate-attributable fire PM exposure (factual minus counterfactual)
+    across(
+      all_of(park_fpm_cli_cols),
+      ~ sum(.x * pop_bar, na.rm = TRUE),
+      .names = "exposure_{.col}"
+    ),
+    across(
+      all_of(park_fpm_cli_cols),
       ~ sum(.x * pop_bar, na.rm = TRUE) / pop_bar_c,
       .names = "exposure_percap_{.col}"
     ),
@@ -156,8 +168,10 @@ world_dr_base <- wb_death_rate %>%
   pull(death_rate_base)
 
 # Park exposure column names: exposure_park_{model}_{decade}_fpm (18 columns)
-park_exp_cols <- paste0("exposure_park_", rep(models, times = length(decades)), "_",
-                        rep(decades, each = length(models)), "_fpm")
+park_exp_cols     <- paste0("exposure_park_", rep(models, times = length(decades)), "_",
+                            rep(decades, each = length(models)), "_fpm")
+park_exp_cli_cols <- paste0("exposure_park_", rep(models, times = length(decades)), "_",
+                            rep(decades, each = length(models)), "_fpm_cli")
 
 # Step 1: sum population, exposure, and base_death
 global_row <- pop_wght_pm_cntry %>%
@@ -169,7 +183,8 @@ global_row <- pop_wght_pm_cntry %>%
     across(all_of(paste0("exposure_fpm_",   fpm_suffixes)), ~ sum(.x, na.rm = TRUE)),
     base_death        = sum(base_death, na.rm = TRUE),
     # Park: sum total exposure to global level (per-capita computed in Step 2b below)
-    across(all_of(park_exp_cols),                           ~ sum(.x, na.rm = TRUE))
+    across(all_of(park_exp_cols),                           ~ sum(.x, na.rm = TRUE)),
+    across(all_of(park_exp_cli_cols),                       ~ sum(.x, na.rm = TRUE))
   )
 
 # Step 2: per-capita exposure = global total exposure / global pop_bar_c
@@ -180,6 +195,12 @@ for (s in fpm_suffixes) {
 
 # Step 2b: Park per-capita exposure = global total Park exposure / global pop_bar_c
 for (exp_col in park_exp_cols) {
+  percap_col <- sub("^exposure_", "exposure_percap_", exp_col)
+  global_row[[percap_col]] <- global_row[[exp_col]] / global_row$pop_bar_c
+}
+
+# Step 2c: Park cli per-capita exposure = global total Park cli exposure / global pop_bar_c
+for (exp_col in park_exp_cli_cols) {
   percap_col <- sub("^exposure_", "exposure_percap_", exp_col)
   global_row[[percap_col]] <- global_row[[exp_col]] / global_row$pop_bar_c
 }
@@ -309,7 +330,7 @@ pop_pm_country %>%
 # then print grid-cell desc stats for those decades to substantiate
 usa_ssib4_percap <- pop_wght_pm_cntry %>%
   filter(country_code_iso3 == "USA") %>%
-  select(starts_with("exposure_percap_park_ssib4")) %>%
+  select(matches("^exposure_percap_park_ssib4.*_fpm$")) %>%
   pivot_longer(everything(), names_to = "column", values_to = "percap") %>%
   mutate(decade = gsub(".*ssib4_(\\w+)_fpm", "\\1", column))  # extract decade label
 

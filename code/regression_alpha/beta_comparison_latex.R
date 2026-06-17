@@ -10,10 +10,14 @@
 ##   fpm_gmt_regression_coefs_classic.csv
 ##   fpm_gmt_regression_coefs_jules.csv
 ##   fpm_gmt_regression_coefs_ssib4.csv
+##   fpm_gmt_regression_coefs_classic_cli.csv
+##   fpm_gmt_regression_coefs_jules_cli.csv
+##   fpm_gmt_regression_coefs_ssib4_cli.csv
 ##   fpm_gmt_regression_coefs_FE_all.csv
 ##   fpm_gmt_regression_coefs_pierce.csv
-## Outputs:
-##
+## Outputs: 
+##    beta_select.tex
+##    beta_summary.tex
 ## Execution Order:
 ##   Execute after: fpm_gmt_regression_park.R, fpm_gmt_regression_pierce.R, fpm_gmt_regression_FE_all.R
 ##   Execute before: NA
@@ -37,8 +41,13 @@ library(xtable)     # for LaTeX table output
 
 # betas from Park et al models (CLASSIC, JULES, SSiB4)
 beta_classic <- read_csv(here("output", "fpm_gmt_regression_coefs_classic.csv"))
-beta_jules <- read_csv(here("output", "fpm_gmt_regression_coefs_jules.csv"))
-beta_ssib4 <- read_csv(here("output", "fpm_gmt_regression_coefs_ssib4.csv"))
+beta_jules   <- read_csv(here("output", "fpm_gmt_regression_coefs_jules.csv"))
+beta_ssib4   <- read_csv(here("output", "fpm_gmt_regression_coefs_ssib4.csv"))
+
+# betas from Park et al climate-attributable regressions (CLASSIC, JULES, SSiB4)
+beta_classic_cli <- read_csv(here("output", "fpm_gmt_regression_coefs_classic_cli.csv"))
+beta_jules_cli   <- read_csv(here("output", "fpm_gmt_regression_coefs_jules_cli.csv"))
+beta_ssib4_cli   <- read_csv(here("output", "fpm_gmt_regression_coefs_ssib4_cli.csv"))
 
 head(beta_classic)
 head(beta_jules)
@@ -86,6 +95,36 @@ beta_comparison <- beta_fe |>
   ) |>
   mutate(across(where(is.numeric), \(x) round(x, 4)))                   # round all numeric to 4dp
 
+# one row per country; climate-attributable (cli) Park betas alongside FE and CESM benchmarks
+beta_comparison_cli <- beta_fe |>
+  select(country_code_iso3, country_name, estimate_beta_c, p.value_beta_c) |>
+  rename(beta_fe = estimate_beta_c, p_fe = p.value_beta_c) |>          # FE (all data)
+  left_join(
+    beta_pierce |>
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
+      rename(beta_cesm = estimate_beta_c, p_cesm = p.value_beta_c),    # Pierce et al
+    by = "country_code_iso3"
+  ) |>
+  left_join(
+    beta_classic_cli |>
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
+      rename(beta_classic_cli = estimate_beta_c, p_classic_cli = p.value_beta_c), # Park CLASSIC cli
+    by = "country_code_iso3"
+  ) |>
+  left_join(
+    beta_jules_cli |>
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
+      rename(beta_jules_cli = estimate_beta_c, p_jules_cli = p.value_beta_c),     # Park JULES cli
+    by = "country_code_iso3"
+  ) |>
+  left_join(
+    beta_ssib4_cli |>
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
+      rename(beta_ssib4_cli = estimate_beta_c, p_ssib4_cli = p.value_beta_c),     # Park SSiB4 cli
+    by = "country_code_iso3"
+  ) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4)))                   # round all numeric to 4dp
+
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Compare select betas ##############################
@@ -94,6 +133,7 @@ beta_comparison <- beta_fe |>
 # 11 countries of interest; order preserved via factor levels
 countries <- c("global","CHN", "IND", "USA", "IDN", "PAK", "NGA", "BRA", "BDG", "RUS", "MEX")
 
+# total fire PM betas (obsclim fire PM minus no-fire baseline)
 beta_comparison_select <- beta_comparison |>
   filter(country_code_iso3 %in% countries) |>
   select(-country_name) |>                                               # drop name; iso3 sufficient
@@ -102,11 +142,21 @@ beta_comparison_select <- beta_comparison |>
 
 beta_comparison_select
 
+# climate-attributable fire PM betas (obsclim minus counterclim)
+beta_comparison_select_cli <- beta_comparison_cli |>
+  filter(country_code_iso3 %in% countries) |>
+  select(-country_name) |>                                               # drop name; iso3 sufficient
+  mutate(country_code_iso3 = factor(country_code_iso3, levels = countries)) |>
+  arrange(country_code_iso3)
+
+beta_comparison_select
+beta_comparison_select_cli
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Summary statistics by model #############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# pivot to long (one row per country * model), then summarise across all countries
+# total fire PM betas (obsclim fire PM minus no-fire baseline)
 beta_summary <- beta_comparison |>
   select(country_code_iso3, starts_with("beta_"), starts_with("p_")) |>
   pivot_longer(
@@ -129,6 +179,31 @@ beta_summary <- beta_comparison |>
   arrange(model)
 
 beta_summary
+
+# climate-attributable fire PM betas (obsclim minus counterclim)
+beta_summary_cli <- beta_comparison_cli |>
+  select(country_code_iso3, starts_with("beta_"), starts_with("p_")) |>
+  pivot_longer(
+    cols = -country_code_iso3,
+    names_to  = c(".value", "model"),
+    names_pattern = "^(beta|p)_(.*)"     # splits e.g. "beta_classic_cli" --> .value="beta", model="classic_cli"
+  ) |>
+  group_by(model) |>
+  summarise(
+    pct_beta_pos  = round(mean(beta > 0,      na.rm = TRUE) * 100, 2),
+    pct_beta_sig5 = round(mean(p    < 0.05,   na.rm = TRUE) * 100, 2),
+    beta_min      = round(min(beta,            na.rm = TRUE),       2),
+    beta_p25      = round(quantile(beta, 0.25, na.rm = TRUE),       2),
+    beta_median   = round(median(beta,         na.rm = TRUE),       2),
+    beta_p75      = round(quantile(beta, 0.75, na.rm = TRUE),       2),
+    beta_max      = round(max(beta,            na.rm = TRUE),       2)
+  ) |>
+  mutate(model = factor(model,
+    levels = c("fe", "cesm", "classic_cli", "jules_cli", "ssib4_cli"))) |>
+  arrange(model)
+
+beta_summary
+beta_summary_cli
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ LaTeX Tables #############################################################
