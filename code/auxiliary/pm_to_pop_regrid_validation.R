@@ -1,6 +1,22 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ########### Re-grid PM data to pop data resolution ##########################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Goal: Confirm PM2.5 vs pop grid referencing, regrid PM2.5 (1.25°) to the 0.5° pop grid
+#       by nearest neighbor, validate the mapping rigorously, then merge PM + pop.
+#   1. Read annual PM2.5 and pop; from the NetCDFs,
+#      confirm PM2.5 lon/lat are cell EDGES and pop lon/lat are CENTERS.
+#   2. Shift PM2.5 edges to centers (+1.25/2 lon, +0.9424/2 lat); for each pop cell find
+#      the nearest PM center (which.min Euclidean) and copy that cell's pm_/fpm_ columns.
+#   3. Validate the regrid three ways: (a) synthetic-field one-shot test — encode a known
+#      f(lon,lat) into PM cells, regrid, recompute independently, require max|error| < 1e-10;
+#      (b) distance check — every pop center lies inside its matched PM cell (max < 1.5°,
+#      observed max ~0.78° = corner bound, mean ~0.42° = geometric expectation); (c) sampled
+#      plot — algorithm distance vs true min distance must lie on y = x.
+#   4. Left-join regridded PM2.5 onto pop on exact lon/lat; check all rows matched.
+# Inputs : output/annual_ave_pm25.csv ; output/pop_df.csv ;
+#          CESM_09x125_PM25_2000_Baseline.nc ; SSP1_for_RCP45 population NetCDF
+# Outputs: pm25_regridded_0.5deg.csv, pop_pm_combined.csv
+
 
 # Remove all objects from the environment
 rm(list = ls())
@@ -16,7 +32,6 @@ library(tidyverse)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Import #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-setwd("C:/Ford_BA_FPM25/")
 # Import annual average PM2.5 data and pop data (previously converted from NetCDF to dataframe)
 annual_ave <- read_csv(here("output", "annual_ave_pm25.csv"))
 pop <- read_csv(here("output", "pop_df.csv"))
