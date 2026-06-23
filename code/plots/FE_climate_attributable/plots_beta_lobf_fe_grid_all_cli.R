@@ -16,7 +16,7 @@
 ##
 ## Execution order:
 ##   files run before: fpm_gmt_regress_FE_grid_all_cli.R   --> writes fpm_gmt_regression_coefs_FE_grid_cli.csv
-##
+##   files run after: NA
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rm(list = ls())
@@ -111,7 +111,8 @@ print_beta_stats(reg_coefs_usa$estimate_beta_i, "CONUS")
 band_labels <- c("<0", "0-0.10", "0.10-0.25", "0.25-0.50", "0.50-1.00", ">1.00")
 
 band_colors <- c(
-  "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  # "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  "<0"        = "azure2",  # azure2    -- warming reduces fire PM2.5
   "0-0.10"    = "#FFE566",  # light yellow -- low positive response
   "0.10-0.25" = "#C8A000",  # dark yellow  -- moderate-low
   "0.25-0.50" = "#CC5500",  # dark orange  -- moderate-high

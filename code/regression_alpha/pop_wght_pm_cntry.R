@@ -1,9 +1,34 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## compute population weighted exposure by country ##
+## POPULATION-WEIGHTED FIRE PM2.5 EXPOSURE BY COUNTRY ##
+##
+## Goal: Aggregate grid-cell fire PM2.5 to country-level population-weighted per-capita
+##   exposure for Pierce, Park, and Zhao scenarios. Joins baseline death rates, appends
+##   a synthetic global row, and exports for use in country-level FE regressions.
+##
+## Inputs:
+##   output/pop_pm_country_death_final.csv         (grid-cell fPM with population and
+##                                                  death rates; Pierce, Park, Zhao cols)
+##   input/WB_crude_death_rate/API_SP.DYN.CDRT.IN_DS2_en_csv_v2_241.csv
+##                                                 (World Bank crude death rates; used
+##                                                  to assign global-row death_rate_base)
+##
+## Outputs:
+##   output/pop_wght_pm_cntry_final.csv            (one row per country + global; columns:
+##                                                  pop_bar_c, death_rate_base, base_death,
+##                                                  exposure_percap_{scenario} for all
+##                                                  Pierce, Park, and Zhao scenarios)
+##
+## Execution order:
+##   files run before: mortality/death_rate_processing.R   --> writes pop_pm_country_death_final.csv
+##   files run after:  FE/fpm_gmt_regression_FE_all.R
+##                     FE_climate_attributable/fpm_gmt_regression_FE_all_cli.R
+##                     FE_climate_attributable/fpm_gmt_regression_park_cli.R
+##                     regression_FE_stats_all.R
+##                     single_study/fpm_gmt_regression_pierce.R
+##                     single_study/fpm_gmt_regression_park.R
+##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
-# Remove all objects from the environment
 rm(list = ls())
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

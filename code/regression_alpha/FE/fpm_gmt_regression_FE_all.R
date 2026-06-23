@@ -25,6 +25,28 @@
 ##   - Zhao et al. projections: ~2095 under SSP2-4.5 and SSP5-8.5 — 2 observations per country.
 ##   Combined: up to 25 observations per country for the regression.
 ##
+## Inputs:
+##   output/pop_wght_pm_cntry_final.csv   (country-level per-capita fPM exposure; Pierce,
+##                                         Park, and Zhao columns)
+##   output/gmt_periods_pi.csv            (decadal mean GMT anomaly for Pierce periods ×
+##                                         scenarios, relative to 1850–1900 PI baseline)
+##   output/gmt_park_decades.csv          (GMT anomaly for each Park snapshot decade,
+##                                         relative to 1850–1900 PI baseline, sourced from OWID)
+##   output/gmt_zhao_mimi.csv             (GMT anomaly for Zhao ~2095 SSP245 and SSP585,
+##                                         sourced from MimiSSPs)
+##
+## Outputs:
+##   output/fpm_gmt_regression_coefs_FE_all.csv   (beta_c per country with SE, CI, p-value,
+##                                                  and gamma_beta_c; primary downstream input)
+##   output/reg_data_combined_fe_all.csv           (combined long-format regression input:
+##                                                  25 obs per country across all three sources)
+##
+## Execution order:
+##   files run before: pop_wght_pm_cntry.R      --> writes pop_wght_pm_cntry_final.csv
+##   files run after: regression_FE_stats_all.R --> reads both outputs above
+##                    alpha_GIVE_country_map.R   --> reads fpm_gmt_regression_coefs_FE_all.csv
+##                    beta_comparison_latex.R    --> reads fpm_gmt_regression_coefs_FE_all.csv
+##                    plots_beta_lobf_fe_all.R   --> re-runs this file
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 

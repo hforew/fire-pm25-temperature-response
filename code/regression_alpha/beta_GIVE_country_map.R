@@ -7,15 +7,17 @@
 # Input:
 #   - input/GIVE/GIVE_countries.csv
 #   - output/fpm_gmt_regression_coefs_pierce.csv     (pierce only)
-#   - output/fpm_gmt_regression_coefs_final.csv      (pierce + park + zhao)
 #   - output/fpm_gmt_regression_coefs_FE_all.csv     (FE all)
 #   - output/fpm_gmt_regression_coefs_FE_all_cli.csv (FE all, cli)
 # Output:
 #   - output/GIVE_betas/beta_country_meta_pierce.csv
-#   - output/GIVE_betas/alpha_country_meta_final.csv
 #   - output/GIVE_betas/beta_country_meta_fe_all.csv
 #   - output/GIVE_betas/beta_country_meta_fe_all_cli.csv
-# Execution Order: standalone
+# Execution order:
+#   files run before: single_study/fpm_gmt_regression_pierce.R   --> writes fpm_gmt_regression_coefs_pierce.csv
+#                     FE/fpm_gmt_regression_FE_all.R             --> writes fpm_gmt_regression_coefs_FE_all.csv
+#                     FE_climate_attributable/fpm_gmt_regression_FE_all_cli.R --> writes fpm_gmt_regression_coefs_FE_all_cli.csv
+#   files run after: NA
 
 rm(list = ls())
 
@@ -39,11 +41,6 @@ colnames(give_countries)
 beta_coeff_pierce <- read_csv(here("output", "fpm_gmt_regression_coefs_pierce.csv"))
 colnames(beta_coeff_pierce)
 head(beta_coeff_pierce)
-
-# regression w/ Pierce/Park/Zhao data without fixed effects (OBSOLETE alpha for slope coeff)
-alpha_coeff_final <- read_csv(here("output", "fpm_gmt_regression_coefs_final.csv"))
-colnames(alpha_coeff_final)
-head(alpha_coeff_final)
 
 # regression w/ Pierce/Park/Zhao data WITH fixed effects (beta for slope coeff)
 beta_coeff_fe_all <- read_csv(here("output", "fpm_gmt_regression_coefs_FE_all.csv"))
@@ -77,25 +74,6 @@ give_beta_pierce <- give_beta_pierce %>%
     starts_with("estimate_") | starts_with("std.error_") |
       starts_with("statistic_") | starts_with("p.value_"),
     ~ if_else(is.na(.x), global_row_pierce[[cur_column()]], .x)
-  ))
-
-# --- Final (Pierce, Park, and Zhao) --- OBSOLETE alpha for slope coeff ---
-give_alpha_final <- give_countries %>%
-  left_join(alpha_coeff_final, by = c("ISO3" = "country_code_iso3"))
-
-missing_alpha_final <- give_alpha_final %>%
-  filter(is.na(estimate_alpha_c2)) %>%
-  select(ISO3, country)
-
-print(missing_alpha_final)
-
-global_row_final <- alpha_coeff_final %>% filter(country_code_iso3 == "global")
-
-give_alpha_final <- give_alpha_final %>%
-  mutate(across(
-    starts_with("estimate_") | starts_with("std.error_") |
-      starts_with("statistic_") | starts_with("p.value_"),
-    ~ if_else(is.na(.x), global_row_final[[cur_column()]], .x)
   ))
 
 # --- FE All (Pierce, Park, and Zhao with fire-model fixed effects) ---
@@ -149,15 +127,6 @@ beta_country_meta_pierce <- give_beta_pierce %>%
 write_csv(
   beta_country_meta_pierce,
   here("output", "GIVE_betas", "beta_country_meta_pierce.csv")
-)
-
-# OBSOLETE alpha for slope coeff
-alpha_country_meta_final <- give_alpha_final %>%
-  select(ISO3, estimate_alpha_c2, std.error_alpha_c2)
-
-write_csv(
-  alpha_country_meta_final,
-  here("output", "GIVE_betas", "alpha_country_meta_final.csv")
 )
 
 beta_country_meta_fe_all <- give_beta_fe_all %>%

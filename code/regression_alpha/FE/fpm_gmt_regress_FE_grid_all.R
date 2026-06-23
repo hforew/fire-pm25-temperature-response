@@ -20,11 +20,23 @@
 ##   - Park et al.:  18 obs (3 fire models x 6 decades)
 ##   - Zhao et al.:   2 obs (SSP2-4.5 and SSP5-8.5 ~2095)
 ##
-## Output: one row per grid cell with beta_i, SE, p-value, lon, lat.
-##         Used for spatial mapping in a separate plotting script.
-##
 ## Note: response is raw fPM concentration (µg/m^3), not per-capita exposure.
 ##       Grid-cell betas are NOT aggregated to country level here.
+##
+## Inputs:
+##   output/pop_pm_country_death_final.csv   (grid-cell fPM; Pierce, Park, and Zhao cols)
+##   output/gmt_periods_pi.csv               (GMT anomaly for Pierce periods × scenarios)
+##   output/gmt_park_decades.csv             (GMT anomaly for each Park snapshot decade)
+##   output/gmt_zhao_mimi.csv                (GMT anomaly for Zhao ~2095 SSP245 and SSP585)
+##
+## Outputs:
+##   output/fpm_gmt_regression_coefs_FE_grid.csv   (beta_i per grid cell with SE, p-value,
+##                                                   lon, lat; used for spatial mapping)
+##
+## Execution order:
+##   files run before: death_rate_processing.R         --> writes pop_pm_country_death_final.csv
+##   files run after:  plots_beta_lobf_fe_grid_all.R   --> reads fpm_gmt_regression_coefs_FE_grid.csv
+##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rm(list = ls())

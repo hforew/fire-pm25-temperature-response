@@ -1,13 +1,28 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## PLOTS OF COUNTRY BETA COEFFICIENTS - ##
+##
+## Goal: Visualise country-level FE regression outputs from fpm_gmt_regression_FE_all.R.
+##   Produces: (1) histogram of beta_c distribution; (2) world choropleth map of
+##   beta_c; (3) individual country LOBF scatter plots; (4) 2x3 multi-country LOBF grid.
+##
+## Inputs:
+##   code/regression_alpha/FE/fpm_gmt_regression_FE_all.R   (sourced directly; provides
+##     reg_coefs, reg_data_combined, reg_results)
+##
+## Outputs:
+##   images/regression_alpha/alpha_FE_all/hist_beta_c_fe.png
+##   images/regression_alpha/alpha_FE_all/map_beta_c_fe.png
+##   images/regression_alpha/alpha_FE_all/multiplot_beta_c_wide.png
+##   images/regression_alpha/alpha_FE_all/lof_{iso}_fe.png   (one per country in countries_to_plot)
+##   images/regression_alpha/alpha_FE_all/lof_multi_fe.png
+##
+## Execution order:
+##   files run before: fpm_gmt_regression_FE_all.R   --> sourced directly; runs automatically
+##   files run after: NA (no downstream files dependent on this one)
+##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rm(list = ls())
-
-# Visualises country-level FE regression outputs from fpm_gmt_regression_FE_all.R.
-# Produces: (1) histogram of beta_c distribution; (2) world choropleth map of
-# beta_c; (3) individual country LOBF scatter plots; (4) 2x3
-# multi-country LOBF grid. All outputs saved to images/regression_alpha/alpha_FE_all/.
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Packages #####################################################
@@ -34,7 +49,7 @@ library(patchwork)
 #   reg_results       -- nested list with tidied FE coefficients (intercept +
 #                        model dummies) used to recover per-model fitted lines.
 
-source(here("code/regression_alpha", "fpm_gmt_regression_FE_all.R")) # regression file and load all objects
+source(here("code/regression_alpha/FE", "fpm_gmt_regression_FE_all.R")) # regression file and load all objects
 
 head(reg_coefs)
 str(reg_coefs)
@@ -159,7 +174,8 @@ print_beta_stats(reg_coefs$estimate_beta_c, "GLOBAL")
 band_labels <- c("<0", "0-0.10", "0.10-0.25", "0.25-0.50", "0.50-1.00", ">1.00")
 
 band_colors <- c(
-  "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  # "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  "<0"        = "azure2",  # azure2    -- warming reduces fire PM2.5
   "0-0.10"    = "#FFE566",  # light yellow -- low positive response
   "0.10-0.25" = "#C8A000",  # dark yellow  -- moderate-low
   "0.25-0.50" = "#CC5500",  # dark orange  -- moderate-high

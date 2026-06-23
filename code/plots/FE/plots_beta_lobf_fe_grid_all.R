@@ -1,11 +1,22 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## PLOTS OF GRID-CELL BETA COEFFICIENTS - FE regression (grid-level)
 ##
-## Two outputs:
-##   1. Histogram of beta_i across all ~65k grid cells
-##   2. World raster maps of beta_i (global and CONUS)
+## Goal: Visualise grid-cell beta_i estimates from fpm_gmt_regression_FE_grid_all.R.
+##   Produces: (1) histogram of beta_i across all ~65k grid cells;
+##   (2) world raster map of beta_i; (3) CONUS raster map of beta_i.
 ##
-## Coefficients read directly from fpm_gmt_regression_coefs_FE_grid.csv.
+## Inputs:
+##   output/fpm_gmt_regression_coefs_FE_grid.csv   (beta_i per grid cell with SE,
+##                                                   p-value, lon, lat)
+##
+## Outputs:
+##   images/regression_alpha/alpha_FE_grid_all/hist_beta_i_fe_grid.png
+##   images/regression_alpha/alpha_FE_grid_all/map_beta_i_fe_grid.png
+##   images/regression_alpha/alpha_FE_grid_all/map_beta_i_fe_grid_usa.png
+##
+## Execution order:
+##   files run before: fpm_gmt_regression_FE_grid_all.R   --> writes fpm_gmt_regression_coefs_FE_grid.csv
+##   files run after: NA
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 rm(list = ls())
@@ -100,7 +111,8 @@ print_beta_stats(reg_coefs_usa$estimate_beta_i, "CONUS")
 band_labels <- c("<0", "0-0.10", "0.10-0.25", "0.25-0.50", "0.50-1.00", ">1.00")
 
 band_colors <- c(
-  "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  # "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
+  "<0"        = "azure2",  # azure2    -- warming reduces fire PM2.5
   "0-0.10"    = "#FFE566",  # light yellow -- low positive response
   "0.10-0.25" = "#C8A000",  # dark yellow  -- moderate-low
   "0.25-0.50" = "#CC5500",  # dark orange  -- moderate-high
