@@ -11,6 +11,8 @@
 #      assemble them into a single self-contained HTML page.
 # Input  : output/pm25_park2024.csv
 # Output : images/fpm_cell_usa/pm_classic_global_park.html
+# Execution order:
+#  files run before: pm_regrid_park_2024.R
 
 
 rm(list = ls())

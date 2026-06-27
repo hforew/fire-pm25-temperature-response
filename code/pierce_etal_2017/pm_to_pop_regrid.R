@@ -12,6 +12,9 @@
 #      verify every pop row matched, and write both outputs.
 # Inputs : output/annual_ave_pm25.csv ; output/pop_df_rev.csv
 # Outputs: output/pm25_regridded_0.5deg.csv ; output/pop_pm_combined.csv
+# Execution order:
+#   files run before: NetCDF_extract_pm.R and NetCDF_extract_pop_final.R
+#   files run after: pop_regrid_park_2024.R and pm_regrid_park_2024.R ------> (Join Park data)
 
 
 # Remove all objects from the environment
