@@ -10,6 +10,9 @@
 #      sum US population over any cell touching the US boundary, and write the CSV.
 # Input  : input/Park_etal_2024/pop_grid_6515.mat
 # Output : output/pop_regrid_park_2024.csv
+# Execution order:
+#   files run before: pm_to_pop_regrid.R
+#   files run after: pm_regrid_park_2024.R, pop_regrid_zhao_2025.R, and pm_regrid_zhao_2025.R
 
 
 # Remove all objects from the environment

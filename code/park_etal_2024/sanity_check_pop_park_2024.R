@@ -10,6 +10,8 @@
 #      color-by-city Leaflet map with per-cell popups (centroid lon/lat + pop_2015).
 # Input  : output/pop_regrid_park_2024.csv
 # Target : park_2015_pop ; Cities: NYC, Denver, LA, Honolulu, Anchorage
+# Execution order:
+#  files run before: pop_regrid_park_2024.R
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -13,6 +13,8 @@
 #      st_intersects), and write the CSV.
 # Inputs : CLM Li 2018 SSP1 CMIP6 hdm 0.5° NetCDF ; landmask_area/gridcell_area_0.5deg.nc
 # Output : output/pop_df_rev.csv
+# Execution order:
+#   files run after: pm_to_pop_regrid.R
 
 
 rm(list = ls())

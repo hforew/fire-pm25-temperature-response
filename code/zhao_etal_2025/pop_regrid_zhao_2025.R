@@ -16,7 +16,9 @@
 #      write the CSV.
 # Input  : input/Zhao_etal_2025/gridded_output_EM/pop_0.1x0.1_2010.npz
 # Output : output/pop_regrid_zhao_20252010.csv
-
+# Execution order:
+#   files run before: pop_regrid_park_2024.R, and pm_regrid_park_2024.R
+#   files run after: pm_regrid_zhao_2025.R / country_map_pop_pm_final.R ------> (Map gridded data to country codes)
 
 rm(list = ls())
 

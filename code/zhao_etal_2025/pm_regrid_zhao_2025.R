@@ -24,6 +24,10 @@
 #          pop_regrid_zhao_20252010.csv
 # Output : output/pop_pm_combined_final.csv
 # Adds   : pm_2095_SSP245_Zhao, pm_2095_SSP585_Zhao, fpm_2095_SSP245_Zhao, fpm_2095_SSP585_Zhao
+# Execution order:
+#   files run before: pop_regrid_park_2024.R, pm_regrid_park_2024.R, and pop_regrid_zhao_2025.R
+#   files run after: country_map_pop_pm_final.R ------> (Map gridded data to country codes)
+
 
 rm(list = ls())
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

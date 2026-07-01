@@ -7,6 +7,7 @@
 # Inputs : Decade-mean surface PM2.5 NetCDF files for 6 periods
 #          (1965, 1975, 1985, 1995, 2005, 2015) under 4 scenarios:
 #          withoutfire (no-fire baseline), classic, jules, ssib4 (fire models).
+# Output : pm25_park2024.csv
 #
 # Steps  : (1) Read NetCDFs, shift lon to [-180,180], regrid to 0.5° x 0.5°.
 #          (2) Compute fPM = PM2.5(models) - PM2.5(withoutfire) for each model.
@@ -14,6 +15,10 @@
 #          (4) Merge with population data and the master pop_pm dataset.
 #          (5) Validate against authors' results1206.mat; render CONUS sanity-
 #              check maps; diagnose the native 4° x 5° simulation resolution.
+# Execution order:
+#   files run before: pm_to_pop_regrid.R and pop_regrid_park_2024.R
+#   files run after: pop_regrid_zhao_2025.R and pm_regrid_zhao_2025.R
+
 
 # Remove all objects from the environment
 
