@@ -408,14 +408,18 @@ pm25_wide <- pm25_all %>%
 
 # Fire PM = Model PM - Without Fire PM
 # Climate-attributable fire PM = factual - counterfactual
+# Counterfactual fire PM = counterfactual model PM - without fire PM
 pm25_all <- pm25_all %>%
   mutate(
-    classic_fpm     = pm25_classic - pm25_withoutfire,
-    jules_fpm       = pm25_jules   - pm25_withoutfire,
-    ssib4_fpm       = pm25_ssib4   - pm25_withoutfire,
-    classic_fpm_cli = pm25_classic - pm25_classic_counter,
-    jules_fpm_cli   = pm25_jules   - pm25_jules_counter,
-    ssib4_fpm_cli   = pm25_ssib4   - pm25_ssib4_counter
+    classic_fpm         = pm25_classic         - pm25_withoutfire,
+    jules_fpm           = pm25_jules           - pm25_withoutfire,
+    ssib4_fpm           = pm25_ssib4           - pm25_withoutfire,
+    classic_fpm_cli     = pm25_classic         - pm25_classic_counter,
+    jules_fpm_cli       = pm25_jules           - pm25_jules_counter,
+    ssib4_fpm_cli       = pm25_ssib4           - pm25_ssib4_counter,
+    classic_fpm_counter = pm25_classic_counter - pm25_withoutfire,
+    jules_fpm_counter   = pm25_jules_counter   - pm25_withoutfire,
+    ssib4_fpm_counter   = pm25_ssib4_counter   - pm25_withoutfire
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -427,11 +431,13 @@ pm25_all_complete <- pm25_all
 
 # Dataset 2: Dataset with only fire PM columns (removed all pm25_* columns)
 # Columns: year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm,
-#          classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli
+#          classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli,
+#          classic_fpm_counter, jules_fpm_counter, ssib4_fpm_counter
 pm25_fpm_only <- pm25_all %>%
   select(year, lon, lat,
          classic_fpm, jules_fpm, ssib4_fpm,
-         classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli)
+         classic_fpm_cli, jules_fpm_cli, ssib4_fpm_cli,
+         classic_fpm_counter, jules_fpm_counter, ssib4_fpm_counter)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Convert Fire PM to Wide Format by Year ########################
@@ -439,9 +445,10 @@ pm25_fpm_only <- pm25_all %>%
 
 # Convert pm25_fpm_only from long to wide format
 # Each model x year combination becomes a separate column
-# fpm:     classic_1965_fpm, jules_1965_fpm, ...
-# fpm_cli: classic_1965_fpm_cli, jules_1965_fpm_cli, ...
-# Two separate pivots to avoid gsub collision between _fpm and _fpm_cli
+# fpm:         classic_1965_fpm, jules_1965_fpm, ...
+# fpm_cli:     classic_1965_fpm_cli, jules_1965_fpm_cli, ...
+# fpm_counter: classic_1965_fpm_counter, jules_1965_fpm_counter, ...
+# Three separate pivots to avoid gsub collision between _fpm, _fpm_cli, and _fpm_counter
 
 fpm_wide <- pm25_fpm_only %>%
   select(year, lon, lat, classic_fpm, jules_fpm, ssib4_fpm) %>%
@@ -465,8 +472,20 @@ fpm_cli_wide <- pm25_fpm_only %>%
   select(-model, -year) %>%
   pivot_wider(names_from = model_year, values_from = fpm_cli)
 
+fpm_counter_wide <- pm25_fpm_only %>%
+  select(year, lon, lat, classic_fpm_counter, jules_fpm_counter, ssib4_fpm_counter) %>%
+  pivot_longer(
+    cols = c(classic_fpm_counter, jules_fpm_counter, ssib4_fpm_counter),
+    names_to = "model",
+    values_to = "fpm_counter"
+  ) %>%
+  mutate(model_year = paste0(gsub("_fpm_counter", "", model), "_", year, "_fpm_counter")) %>%
+  select(-model, -year) %>%
+  pivot_wider(names_from = model_year, values_from = fpm_counter)
+
 pm25_fpm_wide <- fpm_wide %>%
-  left_join(fpm_cli_wide, by = c("lon", "lat")) %>%
+  left_join(fpm_cli_wide,     by = c("lon", "lat")) %>%
+  left_join(fpm_counter_wide, by = c("lon", "lat")) %>%
   rename_with(
     ~ paste0("park_", .x),
     .cols = -c(lon, lat)
@@ -490,6 +509,7 @@ combined_data <- pop_pm_combined %>%
 dim(combined_data)  # Check dimensions
 head(combined_data)  # View first few rows
 summary(combined_data)  # Summary statistics
+colnames(combined_data)
 
 # Check for missing values after merge (indicates non-matching rows)
 sum(is.na(combined_data))  # Total NA count

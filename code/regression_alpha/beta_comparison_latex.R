@@ -54,8 +54,10 @@ head(beta_jules)
 head(beta_ssib4)
 
 # beta from FE regression (Park/Pierce/Zhao data)
-beta_fe <- read_csv(here("output", "fpm_gmt_regression_coefs_FE_all.csv"))
+beta_fe     <- read_csv(here("output", "fpm_gmt_regression_coefs_FE_all.csv"))
+beta_fe_cli <- read_csv(here("output", "fpm_gmt_regression_coefs_FE_all_cli.csv"))
 head(beta_fe)
+head(beta_fe_cli)
 
 # beta from Pirce et al
 beta_pierce <- read_csv(here("output", "fpm_gmt_regression_coefs_pierce.csv"))
@@ -65,62 +67,62 @@ head(beta_pierce)
 ############ Join and Compare betas ##############################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# one row per country; beta_* = estimate, p_* = p-value for each spec
+# one row per country; beta_* = estimate, p_* = p-value, se_* = std error for each spec
 beta_comparison <- beta_fe |>
-  select(country_code_iso3, country_name, estimate_beta_c, p.value_beta_c) |>
-  rename(beta_fe = estimate_beta_c, p_fe = p.value_beta_c) |>          # FE (all data)
+  select(country_code_iso3, country_name, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+  rename(beta_fe = estimate_beta_c, p_fe = p.value_beta_c, se_fe = std.error_beta_c) |>          # FE (all data)
   left_join(
     beta_pierce |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_cesm = estimate_beta_c, p_cesm = p.value_beta_c), # Pierce et al
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_cesm = estimate_beta_c, p_cesm = p.value_beta_c, se_cesm = std.error_beta_c), # Pierce et al
     by = "country_code_iso3"
   ) |>
   left_join(
     beta_classic |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_classic = estimate_beta_c, p_classic = p.value_beta_c), # Park CLASSIC
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_classic = estimate_beta_c, p_classic = p.value_beta_c, se_classic = std.error_beta_c), # Park CLASSIC
     by = "country_code_iso3"
   ) |>
   left_join(
     beta_jules |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_jules = estimate_beta_c, p_jules = p.value_beta_c),   # Park JULES
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_jules = estimate_beta_c, p_jules = p.value_beta_c, se_jules = std.error_beta_c),   # Park JULES
     by = "country_code_iso3"
   ) |>
   left_join(
     beta_ssib4 |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_ssib4 = estimate_beta_c, p_ssib4 = p.value_beta_c),   # Park SSiB4
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_ssib4 = estimate_beta_c, p_ssib4 = p.value_beta_c, se_ssib4 = std.error_beta_c),   # Park SSiB4
     by = "country_code_iso3"
   ) |>
   mutate(across(where(is.numeric), \(x) round(x, 4)))                   # round all numeric to 4dp
 
 # one row per country; climate-attributable (cli) Park betas alongside FE and CESM benchmarks
-beta_comparison_cli <- beta_fe |>
-  select(country_code_iso3, country_name, estimate_beta_c, p.value_beta_c) |>
-  rename(beta_fe = estimate_beta_c, p_fe = p.value_beta_c) |>          # FE (all data)
+beta_comparison_cli <- beta_fe_cli |>
+  select(country_code_iso3, country_name, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+  rename(beta_fe = estimate_beta_c, p_fe = p.value_beta_c, se_fe = std.error_beta_c) |>          # FE cli (all data)
   left_join(
     beta_pierce |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_cesm = estimate_beta_c, p_cesm = p.value_beta_c),    # Pierce et al
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_cesm = estimate_beta_c, p_cesm = p.value_beta_c, se_cesm = std.error_beta_c),    # Pierce et al
     by = "country_code_iso3"
   ) |>
   left_join(
     beta_classic_cli |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_classic_cli = estimate_beta_c, p_classic_cli = p.value_beta_c), # Park CLASSIC cli
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_classic_cli = estimate_beta_c, p_classic_cli = p.value_beta_c, se_classic_cli = std.error_beta_c), # Park CLASSIC cli
     by = "country_code_iso3"
   ) |>
   left_join(
     beta_jules_cli |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_jules_cli = estimate_beta_c, p_jules_cli = p.value_beta_c),     # Park JULES cli
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_jules_cli = estimate_beta_c, p_jules_cli = p.value_beta_c, se_jules_cli = std.error_beta_c),     # Park JULES cli
     by = "country_code_iso3"
   ) |>
   left_join(
     beta_ssib4_cli |>
-      select(country_code_iso3, estimate_beta_c, p.value_beta_c) |>
-      rename(beta_ssib4_cli = estimate_beta_c, p_ssib4_cli = p.value_beta_c),     # Park SSiB4 cli
+      select(country_code_iso3, estimate_beta_c, p.value_beta_c, std.error_beta_c) |>
+      rename(beta_ssib4_cli = estimate_beta_c, p_ssib4_cli = p.value_beta_c, se_ssib4_cli = std.error_beta_c),     # Park SSiB4 cli
     by = "country_code_iso3"
   ) |>
   mutate(across(where(is.numeric), \(x) round(x, 4)))                   # round all numeric to 4dp
@@ -136,7 +138,7 @@ countries <- c("global","CHN", "IND", "USA", "IDN", "PAK", "NGA", "BRA", "BDG", 
 # total fire PM betas (obsclim fire PM minus no-fire baseline)
 beta_comparison_select <- beta_comparison |>
   filter(country_code_iso3 %in% countries) |>
-  select(-country_name) |>                                               # drop name; iso3 sufficient
+  select(-country_name, -starts_with("p_")) |>                          # drop name and p-values; use SE
   mutate(country_code_iso3 = factor(country_code_iso3, levels = countries)) |> # convert to factor so arrange() sorts by countries order, not alphabetically
   arrange(country_code_iso3)
 
@@ -145,7 +147,7 @@ beta_comparison_select
 # climate-attributable fire PM betas (obsclim minus counterclim)
 beta_comparison_select_cli <- beta_comparison_cli |>
   filter(country_code_iso3 %in% countries) |>
-  select(-country_name) |>                                               # drop name; iso3 sufficient
+  select(-country_name, -starts_with("p_")) |>                          # drop name and p-values; use SE
   mutate(country_code_iso3 = factor(country_code_iso3, levels = countries)) |>
   arrange(country_code_iso3)
 
@@ -174,8 +176,15 @@ beta_summary <- beta_comparison |>
     beta_p75      = round(quantile(beta, 0.75, na.rm = TRUE),       2),
     beta_max      = round(max(beta,            na.rm = TRUE),       2)
   ) |>
+  mutate(model = recode(model,
+    fe      = "All models",
+    cesm    = "CESM",
+    classic = "CLASSIC",
+    jules   = "JULES",
+    ssib4   = "SSiB4"
+  )) |>
   mutate(model = factor(model,
-    levels = c("fe", "cesm", "classic", "jules", "ssib4"))) |>
+    levels = c("All models", "CESM", "CLASSIC", "JULES", "SSiB4"))) |>
   arrange(model)
 
 beta_summary
@@ -198,8 +207,15 @@ beta_summary_cli <- beta_comparison_cli |>
     beta_p75      = round(quantile(beta, 0.75, na.rm = TRUE),       2),
     beta_max      = round(max(beta,            na.rm = TRUE),       2)
   ) |>
+  mutate(model = recode(model,
+    fe          = "All models",
+    cesm        = "CESM",
+    classic_cli = "CLASSIC",
+    jules_cli   = "JULES",
+    ssib4_cli   = "SSiB4"
+  )) |>
   mutate(model = factor(model,
-    levels = c("fe", "cesm", "classic_cli", "jules_cli", "ssib4_cli"))) |>
+    levels = c("All models", "CESM", "CLASSIC", "JULES", "SSiB4"))) |>
   arrange(model)
 
 beta_summary
@@ -209,23 +225,14 @@ beta_summary_cli
 ############ LaTeX Tables #############################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-latex_beta_summary <- beta_summary |>
-  mutate(model = recode(as.character(model),  # convert factor to display labels
-    fe      = "FE",
-    cesm    = "CESM",
-    classic = "CLASSIC",
-    jules   = "JULES",
-    ssib4   = "SSiB4"
-  ))
-
 # LaTeX math column headers; rendered correctly via sanitize.colnames.function = identity
-colnames(latex_beta_summary) <- c("Model",
+colnames(beta_summary) <- c("Model",
   "\\% $\\beta_c > 0$", "\\% $p < .05$",
   "Min", "P25", "Median", "P75", "Max")
 
 print(
   xtable(
-    latex_beta_summary,
+    beta_summary,
     caption = paste0("Summary statistics of country-level $\\beta_c$ estimates",
                      " across regression specifications."),
     label   = "tab:beta_summary",                         # \ref{tab:beta_summary} in LaTeX
@@ -256,8 +263,8 @@ header_row <- paste0(
   "\\multicolumn{2}{c}{SSiB4} \\\\\n",
   "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}\\cmidrule(lr){6-7}",
   "\\cmidrule(lr){8-9}\\cmidrule(lr){10-11}\n",
-  "Country & $\\beta$ & $p$ & $\\beta$ & $p$ & $\\beta$ & $p$ & ",
-  "$\\beta$ & $p$ & $\\beta$ & $p$ \\\\\n",
+  "Country & $\\beta$ & SE & $\\beta$ & SE & $\\beta$ & SE & ",
+  "$\\beta$ & SE & $\\beta$ & SE \\\\\n",
   "\\midrule\n"
 )
 

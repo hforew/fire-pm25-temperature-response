@@ -3,7 +3,7 @@
 ##
 ## Goal: Aggregate grid-cell fire PM2.5 to country-level population-weighted per-capita
 ##   exposure for Pierce, Park, and Zhao scenarios. Joins baseline death rates, appends
-##   a synthetic global row, and exports for use in country-level FE regressions.
+##   a global row, and exports for use in country-level FE regressions.
 ##
 ## Inputs:
 ##   output/pop_pm_country_death_final.csv         (grid-cell fPM with population and
