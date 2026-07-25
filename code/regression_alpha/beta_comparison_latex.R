@@ -63,6 +63,10 @@ head(beta_fe_cli)
 beta_pierce <- read_csv(here("output", "fpm_gmt_regression_coefs_pierce.csv"))
 head(beta_pierce)
 
+# beta from FE regression with factual + counterfactual Park data
+beta_fe_fact_cfact <- read_csv(here("output", "betas_fe_fact_cfact", "fpm_gmt_regression_coefs_FE_all_fact_cfact.csv"))
+head(beta_fe_fact_cfact)
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Join and Compare betas ##############################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -128,6 +132,10 @@ beta_comparison_cli <- beta_fe_cli |>
   mutate(across(where(is.numeric), \(x) round(x, 4)))                   # round all numeric to 4dp
 
 
+# fact/cfact FE beta only: three-column reference table used downstream
+beta_comparison_fact_cfact <- beta_fe_fact_cfact |>
+  select(country_code_iso3, beta_fe = estimate_beta_c, se_fe = std.error_beta_c)
+
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Compare select betas ##############################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -151,8 +159,16 @@ beta_comparison_select_cli <- beta_comparison_cli |>
   mutate(country_code_iso3 = factor(country_code_iso3, levels = countries)) |>
   arrange(country_code_iso3)
 
+
+# fe with factual and counterfactual park data
+beta_comparison_select_fact_cfact <- beta_comparison_fact_cfact |>
+  filter(country_code_iso3 %in% countries) |>
+  mutate(country_code_iso3 = factor(country_code_iso3, levels = countries)) |>
+  arrange(country_code_iso3)
+
 beta_comparison_select
 beta_comparison_select_cli
+beta_comparison_select_fact_cfact
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Summary statistics by model #############################################
@@ -220,6 +236,23 @@ beta_summary_cli <- beta_comparison_cli |>
 
 beta_summary
 beta_summary_cli
+
+# fact/cfact FE only: "All models" row matching beta_summary structure
+beta_summary_fact_cfact <- beta_fe_fact_cfact |>
+  summarise(
+    model         = "All models",
+    pct_beta_pos  = round(mean(estimate_beta_c > 0,    na.rm = TRUE) * 100, 2),
+    pct_beta_sig5 = round(mean(p.value_beta_c  < 0.05, na.rm = TRUE) * 100, 2),
+    beta_min      = round(min(estimate_beta_c,             na.rm = TRUE), 2),
+    beta_p25      = round(quantile(estimate_beta_c, 0.25,  na.rm = TRUE), 2),
+    beta_median   = round(median(estimate_beta_c,          na.rm = TRUE), 2),
+    beta_p75      = round(quantile(estimate_beta_c, 0.75,  na.rm = TRUE), 2),
+    beta_max      = round(max(estimate_beta_c,             na.rm = TRUE), 2)
+  )
+
+beta_summary
+beta_summary_cli
+beta_summary_fact_cfact
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ LaTeX Tables #############################################################
