@@ -6,15 +6,15 @@
 ##   beta_c; (3) individual country LOBF scatter plots; (4) 2x3 multi-country LOBF grid.
 ##
 ## Inputs:
-##   code/regression_alpha/FE/fpm_gmt_regression_FE_all.R   (sourced directly; provides
+##   code/regression_beta/FE/fpm_gmt_regression_FE_all.R   (sourced directly; provides
 ##     reg_coefs, reg_data_combined, reg_results)
 ##
 ## Outputs:
-##   images/regression_alpha/alpha_FE_all/hist_beta_c_fe.png
-##   images/regression_alpha/alpha_FE_all/map_beta_c_fe.png
-##   images/regression_alpha/alpha_FE_all/multiplot_beta_c_wide.png
-##   images/regression_alpha/alpha_FE_all/lof_{iso}_fe.png   (one per country in countries_to_plot)
-##   images/regression_alpha/alpha_FE_all/lof_multi_fe.png
+##   images/regression_beta/beta_FE_all/hist_beta_c_fe.png
+##   images/regression_beta/beta_FE_all/map_beta_c_fe.png
+##   images/regression_beta/beta_FE_all/fig3_multiplot_beta_c_wide.png
+##   images/regression_beta/beta_FE_all/country/lof_{iso}_fe.png   (one per country in countries_to_plot)
+##   images/regression_beta/beta_FE_all/fig5_lof_multi_fe.png
 ##
 ## Execution order:
 ##   files run before: fpm_gmt_regression_FE_all.R   --> sourced directly; runs automatically
@@ -49,7 +49,7 @@ library(patchwork)
 #   reg_results       -- nested list with tidied FE coefficients (intercept +
 #                        model dummies) used to recover per-model fitted lines.
 
-source(here("code/regression_alpha/FE", "fpm_gmt_regression_FE_all.R")) # regression file and load all objects
+source(here("code/regression_beta/FE", "fpm_gmt_regression_FE_all.R")) # regression file and load all objects
 
 head(reg_coefs)
 str(reg_coefs)
@@ -108,7 +108,7 @@ hist_beta_c <- hist_base +
   theme(plot.subtitle = element_markdown(size = 10))
 
 hist_beta_c
-ggsave(here("images/regression_alpha/alpha_FE_all", "hist_beta_c_fe.png"), plot = hist_beta_c, width = 8, height = 5, dpi = 300)
+ggsave(here("images/regression_beta/beta_FE_all", "hist_beta_c_fe.png"), plot = hist_beta_c, width = 8, height = 5, dpi = 300)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -239,10 +239,10 @@ map_beta_c <- world_beta %>%
 
 
 map_beta_c
-ggsave(here("images/regression_alpha/alpha_FE_all", "map_beta_c_fe.png"),
+ggsave(here("images/regression_beta/beta_FE_all", "map_beta_c_fe.png"),
        map_beta_c, width = 6.5, height = 3.5, dpi = 300)
 
-print("Beta map saved to images/regression_alpha/alpha_FE_all/")
+print("Beta map saved to images/regression_beta/beta_FE_all/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -275,10 +275,10 @@ multiplot_wide <- (hist_notitle | map_notitle) +
   shared_annotation
 
 print(multiplot_wide)
-ggsave(here("images/regression_alpha/alpha_FE_all", "multiplot_beta_c_wide.png"),
+ggsave(here("images/regression_beta/beta_FE_all", "fig3_multiplot_beta_c_wide.png"),
        multiplot_wide, width = 8.5, height = 3.5, units = "in", dpi = 300)
 
-print("Multiplot saved to images/regression_alpha/alpha_FE_all/")
+print("Multiplot saved to images/regression_beta/beta_FE_all/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -434,12 +434,12 @@ for (iso in countries_to_plot) {
           plot.subtitle     = element_text(size = 12))
 
   print(p)
-  ggsave(here("images/regression_alpha/alpha_FE_all", paste0("lof_", tolower(iso), "_fe.png")),
+  ggsave(here("images/regression_beta/beta_FE_all/country", paste0("lof_", tolower(iso), "_fe.png")),
          p, width = 7, height = 5, dpi = 300)
 }
 
 
-print("Line of best fit plots saved to images/regression_alpha/alpha_FE_all/")
+print("Line of best fit plots saved to images/regression_beta/beta_FE_all/country/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -545,10 +545,10 @@ build_lobf_multi <- function(countries) {
 p_multi <- build_lobf_multi(multiplot_countries)
 
 print(p_multi)
-ggsave(here("images/regression_alpha/alpha_FE_all", "lof_multi_fe.png"),
+ggsave(here("images/regression_beta/beta_FE_all", "fig5_lof_multi_fe.png"),
        p_multi, width = 8.5, height = 5, dpi = 300)
 
-print("Multi-country grid saved to images/regression_alpha/alpha_FE_all/")
+print("Multi-country grid saved to images/regression_beta/beta_FE_all/")
 
 ############ THE END  ############################
 

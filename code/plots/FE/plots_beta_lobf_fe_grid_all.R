@@ -10,9 +10,9 @@
 ##                                                   p-value, lon, lat)
 ##
 ## Outputs:
-##   images/regression_alpha/alpha_FE_grid_all/hist_beta_i_fe_grid.png
-##   images/regression_alpha/alpha_FE_grid_all/map_beta_i_fe_grid.png
-##   images/regression_alpha/alpha_FE_grid_all/map_beta_i_fe_grid_usa.png
+##   images/regression_beta/beta_FE_grid_all/hist_beta_i_fe_grid.png
+##   images/regression_beta/beta_FE_grid_all/fig1_map_beta_i_fe_grid.png
+##   images/regression_beta/beta_FE_grid_all/fig6_map_beta_i_fe_grid_usa.png
 ##
 ## Execution order:
 ##   files run before: fpm_gmt_regression_FE_grid_all.R   --> writes fpm_gmt_regression_coefs_FE_grid.csv
@@ -56,7 +56,7 @@ hist_beta_i <- ggplot(reg_coefs, aes(x = estimate_beta_i)) +
   theme_minimal()
 
 hist_beta_i
-ggsave(here("images/regression_alpha/alpha_FE_grid_all", "hist_beta_i_fe_grid.png"),
+ggsave(here("images/regression_beta/beta_FE_grid_all", "hist_beta_i_fe_grid.png"),
        plot = hist_beta_i, width = 8, height = 5, dpi = 300)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -170,7 +170,7 @@ map_beta_i <- reg_coefs %>%
         plot.title       = element_text(size = 9.5))
 
 map_beta_i
-ggsave(here("images/regression_alpha/alpha_FE_grid_all", "map_beta_i_fe_grid.png"),
+ggsave(here("images/regression_beta/beta_FE_grid_all", "fig1_map_beta_i_fe_grid.png"),
        map_beta_i, width = 6.5, height = 3.5, dpi = 300)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -210,9 +210,9 @@ map_beta_i_usa <- reg_coefs_usa %>%
         plot.title       = element_text(size = 9.5))
 
 map_beta_i_usa
-ggsave(here("images/regression_alpha/alpha_FE_grid_all", "map_beta_i_fe_grid_usa.png"),
+ggsave(here("images/regression_beta/beta_FE_grid_all", "fig6_map_beta_i_fe_grid_usa.png"),
        map_beta_i_usa, width = 6.5, height = 3.5, dpi = 300)
 
-print("Beta grid maps saved to images/regression_alpha/alpha_FE_grid_all/")
+print("Beta grid maps saved to images/regression_beta/beta_FE_grid_all/")
 
 ### THE END ##########
