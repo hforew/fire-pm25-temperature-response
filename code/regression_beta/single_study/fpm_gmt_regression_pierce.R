@@ -1,18 +1,34 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## FPM–GMT RELATIONSHIP: Estimate beta^(c) (per-capita fire PM2.5 change per 1°C GMT)
+## FPM–GMT RELATIONSHIP: Estimate beta_c (per-capita fire PM2.5 change per 1°C GMT)
 ##                        Pierce et al. projections only
 ##
 ## Goal: For each country c, estimate the linear regression:
-##   PM_bar^(c)_ps = alpha^(c) + beta^(c) * T_ps + epsilon^(c)_ps
+##   PM_bar_cts = alpha_c + beta_c * T_ts + epsilon_cts
 ##
-## where T_ps is GMT change in period p under scenario s (°C relative to 1850–1900),
-## and beta^(c) is the key damage function parameter: the change in per-capita fire
-## PM2.5 exposure (µg/m³/person/year) per 1°C increase in GMT.
+## where T_ts is GMT change in period t under scenario s (°C relative to 1850–1900;
+## regressor, code variable: T_ps), and beta_c is the key damage function parameter:
+## the change in per-capita fire PM2.5 exposure (µg/m³/person/year) per 1°C GMT increase.
+## No fire-model fixed effect here (unlike fpm_gmt_regression_FE_all.R) — Pierce is a
+## single source, so PM_bar_cts and epsilon_cts carry no model subscript.
 ##
 ## Data: Pierce et al. projections only:
 ##   - baseline (~2001–2010), 2041–2050, and 2091–2100 under RCP4.5 and RCP8.5
 ##   - 5 (period × scenario) observations per country.
 ##
+## Inputs:
+##   output/pop_wght_pm_cntry_final.csv   (country-level per-capita fPM exposure; Pierce columns)
+##   output/gmt/gmt_pierce_RCPs.csv       (decadal mean GMT anomaly for Pierce periods x
+##                                         scenarios, relative to 1850–1900 PI baseline)
+##
+## Outputs:
+##   output/betas_single_study/fpm_gmt_regression_coefs_pierce.csv  (alpha_c, beta_c per
+##                                         country with SE, CI, p-value, gamma_beta_c)
+##
+## Execution order:
+##   files run before: pop_wght_pm_cntry.R --> writes pop_wght_pm_cntry_final.csv
+##                     temp_chg.R          --> writes gmt_pierce_RCPs.csv
+##   files run after: beta_comparison_latex.R --> reads fpm_gmt_regression_coefs_pierce.csv
+##                    beta_GIVE_country_map.R  --> reads fpm_gmt_regression_coefs_pierce.csv
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -50,7 +66,7 @@ pop_wght <- pop_wght %>%
 # for each period × scenario combination.
 # Rows: "2006-2010" (baseline), "2041-2050", "2091-2100"
 # Columns: mean_gmt_45 (RCP4.5), mean_gmt_85 (RCP8.5)
-gmt_chg <- read_csv(here("output", "gmt_pierce_RCPs.csv"))
+gmt_chg <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -125,15 +141,15 @@ print(reg_data_long %>% count(country_name) %>% summary())
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Run country-level linear regression ########################################
 ##
-## Model: PM_bar^(c)_ps = alpha^(c) + beta^(c) * T_ps + epsilon^(c)_ps
+## Model: PM_bar_cts = alpha_c + beta_c * T_ts + epsilon_cts
 ##
-## For each country c, we regress per-capita fire PM2.5 exposure on GMT (T_ps)
+## For each country c, we regress per-capita fire PM2.5 exposure on GMT (T_ts)
 ## across the 5 (period × scenario) data points.
 ##
-## beta^(c) (slope) = change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase.
-## alpha^(c) (intercept) = OLS-fitted y-intercept; a mathematical artefact of the line fit,
+## beta_c (slope) = change in per-capita fire PM2.5 (µg/m³/yr) per 1°C GMT increase.
+## alpha_c (intercept) = OLS-fitted y-intercept; a mathematical artefact of the line fit,
 ##   not a meaningful estimate of exposure at pre-industrial temperatures. All observed
-##   T_ps values are ~1°C or higher, so T=0 lies outside the data range.
+##   T_ts values are ~1°C or higher, so T=0 lies outside the data range.
 ##
 ## Countries with fewer than 2 valid observations are dropped (cannot fit a line).
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -161,8 +177,8 @@ print(usa_data %>% select(period_scenario, T_ps, exposure_percap))
 #   - The second argument, data =, specifies the data frame containing those variables.
 #   - lm() returns an object of class "lm" containing fitted coefficients, residuals,
 #     the model matrix, and metadata needed for summary(), predict(), and other methods.
-#   - With one predictor, the model is: y = alpha^(c) + beta^(c) * x + epsilon,
-#     where alpha^(c) is the intercept and beta^(c) is the slope.
+#   - With one predictor, the model is: y = alpha_c + beta_c * x + epsilon,
+#     where alpha_c is the intercept and beta_c is the slope.
 #   - OLS minimises the sum of squared residuals to find beta_0 and beta_1.
 usa_model <- lm(exposure_percap ~ T_ps, data = usa_data)
 
@@ -177,14 +193,14 @@ cat("\n--- USA lm() summary ---\n")
 print(summary(usa_model))
 
 # Extract and label the two key coefficients explicitly for readability.
-# Note: alpha^(c) is the OLS y-intercept — the value the fitted line takes at T_ps = 0.
-# All observed T_ps values are ~1°C or above, so this is an extrapolation outside the
+# Note: alpha_c is the OLS y-intercept — the value the fitted line takes at T_ts = 0.
+# All observed T_ts values are ~1°C or above, so this is an extrapolation outside the
 # data range and should not be interpreted as a meaningful exposure estimate.
-usa_alpha_c <- coef(usa_model)[["(Intercept)"]]  # alpha^(c): OLS y-intercept (extrapolated)
-usa_beta_c  <- coef(usa_model)[["T_ps"]]          # beta^(c): slope (µg/m³/yr per 1°C GMT)
+usa_alpha_c <- coef(usa_model)[["(Intercept)"]]  # alpha_c: OLS y-intercept (extrapolated)
+usa_beta_c  <- coef(usa_model)[["T_ps"]]          # beta_c: slope (µg/m³/yr per 1°C GMT)
 
-cat("\nUSA alpha^(c) (OLS intercept, extrapolated outside data range):", round(usa_alpha_c, 6), "µg/m³/yr\n")
-cat("USA beta^(c) (slope, fPM change per 1°C GMT):", round(usa_beta_c, 6), "µg/m³/yr per °C\n")
+cat("\nUSA alpha_c (OLS intercept, extrapolated outside data range):", round(usa_alpha_c, 6), "µg/m³/yr\n")
+cat("USA beta_c (slope, fPM change per 1°C GMT):", round(usa_beta_c, 6), "µg/m³/yr per °C\n")
 
 # Extract R-squared to assess how well GMT explains USA per-capita fPM variation
 # across the 5 Pierce observations.
@@ -209,8 +225,8 @@ print(summary(global_model))
 global_alpha_c <- coef(global_model)[["(Intercept)"]]
 global_beta_c  <- coef(global_model)[["T_ps"]]
 
-cat("\nGlobal alpha^(c) (OLS intercept, extrapolated outside data range):", round(global_alpha_c, 6), "µg/m³/yr\n")
-cat("Global beta^(c) (slope, fPM change per 1°C GMT):", round(global_beta_c, 6), "µg/m³/yr per °C\n")
+cat("\nGlobal alpha_c (OLS intercept, extrapolated outside data range):", round(global_alpha_c, 6), "µg/m³/yr\n")
+cat("Global beta_c (slope, fPM change per 1°C GMT):", round(global_beta_c, 6), "µg/m³/yr per °C\n")
 
 global_r2 <- summary(global_model)$r.squared
 cat("Global R-squared:", round(global_r2, 4), "\n")
@@ -238,11 +254,11 @@ reg_results <- reg_data_long %>%
   )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Extract alpha^(c) and beta^(c) ############################################
+############ Extract alpha_c and beta_c ################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Unnest the tidy coefficient table and pivot so alpha^(c) and beta^(c) are columns.
-# 'term' will be "(Intercept)" for alpha^(c) and "T_ps" for beta^(c).
+# Unnest the tidy coefficient table and pivot so alpha_c and beta_c are columns.
+# 'term' will be "(Intercept)" for alpha_c and "T_ps" for beta_c.
 reg_coefs <- reg_results %>%
   select(country_code_iso3, country_name, tidied) %>%
   unnest(tidied) %>%
@@ -252,7 +268,7 @@ reg_coefs <- reg_results %>%
     term == "T_ps"        ~ "beta_c"    # slope: exposure change per 1°C GMT (the key parameter)
   )) %>%
   select(country_code_iso3, country_name, param, estimate, std.error, statistic, p.value) %>%
-  # Pivot wide so each country has one row with columns alpha^(c) and beta^(c)
+  # Pivot wide so each country has one row with columns alpha_c and beta_c
   pivot_wider(
     id_cols     = c(country_code_iso3, country_name),
     names_from  = param,
@@ -265,12 +281,12 @@ colnames(reg_coefs)
 cat("\nDimensions of regression coefficient table:", nrow(reg_coefs), "countries\n")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Summarise beta^(c) distribution ##########################################
+############ Summarise beta_c distribution #############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Print summary statistics for beta^(c) across all countries.
-# beta^(c) > 0 means higher GMT --> more fire PM2.5 exposure (expected for most countries).
-cat("\n--- Summary of beta^(c) (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
+# Print summary statistics for beta_c across all countries.
+# beta_c > 0 means higher GMT --> more fire PM2.5 exposure (expected for most countries).
+cat("\n--- Summary of beta_c (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
 summary(reg_coefs$estimate_beta_c)
 
 n_total <- nrow(reg_coefs)
@@ -279,7 +295,7 @@ cat(sprintf("beta > 0 for %d of %d countries (%.0f%%)\n",
             n_pos, n_total, 100 * n_pos / n_total))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############ Confidence intervals for beta^(c) ########################################
+############ Confidence intervals for beta_c ############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Compute the t critical value for a 95% confidence interval.
@@ -309,7 +325,7 @@ reg_coefs <- reg_coefs %>%
     t_critical_df3         = t_critical,
     t_critical_largesample = t_critical_largesample,
 
-    # gamma * beta^(c): scaled slope used in the GIVE damage function. .008 from Pope HR
+    # gamma * beta_c: scaled slope used in the GIVE damage function. .008 from Pope HR
     gamma_beta_c        = 0.008 * estimate_beta_c
   ) %>%
   select(
@@ -322,7 +338,7 @@ reg_coefs <- reg_coefs %>%
     estimate_alpha_c, std.error_alpha_c, statistic_alpha_c, p.value_alpha_c
   )
 
-cat("\nSample of beta^(c) estimates with confidence bounds:\n")
+cat("\nSample of beta_c estimates with confidence bounds:\n")
 print(head(reg_coefs %>% select(country_code_iso3, estimate_beta_c,
                                  lower_beta_c, upper_beta_c,
                                  lower_beta_c_1.96, upper_beta_c_1.96), 10))
@@ -333,7 +349,7 @@ print(head(reg_coefs %>% select(country_code_iso3, estimate_beta_c,
 ############ Save output ##############################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Save the full coefficient table (alpha^(c), beta^(c) with SEs and p-values) to CSV.
+# Save the full coefficient table (alpha_c, beta_c with SEs and p-values) to CSV.
 write_csv(reg_coefs, here("output", "betas_single_study", "fpm_gmt_regression_coefs_pierce.csv"))
 
 cat("\nSaved regression coefficients to output/betas_single_study/fpm_gmt_regression_coefs_pierce.csv\n")

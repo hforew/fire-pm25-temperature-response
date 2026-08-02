@@ -1,17 +1,41 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Global Mean Temperature Change — Multiple Sources and Periods
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Goal: Compute GMT change relative to pre-industrial baseline for three sources:
-#   1. Pierce et al. CESM (RCP4.5/8.5) — area-weighted from gridded NetCDF,
-#      grid cell areas computed from coordinates (spherical Earth formula),
-#      assigned to Pierce et al. projection periods (2006-2010, 2041-2050, 2091-2100)
-#   2. OWID observed — decadal means assigned to Park et al. 2024 simulations
-#   3. MimiSSP (SSP245/585) — mean over 2095-2099 assigned to Zhao et al. 2025 simulations
-
-# Temp data sources:
-# 1: Pierce et al. 2017
-# 2: OWID  https://ourworldindata.org/grapher/temperature-anomaly?v=1&csvType=full&useColumnShortNames=false
-# 3: MimiSSPs https://github.com/anthofflab/MimiSSPs.jl
+## GLOBAL MEAN TEMPERATURE CHANGE: Compute GMT anomalies from three sources
+##
+## Goal: Produce GMT anomaly (°C, relative to 1850-1900 pre-industrial baseline)
+##   for each period/decade/scenario needed by the downstream fPM~GMT regressions:
+##   1. Pierce et al. CESM (RCP4.5/8.5) — area-weighted mean from gridded NetCDF
+##      (grid cell areas via spherical Earth formula), for periods 2006-2010,
+##      2041-2050, 2091-2100; shifted from a 2005 baseline to pre-industrial.
+##   2. OWID observed World series — decadal means for Park et al. 2024 snapshot
+##      decades (1960s-2010s).
+##   3. MimiSSP SSP245/SSP585 — mean over 2095-2099, for Zhao et al. 2025 scenarios.
+##
+## Inputs:
+##   input/temperature/pierce_etal_2017/af.tas.ccsm4.rcp45.2006-2300.nc  (CESM RCP4.5
+##                                         monthly temp anomaly, gridded NetCDF)
+##   input/temperature/pierce_etal_2017/af.tas.ccsm4.rcp85.2006-2300.nc  (CESM RCP8.5,
+##                                         same grid/format)
+##   input/temperature/temperature-anomaly-OWID/temperature-anomaly.csv  (OWID observed
+##                                         annual GMT anomaly by country/World, source:
+##                                         ourworldindata.org/grapher/temperature-anomaly)
+##   input/temperature/MimiSSP/temperature_data-SSP245.csv  (MimiSSP annual GMT anomaly,
+##                                         SSP2-4.5, source: github.com/anthofflab/MimiSSPs.jl)
+##   input/temperature/MimiSSP/temperature_data-SSP585.csv  (MimiSSP annual GMT anomaly,
+##                                         SSP5-8.5, same source)
+##
+## Outputs:
+##   output/gmt/gmt_pierce_RCPs.csv   (mean GMT by period x RCP scenario, PI-relative)
+##   output/gmt/gmt_park_hist.csv     (mean GMT by Park snapshot decade, PI-relative)
+##   output/gmt/gmt_zhao_SSPs.csv     (mean GMT 2095-2099 by SSP scenario, PI-relative)
+##
+## Execution order:
+##   files run before: none — reads raw input data directly
+##   files run after: fpm_gmt_regression_FE_all.R, fpm_gmt_regress_FE_grid_all.R,
+##                    regression_FE_stats_all.R, plots_stats_fpm_all.R,
+##                    single_study/fpm_gmt_regression_pierce.R,
+##                    single_study/fpm_gmt_regression_park.R,
+##                    FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R
+##                    (all read one or more of the three GMT outputs above)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Remove all objects from the environment
@@ -435,9 +459,9 @@ print(gmt_zhao_SSPs)
 ############ save output ###############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write_csv(gmt_pierce_RCPs, here("output", "gmt_pierce_RCPs.csv"))
-write_csv(gmt_park_hist, here("output", "gmt_park_hist.csv"))
-write_csv(gmt_zhao_SSPs, here("output", "gmt_zhao_SSPs.csv"))
+write_csv(gmt_pierce_RCPs, here("output", "gmt", "gmt_pierce_RCPs.csv"))
+write_csv(gmt_park_hist, here("output", "gmt", "gmt_park_hist.csv"))
+write_csv(gmt_zhao_SSPs, here("output", "gmt", "gmt_zhao_SSPs.csv"))
 
 
 # THE END

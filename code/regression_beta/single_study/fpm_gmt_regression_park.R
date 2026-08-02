@@ -1,22 +1,35 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## FPM–GMT RELATIONSHIP: Estimate beta^(c) (per-capita fire PM2.5 change per 1°C GMT)
+## FPM–GMT RELATIONSHIP: Estimate beta_c (per-capita fire PM2.5 change per 1°C GMT)
 ##                        Park et al. historical data — one regression per fire model
 ##
-## Goal: For each country c and each Park fire model m, estimate the linear regression:
-##   PM_bar^(c)_td = alpha^(c,m) + beta^(c,m) * T_td + epsilon^(c,m)_td
+## Goal: For each country c, estimate the linear regression:
+##   PM_bar_ct = alpha_c + beta_c * T_t + epsilon_ct
 ##
-## where T_td is GMT change in decade d (°C relative to 1850–1900),
-## and beta^(c,m) is the key damage function parameter for model m.
+## where T_t is GMT change in decade t (°C relative to 1850–1900),
+## and beta_c is the key damage function parameter.
+## Estimated separately for each Park fire model m (classic, jules, ssib4) —
+## m is not a subscript in the equation above since each regression call
+## uses only one model's data (no fire-model fixed effect, unlike fpm_gmt_regression_FE_all.R).
 ##
 ## Approach mirrors fpm_gmt_regression_pierce.R: simple OLS with no fixed effects,
 ## run separately for each fire model. 6 observations per country per model
 ## (one per decade: 1960s–2010s).
 ##
-## Outputs:
-##   fpm_gmt_regression_coefs_classic.csv
-##   fpm_gmt_regression_coefs_jules.csv
-##   fpm_gmt_regression_coefs_ssib4.csv
+## Inputs:
+##   output/pop_wght_pm_cntry_final.csv   (country-level per-capita fPM exposure;
+##                                         Park columns: 3 fire models x 6 decades)
+##   output/gmt/gmt_park_hist.csv         (GMT anomaly for each Park snapshot decade,
+##                                         relative to 1850–1900 PI baseline)
 ##
+## Outputs:
+##   output/betas_single_study/fpm_gmt_regression_coefs_classic.csv  (beta_c for classic model)
+##   output/betas_single_study/fpm_gmt_regression_coefs_jules.csv    (beta_c for JULES model)
+##   output/betas_single_study/fpm_gmt_regression_coefs_ssib4.csv    (beta_c for SSIB4 model)
+##
+## Execution order:
+##   files run before: pop_wght_pm_cntry.R --> writes pop_wght_pm_cntry_final.csv
+##                     temp_chg.R          --> writes gmt_park_hist.csv
+##   files run after: beta_comparison_latex.R --> reads all three coefficient outputs above
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Remove all objects from the environment to start fresh
@@ -46,7 +59,7 @@ pop_wght <- pop_wght %>%
 # Import Park decade GMT values (°C relative to pre-industrial baseline)
 # Rows: one per Park snapshot decade (1960s–2010s)
 # Columns: park_year, decade, mean_gmt_pi
-gmt_park <- read_csv(here("output", "gmt_park_hist.csv"))
+gmt_park <- read_csv(here("output", "gmt", "gmt_park_hist.csv"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Extract scalar GMT values for each Park decade ##############################
@@ -158,22 +171,22 @@ run_park_regression <- function(model_data, model_label) {
   usa_data  <- model_data %>% filter(country_code_iso3 == "USA")
   cat("\n--- USA regression input data (", model_label, ") ---\n")
   print(usa_data %>% select(period_scenario, T_ps, exposure_percap))
-  usa_model <- lm(exposure_percap ~ T_ps, data = usa_data)        # OLS: alpha^(c) + beta^(c)*T_ps
+  usa_model <- lm(exposure_percap ~ T_ps, data = usa_data)        # OLS: alpha_c + beta_c*T_t
   cat("\n--- USA lm() summary (", model_label, ") ---\n")
   print(summary(usa_model))                                        # coefs, SE, t-stat, p-value, R^2, F-stat
-  cat("USA alpha^(c):", round(coef(usa_model)[["(Intercept)"]], 6), "µg/m³/yr\n")
-  cat("USA beta^(c) (slope, fPM change per 1°C GMT):", round(coef(usa_model)[["T_ps"]], 6), "µg/m³/yr per °C\n")
+  cat("USA alpha_c:", round(coef(usa_model)[["(Intercept)"]], 6), "µg/m³/yr\n")
+  cat("USA beta_c (slope, fPM change per 1°C GMT):", round(coef(usa_model)[["T_ps"]], 6), "µg/m³/yr per °C\n")
   cat("USA R-squared:", round(summary(usa_model)$r.squared, 4), "\n")
 
   # --- Global diagnostic ---
   global_data  <- model_data %>% filter(country_name == "global")
   cat("\n--- Global regression input data (", model_label, ") ---\n")
   print(global_data %>% select(period_scenario, T_ps, exposure_percap))
-  global_model <- lm(exposure_percap ~ T_ps, data = global_data)  # OLS: alpha^(c) + beta^(c)*T_ps
+  global_model <- lm(exposure_percap ~ T_ps, data = global_data)  # OLS: alpha_c + beta_c*T_t
   cat("\n--- Global lm() summary (", model_label, ") ---\n")
   print(summary(global_model))                                     # coefs, SE, t-stat, p-value, R^2, F-stat
-  cat("Global alpha^(c):", round(coef(global_model)[["(Intercept)"]], 6), "µg/m³/yr\n")
-  cat("Global beta^(c) (slope, fPM change per 1°C GMT):", round(coef(global_model)[["T_ps"]], 6), "µg/m³/yr per °C\n")
+  cat("Global alpha_c:", round(coef(global_model)[["(Intercept)"]], 6), "µg/m³/yr\n")
+  cat("Global beta_c (slope, fPM change per 1°C GMT):", round(coef(global_model)[["T_ps"]], 6), "µg/m³/yr per °C\n")
   cat("Global R-squared:", round(summary(global_model)$r.squared, 4), "\n")
 
   # --- Full country-level regression ---
@@ -204,14 +217,14 @@ run_park_regression <- function(model_data, model_label) {
   print(head(reg_coefs, 10))
   cat("\nDimensions of regression coefficient table:", nrow(reg_coefs), "countries\n")
 
-  cat("\n--- Summary of beta^(c) (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
+  cat("\n--- Summary of beta_c (slope: per-capita fPM2.5 change per 1°C GMT) ---\n")
   print(summary(reg_coefs$estimate_beta_c))
   n_total <- nrow(reg_coefs)
   n_pos   <- sum(reg_coefs$estimate_beta_c > 0, na.rm = TRUE)
   cat(sprintf("beta > 0 for %d of %d countries (%.0f%%)\n",
               n_pos, n_total, 100 * n_pos / n_total))
 
-  # Add confidence intervals and gamma * beta^(c)
+  # Add confidence intervals and gamma * beta_c
   reg_coefs <- reg_coefs %>%
     mutate(
       # 95% CI bounds using exact t_critical for df = 4
@@ -226,7 +239,7 @@ run_park_regression <- function(model_data, model_label) {
       t_critical_df4         = t_critical,
       t_critical_largesample = t_ls,
 
-      # gamma * beta^(c): scaled slope used in the GIVE damage function. .008 from Pope HR
+      # gamma * beta_c: scaled slope used in the GIVE damage function. .008 from Pope HR
       gamma_beta_c           = 0.008 * estimate_beta_c
     ) %>%
     select(
@@ -241,7 +254,7 @@ run_park_regression <- function(model_data, model_label) {
 
   countries_to_plot <- c("global", "USA", "DEU", "RUS", "AUS", "CHN", "IND", "ARG", "BRA", "ETH", "NGA")
 
-  cat("\nSample of beta^(c) estimates with confidence bounds:\n")
+  cat("\nSample of beta_c estimates with confidence bounds:\n")
   print(reg_coefs %>%
           filter(country_code_iso3 %in% countries_to_plot) %>%
           select(country_code_iso3, estimate_beta_c,

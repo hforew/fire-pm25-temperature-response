@@ -64,17 +64,17 @@ pop_wght <- pop_wght %>%
 # for each period × scenario combination.
 # Rows: "2006-2010" (baseline), "2041-2050", "2091-2100"
 # Columns: mean_gmt_45 (RCP4.5), mean_gmt_85 (RCP8.5)
-gmt_chg <- read_csv(here("output", "gmt_pierce_RCPs.csv"))
+gmt_chg <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))
 
 # Import Park decade GMT values (°C relative to pre-industrial baseline)
 # Rows: one per Park snapshot decade (1960s–2010s)
 # Columns: park_year, decade, mean_gmt_pi
-gmt_park <- read_csv(here("output", "gmt_park_hist.csv"))
+gmt_park <- read_csv(here("output", "gmt", "gmt_park_hist.csv"))
 
 # Import Zhao et al. ~2095 GMT anomalies (°C relative to pre-industrial baseline)
 # Rows: SSP245, SSP585 --- these temp changes assigned to Zhao but sourced from MimiSSPs 
 # Columns: scenario, mean_gmt_pi
-gmt_zhao <- read_csv(here("output", "gmt_zhao_SSPs.csv"))
+gmt_zhao <- read_csv(here("output", "gmt", "gmt_zhao_SSPs.csv"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Extract scalar GMT values for each period × scenario #######################

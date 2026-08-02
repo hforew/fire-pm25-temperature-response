@@ -25,9 +25,9 @@
 ##
 ## Inputs:
 ##   output/pop_pm_country_death_final.csv   (grid-cell fPM; Pierce, Park, and Zhao cols)
-##   output/gmt_pierce_RCPs.csv              (GMT anomaly for Pierce periods × scenarios)
-##   output/gmt_park_hist.csv                (GMT anomaly for each Park snapshot decade)
-##   output/gmt_zhao_SSPs.csv                (GMT anomaly for Zhao ~2095 SSP245 and SSP585)
+##   output/gmt/gmt_pierce_RCPs.csv          (GMT anomaly for Pierce periods × scenarios)
+##   output/gmt/gmt_park_hist.csv            (GMT anomaly for each Park snapshot decade)
+##   output/gmt/gmt_zhao_SSPs.csv            (GMT anomaly for Zhao ~2095 SSP245 and SSP585)
 ##
 ## Outputs:
 ##   output/fpm_gmt_regression_coefs_FE_grid.csv   (beta_i per grid cell with SE, p-value,
@@ -60,9 +60,9 @@ library(broom)      # tidy() extracts lm() coefficients as a clean data frame
 grid <- read_csv(here("output", "pop_pm_country_death_final.csv"))
 
 # GMT lookup tables — same as country-level regression
-gmt_chg  <- read_csv(here("output", "gmt_pierce_RCPs.csv"))  # Pierce periods
-gmt_park <- read_csv(here("output", "gmt_park_hist.csv"))    # Park decades
-gmt_zhao <- read_csv(here("output", "gmt_zhao_SSPs.csv"))    # Zhao ~2095
+gmt_chg  <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))  # Pierce periods
+gmt_park <- read_csv(here("output", "gmt", "gmt_park_hist.csv"))    # Park decades
+gmt_zhao <- read_csv(here("output", "gmt", "gmt_zhao_SSPs.csv"))    # Zhao ~2095
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Extract GMT scalars ##################################################
