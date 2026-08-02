@@ -494,8 +494,8 @@ pm25_fpm_wide <- fpm_wide %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ merge with pop_regrid_park_2024 and our master data ############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pop_pm_combined <- read.csv(here("output", "pop_pm_combined.csv"))
-pop_park <- read.csv(here("output", "pop_regrid_park_2024.csv"))
+pop_pm_combined <- read.csv(here("output", "pm_joined", "pop_pm_combined.csv"))
+pop_park <- read.csv(here("output", "pm_joined", "pop_regrid_park_2024.csv"))
 
 # Merge pop_wide with pm25_fpm_wide by lon and lat
 pm25_pop_merged <- pm25_fpm_wide %>%

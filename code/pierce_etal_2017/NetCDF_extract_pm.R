@@ -1,28 +1,27 @@
-#########################################
-## Extract PM2.5 grid cell data from NetCDF ##
-#########################################
-
-# Pierce et al (2017) data source: 
-# this code 1) extracts fire PM grid cell data from NetCDF file, converts to dataframe and exports as csv
-
-# ## inputs
-# * CESM_09x125_PM25_ 
-# ** multiple files with this predix, see section 3 for detail
-# 
-# ## outputs 
-# * annual_ave_pm25.csv
-# ** columns:
-#   lon	lat	pm_2000	pm_2050_45	pm_2050_85	pm_2100_45	pm_2100_85	fpm_2000	fpm_2050_45	fpm_2050_45_hi	
-# fpm_2050_85	fpm_2050_85_hi	fpm_2100_45	fpm_2100_45_hi	fpm_2100_85	fpm_2100_85_hi	fpm_2100_rcp_chg	
-# fpm_2100_rcp_chg_hi	fpm_2050_rcp_chg	fpm_2050_rcp_chg_hi	fpm_2050_45_base_chg	fpm_2050_85_base_chg	
-# fpm_2100_45_base_chg	fpm_2100_85_base_chg	fpm_2050_45_base_chg_hi	fpm_2050_85_base_chg_hi	
-# fpm_2100_45_base_chg_hi	fpm_2100_85_base_chg_hi	n_months
-# ** at grid cell level, this data is:
-#   - pm total (including fire)
-#   - pm total with human influence
-#   - pm without fire 
-#   - Fire pm (fpm)  
-#   - Computed for years (2000, 2050, 2100) and RCPs (4.5,8.5)
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+## EXTRACT PM2.5 GRID CELL DATA FROM NETCDF: Pierce et al. (2017) CESM simulations
+##
+## Goal: Extract fire PM2.5 (fPM) at the grid-cell level from Pierce et al. NetCDF
+##   files, convert to a tidy dataframe, and compute both monthly and annual-average
+##   fPM (= total PM2.5 minus no-fire PM2.5) for each grid cell, year (2000, 2050,
+##   2100), and RCP scenario (4.5, 8.5) — with and without human-influence adjustment.
+##
+## Inputs:
+##   input/CESM_09x125_PM25_*.nc          (14 gridded NetCDF files: baseline, 2050/2100 x
+##                                         RCP4.5/8.5, each with all-PM, no-fire, and
+##                                         human-influence variants; var "pm25", dims lon x lat x month)
+##
+## Outputs:
+##   output/pm_joined/pm_df_all_month_grid.csv  (monthly grid-cell PM/fPM, all variants,
+##                                         pre-annual-averaging intermediate)
+##   output/pm_joined/annual_ave_pm25.csv       (annual grid-cell average PM/fPM; primary
+##                                         output — pm/fpm for 2000/2050/2100 x RCP4.5/8.5,
+##                                         plus RCP and base-year change columns)
+##
+## Execution order:
+##   files run before: NA
+##   files run after: pm_to_pop_regrid.R --> reads annual_ave_pm25.csv
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Remove all objects from the environment
 rm(list = ls())
@@ -36,10 +35,7 @@ library(tidyverse)
 
 ############ import #####################################################
 
-# Import the grid lookup table
-grid_lookup <- readRDS(here("output", "grid_country_lookup.rds"))
-
-## BASELINE 
+## BASELINE
 # PM2.5 all (fire plus other)
 pm_2000 <- nc_open(here("input", "CESM_09x125_PM25_2000_Baseline.nc"))
 print(pm_2000)
@@ -231,10 +227,7 @@ for (array_name in names(arrays_to_process)) {
       "(", nrow(result), "rows )\n")
 }
 
-# Join with grid_lookup to add country information
 pm_df_all <- pm_df_2000 %>%
-  #left_join(grid_lookup %>% select(lon, lat, country_name, country_code_iso3),
-  #          by = c("lon", "lat")) %>%
   left_join(pm_df_2000_nf %>% select(month, lon, lat, pm_2000_nf),
             by = c("month", "lon", "lat")) %>%
   left_join(pm_df_2050_45 %>% select(month, lon, lat, pm_2050_45), # 2050  RCP 4.5 
@@ -305,7 +298,7 @@ colnames(pm_df_all)
 head(pm_df_all, 5)
 
 # save pm_df_all as intermediate detailed data file
-write_csv(pm_df_all, here("output", "pm_df_all_month_grid.csv"))
+write_csv(pm_df_all, here("output", "pm_joined", "pm_df_all_month_grid.csv"))
 
 ### Create annual average by averaging across all 12 months for each grid cell
 pm_annual_ave <- pm_df_all %>%
@@ -388,7 +381,7 @@ head(pm_annual_ave, 6)
 ############ save outputs #####################################################
 
 # Save annual average to output folder
-write_csv(pm_annual_ave, here("output", "annual_ave_pm25.csv"))
+write_csv(pm_annual_ave, here("output", "pm_joined", "annual_ave_pm25.csv"))
 
 print(paste("File saved:", here("output", "pm_annual_ave_pm25.csv")))
 

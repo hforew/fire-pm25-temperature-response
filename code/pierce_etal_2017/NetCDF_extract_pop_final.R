@@ -1,20 +1,29 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-###################Population grid cell data ##################################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Goal: Build a per-cell population table (2001–2010) from the CLM SSP1 NetCDF,
-#       converting density to totals via grid-cell area, in wide format.
-#   1. Open the chosen CLM hdm file + the 0.5° area file; pull LONGXY/LATIXY coords
-#      and the 'year' axis; match target_years 2001–2010 to their time indices.
-#   2. QC the time dimension: confirm years aren't identical across slices (pick one
-#      populated 2009 cell, print its 2001–2010 series), then loop all years into a
-#      long table of (lon, lat, pop_density, pop_year) with per-year sanity stats.
-#   3. Read cell area (m^2 -> km^2), join, compute pop_tot = density * area; pivot to
-#      wide (pop_dens_<yr>, pop_tot_<yr>), check global + USA totals (point-in-USA via
-#      st_intersects), and write the CSV.
-# Inputs : CLM Li 2018 SSP1 CMIP6 hdm 0.5° NetCDF ; landmask_area/gridcell_area_0.5deg.nc
-# Output : output/pop_df_rev.csv
-# Execution order:
-#   files run after: pm_to_pop_regrid.R
+## POPULATION GRID CELL DATA: Build per-cell population totals from CLM SSP1 NetCDF
+##
+## Goal: Build a per-cell population table (2001–2010) from the CLM SSP1 NetCDF,
+##       converting density to totals via grid-cell area, in wide format.
+##   1. Open the chosen CLM hdm file + the 0.5° area file; pull LONGXY/LATIXY coords
+##      and the 'year' axis; match target_years 2001–2010 to their time indices.
+##   2. QC the time dimension: confirm years aren't identical across slices (pick one
+##      populated 2009 cell, print its 2001–2010 series), then loop all years into a
+##      long table of (lon, lat, pop_density, pop_year) with per-year sanity stats.
+##   3. Read cell area (m^2 -> km^2), join, compute pop_tot = density * area; pivot to
+##      wide (pop_dens_<yr>, pop_tot_<yr>), check global + USA totals (point-in-USA via
+##      st_intersects), and write the CSV.
+##
+## Inputs:
+##   input/population/clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
+##                                         (CLM SSP1 CMIP6 population density, var "hdm")
+##   input/landmask_area/gridcell_area_0.5deg.nc  (grid cell area, var "area", m^2)
+##
+## Outputs:
+##   output/pm_joined/pop_df_rev.csv      (wide table: lon, lat, cell_area_km2, plus
+##                                         pop_dens_<year> and pop_tot_<year> for 2001–2010)
+##
+## Execution order:
+##   files run before: NA
+##   files run after: pm_to_pop_regrid.R --> reads pop_df_rev.csv
 
 
 rm(list = ls())
@@ -42,7 +51,7 @@ library(tidyr)
 #clmforc.Li_2012_hdm_0.5x0.5_AVHRR_simyr1850-2010_c130401.nc/different/8951715907
 
 # decide to use: clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
-clm_nc <- nc_open(here("input/google_drive/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
+clm_nc <- nc_open(here("input/population/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
 print(clm_nc)
 area_nc <- nc_open(here("input/landmask_area/","gridcell_area_0.5deg.nc"))
 print(area_nc)
@@ -257,4 +266,4 @@ print(usa_pop_all_years, n = Inf)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############## output final data set ##################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-write_csv(pop_df_rev, here("output", "pop_df_rev.csv"))
+write_csv(pop_df_rev, here("output", "pm_joined", "pop_df_rev.csv"))

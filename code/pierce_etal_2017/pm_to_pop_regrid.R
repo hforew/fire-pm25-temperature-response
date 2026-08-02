@@ -1,20 +1,29 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-########### Re-grid PM data to pop data resolution ##########################
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# Goal: Re-grid coarse PM2.5 (1.25°) onto the 0.5° population grid by nearest neighbor,
-#       then merge PM2.5 + population into one per-cell table.
-#   1. Read annual-average PM2.5 (288x192 = 55,296 cells) and the pop grid
-#      (720x360 = 259,200 cells); shift PM2.5 edge coords to cell centers
-#      (+1.25/2 lon, +0.9424/2 lat) so both grids are center-referenced.
-#   2. For each 0.5° pop cell, find the nearest 1.25° PM2.5 center by Euclidean
-#      distance (which.min) and copy that cell's pm_/fpm_ columns over.
-#   3. Join the regridded PM2.5 back onto the full pop table on exact lon/lat;
-#      verify every pop row matched, and write both outputs.
-# Inputs : output/annual_ave_pm25.csv ; output/pop_df_rev.csv
-# Outputs: output/pm25_regridded_0.5deg.csv ; output/pop_pm_combined.csv
-# Execution order:
-#   files run before: NetCDF_extract_pm.R and NetCDF_extract_pop_final.R
-#   files run after: pop_regrid_park_2024.R and pm_regrid_park_2024.R ------> (Join Park data)
+## RE-GRID PM DATA TO POP DATA RESOLUTION
+##
+## Goal: Re-grid coarse PM2.5 (1.25°) onto the 0.5° population grid by nearest neighbor,
+##       then merge PM2.5 + population into one per-cell table.
+##   1. Read annual-average PM2.5 (288x192 = 55,296 cells) and the pop grid
+##      (720x360 = 259,200 cells); shift PM2.5 edge coords to cell centers
+##      (+1.25/2 lon, +0.9424/2 lat) so both grids are center-referenced.
+##   2. For each 0.5° pop cell, find the nearest 1.25° PM2.5 center by Euclidean
+##      distance (which.min) and copy that cell's pm_/fpm_ columns over.
+##   3. Join the regridded PM2.5 back onto the full pop table on exact lon/lat;
+##      verify every pop row matched, and write both outputs.
+##
+## Inputs:
+##   output/pm_joined/annual_ave_pm25.csv  (annual grid-cell average PM/fPM, 1.25° grid)
+##   output/pm_joined/pop_df_rev.csv       (per-cell population density/totals, 0.5° grid)
+##
+## Outputs:
+##   output/pm_joined/pm25_regridded_0.5deg.csv  (PM2.5 regridded onto the 0.5° pop grid;
+##                                         not currently read by any downstream script)
+##   output/pm_joined/pop_pm_combined.csv        (full pop table + regridded PM2.5 per cell)
+##
+## Execution order:
+##   files run before: NetCDF_extract_pm.R          --> writes annual_ave_pm25.csv
+##                     NetCDF_extract_pop_final.R    --> writes pop_df_rev.csv
+##   files run after: pm_regrid_park_2024.R --> reads pop_pm_combined.csv (joins Park data)
 
 
 # Remove all objects from the environment
@@ -33,8 +42,8 @@ library(tidyverse)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Import annual average PM2.5 data and pop data (previously converted from NetCDF to dataframe)
-annual_ave <- read_csv(here("output", "annual_ave_pm25.csv"))
-pop <- read_csv(here("output", "pop_df_rev.csv")) #may use pop_df_rev.csv here for the latest version
+annual_ave <- read_csv(here("output", "pm_joined", "annual_ave_pm25.csv"))
+pop <- read_csv(here("output", "pm_joined", "pop_df_rev.csv")) #may use pop_df_rev.csv here for the latest version
 
 # pm data dimension = (lon x lat) 288 x 192 = 55296
 # pop data dimension = (lon x lat) 720 × 360 = 259200
@@ -138,8 +147,8 @@ cat("All pop rows matched:", sum(is.na(pop_pm_combined$pm_2000)) == 0, "\n")
 # Save outputs
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write_csv(pm25_regridded, here("output", "pm25_regridded_0.5deg.csv"))
-write_csv(pop_pm_combined, here("output", "pop_pm_combined.csv"))
+write_csv(pm25_regridded, here("output", "pm_joined", "pm25_regridded_0.5deg.csv"))
+write_csv(pop_pm_combined, here("output", "pm_joined", "pop_pm_combined.csv"))
 
 cat("\nRegridding complete!\n")
 

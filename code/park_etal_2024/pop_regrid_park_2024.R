@@ -187,6 +187,6 @@ print(us_pop_sums)
 ############  Save ##########################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Save data
-write.csv(pop_wide, here("output", "pop_regrid_park_2024.csv"), row.names = FALSE)
+write.csv(pop_wide, here("output", "pm_joined", "pop_regrid_park_2024.csv"), row.names = FALSE)
 
 ##THE END
