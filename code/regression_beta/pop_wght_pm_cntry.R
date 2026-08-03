@@ -6,7 +6,7 @@
 ##   a global row, and exports for use in country-level FE regressions.
 ##
 ## Inputs:
-##   output/pop_pm_country_death_final.csv         (grid-cell fPM with population and
+##   output/pm_joined/pop_pm_country_death_final.csv (grid-cell fPM with population and
 ##                                                  death rates; Pierce, Park, Zhao cols)
 ##   input/WB_crude_death_rate/API_SP.DYN.CDRT.IN_DS2_en_csv_v2_241.csv
 ##                                                 (World Bank crude death rates; used
@@ -19,7 +19,7 @@
 ##                                                  Pierce, Park, and Zhao scenarios)
 ##
 ## Execution order:
-##   files run before: mortality/death_rate_processing.R   --> writes pop_pm_country_death_final.csv
+##   files run before: other_mapping/death_rate_processing.R   --> writes output/pm_joined/pop_pm_country_death_final.csv
 ##   files run after:  FE/fpm_gmt_regression_FE_all.R
 ##                     FE_climate_attributable/fpm_gmt_regression_FE_all_cli.R
 ##                     FE_climate_attributable/fpm_gmt_regression_park_cli.R
@@ -47,7 +47,7 @@ library(tibble)
 # pop_pm_country <- read_csv(here("output", "pop_pm_with_countries.csv"))
 # pop_pm_country <- read_csv(here("output", "pop_pm_country_death.csv"))
 # pop_pm_country <- read_csv(here("output", "pop_pm_country_death_park.csv"))
-pop_pm_country <- read_csv(here("output", "pop_pm_country_death_final.csv"))
+pop_pm_country <- read_csv(here("output", "pm_joined", "pop_pm_country_death_final.csv"))
 
 colnames(pop_pm_country)
 

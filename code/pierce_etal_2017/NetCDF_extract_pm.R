@@ -7,7 +7,7 @@
 ##   2100), and RCP scenario (4.5, 8.5) — with and without human-influence adjustment.
 ##
 ## Inputs:
-##   input/CESM_09x125_PM25_*.nc          (14 gridded NetCDF files: baseline, 2050/2100 x
+##   input/pierce_etal_2017/CESM_09x125_PM25_*.nc  (14 gridded NetCDF files: baseline, 2050/2100 x
 ##                                         RCP4.5/8.5, each with all-PM, no-fire, and
 ##                                         human-influence variants; var "pm25", dims lon x lat x month)
 ##
@@ -37,44 +37,44 @@ library(tidyverse)
 
 ## BASELINE
 # PM2.5 all (fire plus other)
-pm_2000 <- nc_open(here("input", "CESM_09x125_PM25_2000_Baseline.nc"))
+pm_2000 <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2000_Baseline.nc"))
 print(pm_2000)
 # PM2.5 no fire
-pm_2000_nf <- nc_open(here("input", "CESM_09x125_PM25_2000_BaseLine_NoFire.nc"))
+pm_2000_nf <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2000_BaseLine_NoFire.nc"))
 print(pm_2000_nf) # dimensions 288x192x12 --- longitude x latitude x time, for 12 months
 
 ## 2050 RCP4.5 
 # PM2.5 all (fire plus other)
-pm_2050_45 <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45.nc"))
+pm_2050_45 <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2050_RCP45.nc"))
 print(pm_2050_45)
 # PM2.5 no fire
-pm_2050_45_nf <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45_NoFire.nc"))
+pm_2050_45_nf <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2050_RCP45_NoFire.nc"))
 # PM2.5 human influence
-pm_2050_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP45_HI.nc"))
+pm_2050_45_hi <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2050_RCP45_HI.nc"))
 
 ## 2050 RCP8.5
 # PM2.5 all (fire plus other)
-pm_2050_85 <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85.nc"))
+pm_2050_85 <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2050_RCP85.nc"))
 # PM2.5 no fire
-pm_2050_85_nf <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85_NoFire.nc"))
+pm_2050_85_nf <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2050_RCP85_NoFire.nc"))
 # PM2.5 human influence
-pm_2050_85_hi <- nc_open(here("input", "CESM_09x125_PM25_2050_RCP85_HI.nc"))
+pm_2050_85_hi <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2050_RCP85_HI.nc"))
 
 ## 2100 RCP4.5 
 # PM2.5 all (fire plus other)
-pm_2100_45 <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45.nc"))
+pm_2100_45 <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2100_RCP45.nc"))
 # PM2.5 no fire
-pm_2100_45_nf <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45_NoFire.nc"))
+pm_2100_45_nf <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2100_RCP45_NoFire.nc"))
 # PM2.5 human influence
-pm_2100_45_hi <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP45_HI.nc"))
+pm_2100_45_hi <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2100_RCP45_HI.nc"))
 
 ## 2100 RCP8.5
 # PM2.5 all (fire plus other)
-pm_2100_85 <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85.nc"))
+pm_2100_85 <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2100_RCP85.nc"))
 # PM2.5 no fire
-pm_2100_85_nf <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85_NoFire.nc"))
+pm_2100_85_nf <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2100_RCP85_NoFire.nc"))
 # PM2.5 human influence
-pm_2100_85_hi <- nc_open(here("input", "CESM_09x125_PM25_2100_RCP85_HI.nc"))
+pm_2100_85_hi <- nc_open(here("input", "pierce_etal_2017", "CESM_09x125_PM25_2100_RCP85_HI.nc"))
 
 ############ extract data from NetCDFs #####################################################
 
@@ -383,5 +383,5 @@ head(pm_annual_ave, 6)
 # Save annual average to output folder
 write_csv(pm_annual_ave, here("output", "pm_joined", "annual_ave_pm25.csv"))
 
-print(paste("File saved:", here("output", "pm_annual_ave_pm25.csv")))
+print(paste("File saved:", here("output", "pm_joined", "pm_annual_ave_pm25.csv")))
 

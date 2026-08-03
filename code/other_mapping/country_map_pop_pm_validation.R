@@ -43,7 +43,7 @@ sf_use_s2(FALSE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # pop file used clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
 # CLM population dataset
-clm_nc_file <- "input/google_drive/clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"
+clm_nc_file <- "input/pierce_etal_2017/clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"
 
 # grid cell area dataset
 area_nc_file <- "input/landmask_area/gridcell_area_0.5deg.nc"

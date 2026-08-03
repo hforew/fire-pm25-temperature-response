@@ -24,17 +24,17 @@
 ##       Grid-cell betas are NOT aggregated to country level here.
 ##
 ## Inputs:
-##   output/pop_pm_country_death_final.csv   (grid-cell fPM; Pierce, Park, and Zhao cols)
+##   output/pm_joined/pop_pm_country_death_final.csv   (grid-cell fPM; Pierce, Park, and Zhao cols)
 ##   output/gmt/gmt_pierce_RCPs.csv          (GMT anomaly for Pierce periods × scenarios)
 ##   output/gmt/gmt_park_hist.csv            (GMT anomaly for each Park snapshot decade)
 ##   output/gmt/gmt_zhao_SSPs.csv            (GMT anomaly for Zhao ~2095 SSP245 and SSP585)
 ##
 ## Outputs:
-##   output/fpm_gmt_regression_coefs_FE_grid.csv   (beta_i per grid cell with SE, p-value,
+##   output/betas_fe_all/fpm_gmt_regression_coefs_FE_grid.csv   (beta_i per grid cell with SE, p-value,
 ##                                                   lon, lat; used for spatial mapping)
 ##
 ## Execution order:
-##   files run before: death_rate_processing.R         --> writes pop_pm_country_death_final.csv
+##   files run before: death_rate_processing.R         --> writes output/pm_joined/pop_pm_country_death_final.csv
 ##   files run after:  plots_beta_lobf_fe_grid_all.R   --> reads fpm_gmt_regression_coefs_FE_grid.csv
 ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -57,7 +57,7 @@ library(broom)      # tidy() extracts lm() coefficients as a clean data frame
 # fPM columns: Pierce (fpm_2000, fpm_2050_45/85, fpm_2100_45/85),
 #              Zhao (fpm_2095_SSP245_Zhao, fpm_2095_SSP585_Zhao),
 #              Park (park_{model}_{decade}_fpm: 18 columns)
-grid <- read_csv(here("output", "pop_pm_country_death_final.csv"))
+grid <- read_csv(here("output", "pm_joined", "pop_pm_country_death_final.csv"))
 
 # GMT lookup tables — same as country-level regression
 gmt_chg  <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))  # Pierce periods
@@ -320,8 +320,8 @@ cat("Cells with negative beta^(i) (less fPM with warming):",
 ############ Export ##############################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-write_csv(reg_coefs, here("output", "fpm_gmt_regression_coefs_FE_grid.csv"))
-cat("\nSaved to output/fpm_gmt_regression_coefs_FE_grid.csv\n")
+write_csv(reg_coefs, here("output", "betas_fe_all", "fpm_gmt_regression_coefs_FE_grid.csv"))
+cat("\nSaved to output/betas_fe_all/fpm_gmt_regression_coefs_FE_grid.csv\n")
 
 glimpse(reg_coefs)
 

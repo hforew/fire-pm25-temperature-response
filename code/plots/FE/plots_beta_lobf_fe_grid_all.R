@@ -6,7 +6,7 @@
 ##   (2) world raster map of beta_i; (3) CONUS raster map of beta_i.
 ##
 ## Inputs:
-##   output/fpm_gmt_regression_coefs_FE_grid.csv   (beta_i per grid cell with SE,
+##   output/betas_fe_all/fpm_gmt_regression_coefs_FE_grid.csv   (beta_i per grid cell with SE,
 ##                                                   p-value, lon, lat)
 ##
 ## Outputs:
@@ -38,7 +38,7 @@ library(maps)
 #   row_id, lon, lat      -- cell identifier and centre coordinates
 #   estimate_beta_i       -- OLS slope: change in fire PM2.5 (µg/m^3) per 1°C GMT
 
-reg_coefs <- read_csv(here("output", "fpm_gmt_regression_coefs_FE_grid.csv"))
+reg_coefs <- read_csv(here("output", "betas_fe_all", "fpm_gmt_regression_coefs_FE_grid.csv"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Histogram of beta_i ####################################################

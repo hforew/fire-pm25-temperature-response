@@ -646,7 +646,7 @@ combined_data <- combined_data %>%
     }
   )
 
-write.csv(combined_data, here("output", "pop_pm_combined_with_park2024.csv"), row.names = FALSE)
+write.csv(combined_data, here("output", "pm_joined", "pop_pm_combined_with_park2024.csv"), row.names = FALSE)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ SANITY CHECK: Plot US fpm for ALL models x years ##############

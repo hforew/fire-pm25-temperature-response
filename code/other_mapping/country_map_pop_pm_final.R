@@ -11,9 +11,9 @@
 #   3. Manual ISO3 repairs (France, Norway), filter to GIVE country list,
 #      QC against Park et al. population, write final CSV, and render checks
 #      (static ggplot world map + interactive Leaflet map for USA/CAN/MEX).
-# Inputs : input/GIVE/GIVE_countries.csv ; output/pop_pm_combined_final.csv
+# Inputs : input/GIVE/GIVE_countries.csv ; output/pm_joined/pop_pm_combined_final.csv
 # Country boundaries : Natural Earth 1:10m (rnaturalearth, scale = 10)
-# Output : output/pop_pm_with_countries_final.csv ; images/country_mapping_check_rev.png
+# Output : output/pm_joined/pop_pm_with_countries_final.csv ; images/country_mapping_check_rev.png
 
 rm(list = ls())
 
@@ -37,9 +37,9 @@ sf_use_s2(FALSE)
 # import give countries for filtering full dataset (give countries in GIVE only)
 give_countries <- read_csv(here("input", "GIVE", "GIVE_countries.csv"))
 
-#pop_pm_combined <- read_csv(here("output", "pop_pm_combined.csv"))
-# pop_pm_combined <- read_csv(here("output", "pop_pm_combined_with_park2024.csv"))
- pop_pm_combined <- read_csv(here("output", "pop_pm_combined_final.csv"))
+#pop_pm_combined <- read_csv(here("output", "pm_joined", "pop_pm_combined.csv"))
+# pop_pm_combined <- read_csv(here("output", "pm_joined", "pop_pm_combined_with_park2024.csv"))
+ pop_pm_combined <- read_csv(here("output", "pm_joined", "pop_pm_combined_final.csv"))
 
 nrow(pop_pm_combined)
 colnames(pop_pm_combined)
@@ -271,7 +271,7 @@ cat("Ratio Pierce/Park (global):",   round(pierce_global / park_global, 4), "\n"
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # write_csv(pop_pm_final, here("output", "pop_pm_with_countries_rev.csv"))
 # write_csv(pop_pm_final, here("output", "pop_pm_with_countries_park.csv"))
-write_csv(pop_pm_final, here("output", "pop_pm_with_countries_final.csv"))
+write_csv(pop_pm_final, here("output", "pm_joined", "pop_pm_with_countries_final.csv"))
 
 
 cat("\nCountry mapping complete!\n")

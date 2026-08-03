@@ -20,9 +20,9 @@
 #      (note fpm can go slightly negative from nonlinear chemistry, clipped for log).
 #   3. Left-join Zhao PM and Zhao 2010 pop onto pop_pm_combined_with_park2024 by lon/lat,
 #      report match %, reorder columns (pop_* first), sort, and write the final CSV.
-# Inputs : Zhao_etal_2025/gridded_output/*.csv ; pop_pm_combined_with_park2024.csv ;
-#          pop_regrid_zhao_20252010.csv
-# Output : output/pop_pm_combined_final.csv
+# Inputs : Zhao_etal_2025/gridded_output/*.csv ; output/pm_joined/pop_pm_combined_with_park2024.csv ;
+#          output/pm_joined/pop_regrid_zhao_20252010.csv
+# Output : output/pm_joined/pop_pm_combined_final.csv
 # Adds   : pm_2095_SSP245_Zhao, pm_2095_SSP585_Zhao, fpm_2095_SSP245_Zhao, fpm_2095_SSP585_Zhao
 # Execution order:
 #   files run before: pop_regrid_park_2024.R, pm_regrid_park_2024.R, and pop_regrid_zhao_2025.R
@@ -43,9 +43,9 @@ library(patchwork)                                   # combine plots
 ############ Paths ###
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 pm_dir       <- here("input/Zhao_etal_2025/gridded_output")     # Zhao inputs
-pop_pm_file  <- here("output", "pop_pm_combined_with_park2024.csv")
-pop_zhao_file <- here("output", "pop_regrid_zhao_20252010.csv")
-out_file     <- here("output", "pop_pm_combined_final.csv")
+pop_pm_file  <- here("output", "pm_joined", "pop_pm_combined_with_park2024.csv")
+pop_zhao_file <- here("output", "pm_joined", "pop_regrid_zhao_20252010.csv")
+out_file     <- here("output", "pm_joined", "pop_pm_combined_final.csv")
 #fig_dir      <- here("images", "Zhao_checks")                       # save plots here
 #dir.create(fig_dir, showWarnings = FALSE, recursive = TRUE)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

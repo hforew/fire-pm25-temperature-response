@@ -13,7 +13,7 @@
 ##      st_intersects), and write the CSV.
 ##
 ## Inputs:
-##   input/population/clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
+##   input/pierce_etal_2017/clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
 ##                                         (CLM SSP1 CMIP6 population density, var "hdm")
 ##   input/landmask_area/gridcell_area_0.5deg.nc  (grid cell area, var "area", m^2)
 ##
@@ -51,7 +51,7 @@ library(tidyr)
 #clmforc.Li_2012_hdm_0.5x0.5_AVHRR_simyr1850-2010_c130401.nc/different/8951715907
 
 # decide to use: clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc
-clm_nc <- nc_open(here("input/population/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
+clm_nc <- nc_open(here("input/pierce_etal_2017/","clmforc.Li_2018_SSP1_CMIP6_hdm_0.5x0.5_AVHRR_simyr1850-2100_c181205.nc"))
 print(clm_nc)
 area_nc <- nc_open(here("input/landmask_area/","gridcell_area_0.5deg.nc"))
 print(area_nc)

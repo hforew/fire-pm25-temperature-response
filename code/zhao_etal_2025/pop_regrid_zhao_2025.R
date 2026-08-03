@@ -15,7 +15,7 @@
 #      US total and 5 city totals using any-touch overlap (extract touches = TRUE) — and
 #      write the CSV.
 # Input  : input/Zhao_etal_2025/gridded_output_EM/pop_0.1x0.1_2010.npz
-# Output : output/pop_regrid_zhao_20252010.csv
+# Output : output/pm_joined/pop_regrid_zhao_20252010.csv
 # Execution order:
 #   files run before: pop_regrid_park_2024.R, and pm_regrid_park_2024.R
 #   files run after: pm_regrid_zhao_2025.R / country_map_pop_pm_final.R ------> (Map gridded data to country codes)
@@ -168,7 +168,7 @@ cat("=====================================================\n")
 
 # ---- 1. Build output path via here() ----
 out_dir  <- here("output")                             # Ford_BA_FPM25/output
-out_file <- here("output", "pop_regrid_zhao_20252010.csv") # full file path
+out_file <- here("output", "pm_joined", "pop_regrid_zhao_20252010.csv") # full file path
 
 if (!dir.exists(out_dir)) dir.create(out_dir,          # create dir if missing
                                      recursive = TRUE)

@@ -1,5 +1,24 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## Process Death Rate Data ##
+## PROCESS DEATH RATE DATA: Join World Bank crude death rates onto the pop/PM grid
+##
+## Goal: Clean World Bank crude death rate data (1960-2020, per capita) and join it
+##   onto the pop/PM grid-cell table by country, filling grid cells whose country has
+##   no WB match with the world-average death rate for that year.
+##
+## Inputs:
+##   output/pm_joined/pop_pm_with_countries_final.csv           (grid-cell pop + PM2.5
+##                                         + country assignment; Pierce, Park, Zhao data)
+##   input/WB_crude_death_rate/API_SP.DYN.CDRT.IN_DS2_en_csv_v2_241.csv  (World Bank crude
+##                                         death rate per 1,000 people, by country and year)
+##
+## Outputs:
+##   output/pm_joined/pop_pm_country_death_final.csv  (grid-cell table with death_rate_YYYY
+##                                         columns for 1960-2020 joined on, as a proportion)
+##
+## Execution order:
+##   files run before: country_map_pop_pm_final.R --> writes pop_pm_with_countries_final.csv
+##   files run after: pop_wght_pm_cntry.R, fpm_gmt_regress_FE_grid_all.R,
+##                    plots_stats_fpm_all.R --> read pop_pm_country_death_final.csv
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Remove all objects from the environment
@@ -18,7 +37,7 @@ library(tibble)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_rev.csv")) #may use pop_pm_with_countries_rev.csv for latest version
-pop_pm_country <- read_csv(here("output", "pop_pm_with_countries_final.csv")) # includes pierce, park, zhao data
+pop_pm_country <- read_csv(here("output", "pm_joined", "pop_pm_with_countries_final.csv")) # includes pierce, park, zhao data
 
 colnames(pop_pm_country)
 
@@ -181,7 +200,7 @@ cat("\n=== Death rates in pop_pm_country_death ===\n")
 
 # write_csv(pop_pm_country_death, here("output", "pop_pm_country_death.csv"))
 # write_csv(pop_pm_country_death, here("output", "pop_pm_country_death_park.csv"))
-write_csv(pop_pm_country_death, here("output", "pop_pm_country_death_final.csv"))
+write_csv(pop_pm_country_death, here("output", "pm_joined", "pop_pm_country_death_final.csv"))
 
 
 ## THE END 

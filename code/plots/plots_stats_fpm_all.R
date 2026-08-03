@@ -55,7 +55,7 @@ library(ggrepel)
 ############ Import ############################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-df <- read_csv(here("output", "pop_pm_country_death_final.csv"))
+df <- read_csv(here("output", "pm_joined", "pop_pm_country_death_final.csv"))
 
 gmt_pierce  <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))
 gmt_park <- read_csv(here("output", "gmt", "gmt_park_hist.csv"))
