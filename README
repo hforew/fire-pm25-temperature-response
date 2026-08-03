@@ -20,58 +20,58 @@ spatial pattern). It:
   4) runs country- and grid-cell-level fixed-effects regressions of fire PM2.5 on GMT.
 
 The resulting beta_c estimates (output/betas_fe_all/fpm_gmt_regression_coefs_FE_all.csv)
-are the damage-function parameter that feeds the Monte Carlo GIVE/SC-CO2 valuation step,
-which lives outside this repo (see note at the top of Section 4 below).
+are the damage-function parameter that feeds the GIVE/SC-CO2 valuation step,
+which lives outside this repo (see note at the top of Section 5 below).
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############################  DIRECTORY STRUCTURE  #######################################
+############################  1 - DIRECTORY STRUCTURE  #######################################
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 fire-pm25-temperature-response/
-├── README
-├── Fire_SC_CO2_draft.pdf        manuscript draft
-├── code/
-│   ├── pierce_etal_2017/        extract + regrid Pierce/CESM PM2.5 and population
-│   ├── park_etal_2024/          extract + regrid Park historical PM2.5 and population
-│   ├── zhao_etal_2025/          regrid Zhao projected PM2.5 and population
-│   ├── other_mapping/           country-code assignment, death-rate join
-│   ├── gmt_chg/                 GMT anomaly series for all three studies
-│   ├── regression_beta/         beta_c / beta_i regressions, GIVE country mapping, tables
-│   │   ├── FE/                    preferred pooled fixed-effects specification
-│   │   ├── FE_fact_cfact/         factual + counterfactual Park sensitivity specification
-│   │   └── single_study/          single-source (Pierce-only, Park-only) specifications
-│   └── plots/                   figures built from regression outputs
-│       ├── FE/
-│       └── FE_fact_cfact/
-├── input/                       raw source data (NetCDF/CSV/.mat/.npz) -- see Section 3
-│   ├── pierce_etal_2017/
-│   ├── Park_etal_2024/
-│   ├── Zhao_etal_2025/
-│   ├── GIVE/
-│   ├── WB_crude_death_rate/
-│   ├── landmask_area/
-│   └── temperature/
-├── output/                      processed CSVs, regression coefficients, latex tables
-│   ├── pm_joined/
-│   ├── gmt/
-│   ├── betas_fe_all/
-│   ├── betas_fe_fact_cfact/
-│   ├── betas_single_study/
-│   ├── GIVE_betas/
-│   └── latex/
-└── images/                      manuscript figures + diagnostic maps
-    ├── regression_beta/
-    ├── pm/
-    ├── fpm_cell_global/
-    └── fpm_cell_usa/
+|-- README
+|-- Fire_SC_CO2_draft.pdf        manuscript draft
+|-- code/
+|   |-- pierce_etal_2017/        extract + regrid Pierce/CESM PM2.5 and population
+|   |-- park_etal_2024/          extract + regrid Park historical PM2.5 and population
+|   |-- zhao_etal_2025/          regrid Zhao projected PM2.5 and population
+|   |-- other_mapping/           country-code assignment, death-rate join
+|   |-- gmt_chg/                 GMT anomaly series for all three studies
+|   |-- regression_beta/         beta_c / beta_i regressions, GIVE country mapping, tables
+|   |   |-- FE/                    preferred pooled fixed-effects specification
+|   |   |-- FE_fact_cfact/         factual + counterfactual Park sensitivity specification
+|   |   |-- single_study/          single-source (Pierce-only, Park-only) specifications
+|   |-- plots/                   figures built from regression outputs
+|       |-- FE/
+|       |-- FE_fact_cfact/
+|-- input/                       raw source data (NetCDF/CSV/.mat/.npz) -- see Section 4
+|   |-- pierce_etal_2017/
+|   |-- Park_etal_2024/
+|   |-- Zhao_etal_2025/
+|   |-- GIVE/
+|   |-- WB_crude_death_rate/
+|   |-- landmask_area/
+|   |-- temperature/
+|-- output/                      processed CSVs, regression coefficients, latex tables
+|   |-- pm_joined/
+|   |-- gmt/
+|   |-- betas_fe_all/
+|   |-- betas_fe_fact_cfact/
+|   |-- betas_single_study/
+|   |-- GIVE_betas/
+|   |-- latex/
+|-- images/                      manuscript figures + diagnostic maps
+    |-- regression_beta/
+    |-- pm/
+    |-- fpm_cell_global/
+    |-- fpm_cell_usa/
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############################  1 - FILE EXECUTION ORDER  #######################################
+############################  2 - FILE EXECUTION ORDER  #######################################
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The pipeline is not a single line -- three source studies are extracted/regridded in
-parallel, then merged. Stages below run top-to-bottom; scripts within a stage (or within
-a lettered sub-group) can run in any order relative to each other.
+Run stages top-to-bottom, and run the files listed within each stage top-to-bottom too.
+Three source studies are extracted/regridded in parallel as lettered sub-groups (a)/(b)/(c)
+within Stage 1 -- run those in listed order; "<- needs ..." notes call out dependencies.
 
 STAGE 1 -- per-study extraction & regridding (parallel)
 
@@ -97,7 +97,7 @@ STAGE 2 -- merge & country mapping (needs 1c)
   code/other_mapping/country_map_pop_pm_final.R
   code/other_mapping/death_rate_processing.R             <- needs country_map_pop_pm_final.R
 
-STAGE 3 -- country-level aggregation (needs 2, and WB death rates)
+STAGE 3 -- country-level aggregation (needs 2)
 
   code/regression_beta/pop_wght_pm_cntry.R
 
@@ -119,7 +119,7 @@ STAGE 5 -- comparison, GIVE mapping, and plots (needs Stage 4 outputs)
   code/plots/FE_fact_cfact/plots_beta_lobf_fe_all_fact_cfact.R  (sensitivity-spec figures)
   code/plots/plots_stats_fpm_all.R                 -> descriptive plots across all datasets
 
-DIAGNOSTIC / VALIDATION UTILITIES (not part of the main DAG; run standalone for QC)
+DIAGNOSTIC / VALIDATION UTILITIES (not part of the main pipeline; run standalone for QC)
 
   code/other_mapping/country_map_pop_pm_validation.R   -- CLM vs. World Bank population check
   code/park_etal_2024/org_park_summary.R                -- yearly PM2.5 summary stats by model
@@ -134,10 +134,10 @@ DIAGNOSTIC / VALIDATION UTILITIES (not part of the main DAG; run standalone for 
   IMPORTANT: what happens after beta_c leaves this repo (Monte Carlo sampling of beta_c and
   the concentration-response coefficient, the GIVE wildfire-PM2.5 damage function, discounting,
   and the resulting SC-CO2) is not implemented in this repo -- see the flagged items in
-  Section 4 below.
+  Section 5 below.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############################  2 - CODE SUMMARY  #######################################
+############################  3 - CODE SUMMARY  #######################################
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 pierce_etal_2017/
@@ -218,7 +218,7 @@ plots/
                                 three studies, globally and for the USA.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############################  3 - DATA INPUTS  #######################################
+############################  4 - DATA INPUTS  #######################################
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 input/pierce_etal_2017/    CESM gridded PM2.5 NetCDFs (2000 baseline, 2050/2100 x RCP4.5/8.5,
@@ -249,11 +249,11 @@ input/temperature/         GMT anomaly series feeding temp_chg.R: Pierce CESM Ne
                             SSP5-8.5 series (for Zhao scenarios).
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-############################  4 - MANUSCRIPT FIGURES & TABLES  #######################################
+############################  5 - MANUSCRIPT FIGURES & TABLES  #######################################
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Figure numbers below refer to Fire_SC_CO2_draft.pdf. Only figures/tables built from beta_c/
-beta_i (this repo's output) have a source here; the Monte Carlo SC-CO2 simulation, the GIVE
+beta_i (this repo's output) have a source here; the GIVE model SC-CO2 estimation, the GIVE
 damage-function integration, and the Qiu et al. comparison happen downstream, outside this
 repo -- those items are flagged "NOT IN THIS REPO" below so you can fill in the source.
 
