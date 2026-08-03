@@ -100,7 +100,7 @@ gmt_chg <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))
 gmt_park <- read_csv(here("output", "gmt", "gmt_park_hist.csv"))
 
 # Import Zhao et al. ~2095 GMT anomalies (°C relative to pre-industrial baseline)
-# Rows: SSP245, SSP585 --- these temp changes assigned to Zhao but sourced from MimiSSPs 
+# Rows: SSP245, SSP585 --- these temp changes assigned to Zhao but sourced from MimiSSPs
 # Columns: scenario, mean_gmt_pi
 gmt_zhao <- read_csv(here("output", "gmt", "gmt_zhao_SSPs.csv"))
 
@@ -303,26 +303,9 @@ park_counter_data_long <- park_counter_data_wide %>%
     names_to  = "period_scenario",
     values_to = "exposure_percap"
   ) %>%
-  mutate(T_ps = case_when(
-    period_scenario == "exposure_percap_park_classic_1960s_fpm_counter" ~ gmt_1960s,
-    period_scenario == "exposure_percap_park_classic_1970s_fpm_counter" ~ gmt_1970s,
-    period_scenario == "exposure_percap_park_classic_1980s_fpm_counter" ~ gmt_1980s,
-    period_scenario == "exposure_percap_park_classic_1990s_fpm_counter" ~ gmt_1990s,
-    period_scenario == "exposure_percap_park_classic_2000s_fpm_counter" ~ gmt_2000s,
-    period_scenario == "exposure_percap_park_classic_2010s_fpm_counter" ~ gmt_2010s,
-    period_scenario == "exposure_percap_park_jules_1960s_fpm_counter"   ~ gmt_1960s,
-    period_scenario == "exposure_percap_park_jules_1970s_fpm_counter"   ~ gmt_1970s,
-    period_scenario == "exposure_percap_park_jules_1980s_fpm_counter"   ~ gmt_1980s,
-    period_scenario == "exposure_percap_park_jules_1990s_fpm_counter"   ~ gmt_1990s,
-    period_scenario == "exposure_percap_park_jules_2000s_fpm_counter"   ~ gmt_2000s,
-    period_scenario == "exposure_percap_park_jules_2010s_fpm_counter"   ~ gmt_2010s,
-    period_scenario == "exposure_percap_park_ssib4_1960s_fpm_counter"   ~ gmt_1960s,
-    period_scenario == "exposure_percap_park_ssib4_1970s_fpm_counter"   ~ gmt_1970s,
-    period_scenario == "exposure_percap_park_ssib4_1980s_fpm_counter"   ~ gmt_1980s,
-    period_scenario == "exposure_percap_park_ssib4_1990s_fpm_counter"   ~ gmt_1990s,
-    period_scenario == "exposure_percap_park_ssib4_2000s_fpm_counter"   ~ gmt_2000s,
-    period_scenario == "exposure_percap_park_ssib4_2010s_fpm_counter"   ~ gmt_2010s
-  )) %>%
+  # Counterclim runs hold CO2 (and thus GMT) fixed at 1901 levels, so all
+  # counterfactual decades share T_ps = 0 (°C anomaly rel. to 1850-1900 PI baseline).
+  mutate(T_ps = 0) %>%
   mutate(fire_model = case_when(
     grepl("classic", period_scenario) ~ "classic_counter",
     grepl("jules",   period_scenario) ~ "jules_counter",

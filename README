@@ -1,181 +1,275 @@
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
-############################  R Code Files and their output  ############################ 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################  0 - OVERVIEW  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-This project reads NetCDF data for pm and pop projected over various time periods and computes mortality.
+This repo builds the country-level damage-function input for "Valuing global wildfire
+PM2.5 mortality caused by climate change" (Williams, Fremstad, Burkhardt, Lou;
+Fire_SC_CO2_draft.pdf). The paper estimates a fifth GIVE damage sector -- wildfire
+PM2.5 mortality -- and needs, for each country c, beta_c: the change in
+population-weighted per-capita fire PM2.5 exposure (ug/m3/yr) per 1C increase in
+global mean temperature (GMT).
 
-Obtained from authors, data comes from these studies:
+This R pipeline produces beta_c (and a grid-cell analog, beta_i, used only to map the
+spatial pattern). It:
 
-https://www.frames.gov/catalog/25211
-https://onlinelibrary.wiley.com/doi/abs/10.1029/2018GH000144
+  1) extracts gridded fire PM2.5 and population data from three source studies
+     (Pierce et al. 2017 / CESM, Park et al. 2024 / CLASSIC-JULES-SSiB4, Zhao et al. 2025),
+  2) regrids everything onto a common 0.5deg population grid and assigns country codes,
+  3) pairs each grid cell/country observation with its GMT anomaly, and
+  4) runs country- and grid-cell-level fixed-effects regressions of fire PM2.5 on GMT.
 
-This README is organized as follows:
+The resulting beta_c estimates (output/betas_fe_all/fpm_gmt_regression_coefs_FE_all.csv)
+are the damage-function parameter that feeds the Monte Carlo GIVE/SC-CO2 valuation step,
+which lives outside this repo (see note at the top of Section 4 below).
 
-1) File execution order: provides summary of code file, listed by execution order
-2) Code: Details each file, including inputs and outputs
-3) Data inputs: Details each input file
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################  DIRECTORY STRUCTURE  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
-############################  1 - FILE EXECUTION ORDER #######################################
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+fire-pm25-temperature-response/
+├── README
+├── Fire_SC_CO2_draft.pdf        manuscript draft
+├── code/
+│   ├── pierce_etal_2017/        extract + regrid Pierce/CESM PM2.5 and population
+│   ├── park_etal_2024/          extract + regrid Park historical PM2.5 and population
+│   ├── zhao_etal_2025/          regrid Zhao projected PM2.5 and population
+│   ├── other_mapping/           country-code assignment, death-rate join
+│   ├── gmt_chg/                 GMT anomaly series for all three studies
+│   ├── regression_beta/         beta_c / beta_i regressions, GIVE country mapping, tables
+│   │   ├── FE/                    preferred pooled fixed-effects specification
+│   │   ├── FE_fact_cfact/         factual + counterfactual Park sensitivity specification
+│   │   └── single_study/          single-source (Pierce-only, Park-only) specifications
+│   └── plots/                   figures built from regression outputs
+│       ├── FE/
+│       └── FE_fact_cfact/
+├── input/                       raw source data (NetCDF/CSV/.mat/.npz) -- see Section 3
+│   ├── pierce_etal_2017/
+│   ├── Park_etal_2024/
+│   ├── Zhao_etal_2025/
+│   ├── GIVE/
+│   ├── WB_crude_death_rate/
+│   ├── landmask_area/
+│   └── temperature/
+├── output/                      processed CSVs, regression coefficients, latex tables
+│   ├── pm_joined/
+│   ├── gmt/
+│   ├── betas_fe_all/
+│   ├── betas_fe_fact_cfact/
+│   ├── betas_single_study/
+│   ├── GIVE_betas/
+│   └── latex/
+└── images/                      manuscript figures + diagnostic maps
+    ├── regression_beta/
+    ├── pm/
+    ├── fpm_cell_global/
+    └── fpm_cell_usa/
 
-NetCDF_extract_pm.R  (converts NetCDF pm data to data frame)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################  1 - FILE EXECUTION ORDER  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-NetCDF_extract_pop.R (converts NetCDF population data to data frame)
+The pipeline is not a single line -- three source studies are extracted/regridded in
+parallel, then merged. Stages below run top-to-bottom; scripts within a stage (or within
+a lettered sub-group) can run in any order relative to each other.
 
-pm_to_pop_regrid.R (re-grids pm data (coarser resolution) to pop data resolution (finer))
+STAGE 1 -- per-study extraction & regridding (parallel)
 
-country_map_pop_pm.R (maps country codes to combined pm and pop data)
+  (a) Pierce et al. 2017 (CESM):
+      code/pierce_etal_2017/NetCDF_extract_pm.R
+      code/pierce_etal_2017/NetCDF_extract_pop_final.R
+      code/pierce_etal_2017/pm_to_pop_regrid.R          <- needs both files above
 
-pm_mortality.R (computes mortality)
+  (b) Park et al. 2024:
+      code/park_etal_2024/pop_regrid_park_2024.R
+      code/park_etal_2024/pm_regrid_park_2024.R          <- needs pm_to_pop_regrid.R output
 
-plots_  (various plot files)
+  (c) Zhao et al. 2025:
+      code/zhao_etal_2025/pop_regrid_zhao_2025.R
+      code/zhao_etal_2025/pm_regrid_zhao_2025.R          <- needs pm_regrid_park_2024.R
+                                                              and pop_regrid_zhao_2025.R output
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
-############################  2 - Code  #######################################
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+  (d) GMT (independent of a-c):
+      code/gmt_chg/temp_chg.R
 
-####### NetCDF_extract_pm.R #################################################################
-* this code 1) extracts grid cell data from NetCDF file, converts to dataframe and exports as csv
+STAGE 2 -- merge & country mapping (needs 1c)
 
-## inputs
-* CESM_09x125_PM25_ 
-** multiple files with this predix, see section 3 for detail
+  code/other_mapping/country_map_pop_pm_final.R
+  code/other_mapping/death_rate_processing.R             <- needs country_map_pop_pm_final.R
 
-## outputs 
-* annual_ave_pm25.csv
-** columns:
-  lon	lat	pm_2000	pm_2050_45	pm_2050_85	pm_2100_45	pm_2100_85	fpm_2000	fpm_2050_45	fpm_2050_45_hi	
-  fpm_2050_85	fpm_2050_85_hi	fpm_2100_45	fpm_2100_45_hi	fpm_2100_85	fpm_2100_85_hi	fpm_2100_rcp_chg	
-  fpm_2100_rcp_chg_hi	fpm_2050_rcp_chg	fpm_2050_rcp_chg_hi	fpm_2050_45_base_chg	fpm_2050_85_base_chg	
-  fpm_2100_45_base_chg	fpm_2100_85_base_chg	fpm_2050_45_base_chg_hi	fpm_2050_85_base_chg_hi	
-  fpm_2100_45_base_chg_hi	fpm_2100_85_base_chg_hi	n_months
-** at grid cell level, this data is:
-    - pm total (including fire)
-    - pm total with human influence
-    - pm without fire 
-    - Fire pm (fpm)  
-    - Computed for years (2000, 2050, 2100) and RCPs (4.5,8.5)
+STAGE 3 -- country-level aggregation (needs 2, and WB death rates)
 
-####### NetCDF_extract_pop.R #################################################################
-* this code 1) extracts grid cell population data from NetCDF file
-            2) computes area by grid cell and then total population, given pop denisty
-            3) converts to data frame and exports as csv
+  code/regression_beta/pop_wght_pm_cntry.R
 
-## inputs
-* SSP1_for_RCP45_2006-2100_population_density_c160701.nc 
-** see section 3 for file detail
+STAGE 4 -- regressions (needs Stage 3 and/or Stage 2 grid data, plus Stage 1d GMT)
 
-## outputs 
-* pop_df.csv
-** columns: lon	lat	pop_dens_2009	pop_year	cell_area_km2	pop_tot_2009
-** total population per grid
+  code/regression_beta/FE/fpm_gmt_regression_FE_all.R         (preferred country-level spec)
+  code/regression_beta/FE/fpm_gmt_regress_FE_grid_all.R       (grid-cell-level spec)
+  code/regression_beta/FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R  (sensitivity)
+  code/regression_beta/single_study/fpm_gmt_regression_pierce.R  (sensitivity)
+  code/regression_beta/single_study/fpm_gmt_regression_park.R    (sensitivity)
+  code/regression_beta/regression_FE_stats_all.R               (descriptive stats + Figure 4)
 
-####### pm_to_pop_regrid.R ############################################################
-* this code 1) imports processed data for pm and population
-            2) re-grids pm data (coarser resolution) to pop data resolution (finer)
-            3) outputs the combined data for pm and pop
-            
-## inputs
-* pop_df.csv (processed data file)
-* annual_ave_pm25.csv (processed data file)
+STAGE 5 -- comparison, GIVE mapping, and plots (needs Stage 4 outputs)
 
-## outputs 
-* pm25_regridded_0.5deg.csv
-** columns: same as annual_ave_pm25.csv
-** the pm data from annual_ave_pm25.csv now has:
-  - lon and lat coordinates converted from edges to centers 
-  - more rows---before 55296, now 259200---because pm value is repeated
-        for each corresponding pop data grid cell 
+  code/regression_beta/beta_comparison_latex.R     -> Tables 4-5
+  code/regression_beta/beta_GIVE_country_map.R     -> maps beta_c onto full GIVE country list
+  code/plots/FE/plots_beta_lobf_fe_all.R           -> Figures 3, 5
+  code/plots/FE/plots_beta_lobf_fe_grid_all.R      -> Figures 1, 6
+  code/plots/FE_fact_cfact/plots_beta_lobf_fe_all_fact_cfact.R  (sensitivity-spec figures)
+  code/plots/plots_stats_fpm_all.R                 -> descriptive plots across all datasets
 
-* pop_pm_combined.csv
-** columns: combined columns from annual_ave_pm25.csv and pop_df.csv
-** for standardized lat and lon coordinates pop and pm data is listed
+DIAGNOSTIC / VALIDATION UTILITIES (not part of the main DAG; run standalone for QC)
 
-####### country_map_pop_pm.R ############################################################
+  code/other_mapping/country_map_pop_pm_validation.R   -- CLM vs. World Bank population check
+  code/park_etal_2024/org_park_summary.R                -- yearly PM2.5 summary stats by model
+  code/park_etal_2024/park_read_test.R                  -- ad hoc NetCDF read scratch file
+  code/park_etal_2024/sanity_check_pm_park_us_all.R     -- CONUS PM2.5 map QC
+  code/park_etal_2024/sanity_check_pm_park_world_classic.R -- global PM2.5 map QC (CLASSIC)
+  code/park_etal_2024/sanity_check_pop_park_2024.R      -- city-level population QC
+  input/Park_etal_2024/read_convert_nc.py               -- local one-off NetCDF export
+                                                             (hardcoded local paths; not part
+                                                             of the repo pipeline)
 
-* this code maps country codes to combined pm and pop data
+  IMPORTANT: what happens after beta_c leaves this repo (Monte Carlo sampling of beta_c and
+  the concentration-response coefficient, the GIVE wildfire-PM2.5 damage function, discounting,
+  and the resulting SC-CO2) is not implemented in this repo -- see the flagged items in
+  Section 4 below.
 
-## inputs: pop_pm_combined 
-## outputs: pop_pm_with_countries.csv
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################  2 - CODE SUMMARY  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-####### pm_mortality.R ############################################################
+pierce_etal_2017/
+  NetCDF_extract_pm.R          Extract fire PM2.5 (fPM = total - no-fire) at the grid-cell
+                                level from Pierce CESM NetCDFs; monthly + annual-average,
+                                for 2000/2050/2100 x RCP4.5/8.5, with/without human influence.
+  NetCDF_extract_pop_final.R   Build per-cell population (2001-2010) from the CLM SSP1 NetCDF,
+                                converting density to totals via grid-cell area.
+  pm_to_pop_regrid.R           Re-grid coarse (1.25deg) PM2.5 onto the fine (0.5deg) population
+                                grid by nearest-neighbor matching; merge into one table.
 
-* Using prior data output, this code computes pm mortality with CRFs
+park_etal_2024/
+  pop_regrid_park_2024.R       Convert the Park .mat population grid (360x720x6 decades) to a
+                                tidy CSV, area-weighted (sum) regridded onto the 0.5deg grid.
+  pm_regrid_park_2024.R        Process GEOS-Chem PM2.5 output (CLASSIC/JULES/SSiB4 vs.
+                                withoutfire) into fPM by model x decade; merge into the
+                                master pop_pm table; validate against authors' results1206.mat.
+  org_park_summary.R           Diagnostic: yearly min/max/mean/median PM2.5 by land-surface
+                                model, straight from the raw NetCDFs.
+  sanity_check_pm_park_*.R     Diagnostic: render CONUS / global PM2.5 choropleth maps as
+                                self-contained HTML for visual QC of the regridded PM2.5.
+  sanity_check_pop_park_2024.R Diagnostic: spot-check regridded population for 5 US cities.
+  park_read_test.R             Diagnostic scratch file for reading Park NetCDFs.
 
-## inputs: pop_pm_with_countries.csv 
-## outputs: 
+zhao_etal_2025/
+  pop_regrid_zhao_2025.R       Convert the Zhao 0.1deg population .npz to a 0.5deg long-format
+                                CSV via area-weighted (sum) resampling, conserving total pop.
+  pm_regrid_zhao_2025.R        Area-weight-average Zhao 0.1deg PM2.5 (4 scenario CSVs: SSP245/
+                                585 x with/without fire) to 0.5deg; compute fPM; merge into the
+                                master pop_pm table -> pop_pm_combined_final.csv.
 
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
-############################  3 - Data Inputs  #######################################
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~    
+gmt_chg/
+  temp_chg.R                   Compute GMT anomaly (°C, relative to 1850-1900) for every
+                                period/decade/scenario used downstream, from three sources:
+                                Pierce CESM NetCDFs (area-weighted), OWID observed series
+                                (Park decades), and MimiSSP series (Zhao SSPs).
 
-####
-### CESM_09x125_PM25_2000_Baseline.nc
-### CESM_09x125_PM25_2000_BaseLine_NoFire.nc
-####
+other_mapping/
+  country_map_pop_pm_final.R   Assign each 0.5deg grid cell to a country by max-overlap-area
+                                intersection with Natural Earth polygons; filter to GIVE
+                                countries; QC against Park population.
+  country_map_pop_pm_validation.R  Diagnostic: validate CLM-derived country population totals
+                                against World Bank official totals.
+  death_rate_processing.R      Join World Bank crude death rates (1960-2020) onto the grid,
+                                filling unmatched cells with the world average.
 
-The _NoFire file is identical to the first, except PM2.5 from fire are excluded. 
+regression_beta/
+  pop_wght_pm_cntry.R           Aggregate grid-cell fPM to country-level population-weighted
+                                per-capita exposure (all three studies); append death rates
+                                and a global row.
+  FE/fpm_gmt_regression_FE_all.R      PREFERRED SPEC: country-level FE regression of fPM on
+                                GMT, pooled across Pierce/Park/Zhao with fire-model fixed
+                                effects -- produces beta_c (Equation 1 in the paper).
+  FE/fpm_gmt_regress_FE_grid_all.R    Same specification at the grid-cell level -> beta_i,
+                                used only to characterize the spatial pattern (Figures 1, 6).
+  FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R  Sensitivity spec: adds Park
+                                factual + counterfactual (obsclim/counterclim) runs as
+                                separate fixed-effect levels.
+  single_study/fpm_gmt_regression_pierce.R  Sensitivity spec: Pierce-only OLS, no FE.
+  single_study/fpm_gmt_regression_park.R    Sensitivity spec: one OLS per Park fire model
+                                (CLASSIC/JULES/SSiB4), no FE.
+  regression_FE_stats_all.R    Descriptive statistics for the regression inputs and the
+                                preferred-spec estimates; produces Figure 4.
+  beta_comparison_latex.R      Compare beta_c across the pooled-FE and single-model specs;
+                                exports Tables 4-5 as LaTeX.
+  beta_GIVE_country_map.R      Left-join beta_c estimates onto the full GIVE country list,
+                                filling missing countries with the global-row estimate.
 
-This NetCDF file contains global PM2.5 concentration data with:
-Variables:
+plots/
+  FE/plots_beta_lobf_fe_all.R          Country-level beta_c: histogram, choropleth, per-
+                                country line-of-best-fit scatter, and multi-country grid
+                                (Figures 3, 5) from the preferred FE spec.
+  FE/plots_beta_lobf_fe_grid_all.R     Grid-cell beta_i: histogram, world raster map, and
+                                CONUS raster map (Figures 1, 6).
+  FE_fact_cfact/plots_beta_lobf_fe_all_fact_cfact.R  Same plot set as FE/plots_beta_lobf_fe_all.R,
+                                for the factual/counterfactual sensitivity spec.
+  plots_stats_fpm_all.R        Descriptive plots and summary stats of fire PM2.5 across all
+                                three studies, globally and for the USA.
 
-date: Time stamps in YYYYMMDD format
-pm25: PM2.5 concentrations in μg/m³
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################  3 - DATA INPUTS  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Dimensions:
+input/pierce_etal_2017/    CESM gridded PM2.5 NetCDFs (2000 baseline, 2050/2100 x RCP4.5/8.5,
+                            each with all-PM, no-fire, and human-influence variants; 0.9x1.25deg,
+                            monthly); CLM population-density NetCDFs (SSP1/SSP3, 0.5deg,
+                            1850-2100); CESM GMT anomaly NetCDFs (RCP4.5/8.5).
 
-Longitude: 288 grid points (0.9° × 1.25° resolution)
-Latitude: 192 grid points
-Time: 12 time steps (monthly data)
+input/Park_etal_2024/      GEOS-Chem surface PM2.5 output (.nc4) for 3 wildfire-vegetation
+                            models (CLASSIC, JULES, SSiB4) x 6 decades (1960s-2010s), factual
+                            and counterfactual, plus a withoutfire baseline; population grid
+                            (pop_grid_6515.mat, 0.5deg x 6 decades).
 
-Data coverage:
-10-year average (2001-2010) of PM2.5 components including sulfate, nitrate, organic aerosols, black carbon, fine dust, and sea salt.
-The grid is global at approximately 1° resolution with 12 monthly averages.
+input/Zhao_etal_2025/      Machine-learning-projected PM2.5 (0.1deg CSVs, SSP2-4.5/SSP5-8.5 x
+                            with/without fire, ~2095-2099) and population (.npz, 0.1deg, 2010).
 
-####
-### CESM_09x125_PM25_2050_RCP45.nc
-### CESM_09x125_PM25_2050_RCP45_HI.nc
-### CESM_09x125_PM25_2050_RCP45_NoFire.nc
-####
+input/GIVE/                GIVE_countries.csv: the country list (ISO3) used by the GIVE IAM,
+                            the reference set that beta_c is ultimately joined onto.
 
-Files identical to above, except future projection under 4.5. 10-year average for 2041-2050. 
+input/WB_crude_death_rate/ World Bank crude death rate per 1,000 people, by country and year
+                            (1960-2020); used to fill baseline mortality for countries/cells
+                            without a direct match.
 
-Note, the _HI (human influence) file allows population change (ie, ignition/suppression) effects. 
-File ending _RCP45.nc does not allow population change. 
+input/landmask_area/       Grid-cell area (km^2) at 0.5deg, used to convert population density
+                            to population totals.
 
-####
-### CESM_09x125_PM25_2050_RCP85.nc
-### CESM_09x125_PM25_2050_RCP85_HI.nc
-### CESM_09x125_PM25_2050_RCP85_NoFire.nc
-####
+input/temperature/         GMT anomaly series feeding temp_chg.R: Pierce CESM NetCDFs, OWID
+                            observed annual anomaly (for Park decades), and MimiSSP SSP2-4.5 /
+                            SSP5-8.5 series (for Zhao scenarios).
 
-Identical to above, except future projection under 8.5. 10-year average for 2041-2050. 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############################  4 - MANUSCRIPT FIGURES & TABLES  #######################################
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+Figure numbers below refer to Fire_SC_CO2_draft.pdf. Only figures/tables built from beta_c/
+beta_i (this repo's output) have a source here; the Monte Carlo SC-CO2 simulation, the GIVE
+damage-function integration, and the Qiu et al. comparison happen downstream, outside this
+repo -- those items are flagged "NOT IN THIS REPO" below so you can fill in the source.
 
-####
-### CESM_09x125_PM25_2100_RCP45.nc
-### CESM_09x125_PM25_2100_RCP45_HI.nc
-### CESM_09x125_PM25_2100_RCP45_NoFire.nc
-####
+  Figure 1  images/regression_beta/beta_FE_grid_all/fig1_map_beta_i_fe_grid.png
+  Figure 2  NOT IN THIS REPO -- global SC-CO2 Monte Carlo distribution + sector comparison
+  Figure 3  images/regression_beta/beta_FE_all/fig3_multiplot_beta_c_wide.png
+  Figure 4  images/regression_beta/beta_FE_all/fig4_desc_stats.png
+  Figure 5  images/regression_beta/beta_FE_all/fig5_lof_multi_fe.png
+  Figure 6  images/regression_beta/beta_FE_grid_all/fig6_map_beta_i_fe_grid_usa.png
+  Figure 7  NOT IN THIS REPO -- USA SC-CO2 Monte Carlo distribution + sector comparison
+  Figure 8  NOT IN THIS REPO -- linear vs. Qiu et al. quadratic damage-function comparison
 
-Identical to above, except future projection under 4.5. 9-year average for 2091-2099. 
+  Table 1   NOT IN THIS REPO -- SC-CO2 by FUND region
+  Table 2   NOT IN THIS REPO -- USA SC-CO2 comparison with Qiu et al. (2026)
+  Table 3   NOT IN THIS REPO -- average excess deaths by warming level, comparison with Qiu et al.
+  Table 4   output/latex/beta_summary.tex
+  Table 5   output/latex/beta_select.tex
 
-####
-### CESM_09x125_PM25_2100_RCP85.nc
-### CESM_09x125_PM25_2100_RCP85_HI.nc
-### CESM_09x125_PM25_2100_RCP85_NoFire.nc
-####
-
-Identical to above, except future projection under 8.5. 9-year average for 2091-2099. 
-
-####
-### SSP1_for_RCP45_2006-2100_population_density_c160701.nc
-####
-
-720 longitude cells (0.5° resolution: 360°/0.5° = 720)
-360 latitude cells (0.5° resolution: 180°/0.5° = 360)
-95 time steps (years 2006-2100)
-Units: km^-2 = people per square kilometer (population density)
-Data structure: 3D array where each [lon, lat] cell has 95 time values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

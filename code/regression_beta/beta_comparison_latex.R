@@ -37,9 +37,9 @@ library(xtable)     # for LaTeX table output
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # betas from Park et al models (CLASSIC, JULES, SSiB4)
-beta_classic <- read_csv(here("output", "fpm_gmt_regression_coefs_classic.csv"))
-beta_jules   <- read_csv(here("output", "fpm_gmt_regression_coefs_jules.csv"))
-beta_ssib4   <- read_csv(here("output", "fpm_gmt_regression_coefs_ssib4.csv"))
+beta_classic <- read_csv(here("output", "betas_single_study", "fpm_gmt_regression_coefs_classic.csv"))
+beta_jules   <- read_csv(here("output", "betas_single_study", "fpm_gmt_regression_coefs_jules.csv"))
+beta_ssib4   <- read_csv(here("output", "betas_single_study", "fpm_gmt_regression_coefs_ssib4.csv"))
 
 head(beta_classic)
 head(beta_jules)
@@ -50,7 +50,7 @@ beta_fe     <- read_csv(here("output", "betas_fe_all", "fpm_gmt_regression_coefs
 head(beta_fe)
 
 # beta from Pirce et al
-beta_pierce <- read_csv(here("output", "fpm_gmt_regression_coefs_pierce.csv"))
+beta_pierce <- read_csv(here("output", "betas_single_study", "fpm_gmt_regression_coefs_pierce.csv"))
 head(beta_pierce)
 
 # beta from FE regression with factual + counterfactual Park data
