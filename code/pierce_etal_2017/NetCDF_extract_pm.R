@@ -21,6 +21,8 @@
 ## Execution order:
 ##   files run before: NA
 ##   files run after: pm_to_pop_regrid.R --> reads annual_ave_pm25.csv
+##
+## Other notes: See notes on metadata at very end of script
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Remove all objects from the environment
@@ -385,3 +387,65 @@ write_csv(pm_annual_ave, here("output", "pm_joined", "annual_ave_pm25.csv"))
 
 print(paste("File saved:", here("output", "pm_joined", "pm_annual_ave_pm25.csv")))
 
+
+
+############ Metadata notes #####################################################
+
+####
+### CESM_09x125_PM25_2000_Baseline.nc
+### CESM_09x125_PM25_2000_BaseLine_NoFire.nc
+####
+
+# The _NoFire file is identical to the first, except PM2.5 from fire are excluded.
+
+# This NetCDF file contains global PM2.5 concentration data with:
+#   Variables:
+#
+#   date: Time stamps in YYYYMMDD format
+# pm25: PM2.5 concentrations in μg/m³
+
+# Dimensions:
+#
+#   Longitude: 288 grid points (0.9° × 1.25° resolution)
+# Latitude: 192 grid points
+# Time: 12 time steps (monthly data)
+
+# Data coverage:
+#   10-year average (2001-2010) of PM2.5 components including sulfate, nitrate, organic aerosols, black carbon, fine dust, and sea salt.
+# The grid is global at approximately 1° resolution with 12 monthly averages.
+
+####
+### CESM_09x125_PM25_2050_RCP45.nc
+### CESM_09x125_PM25_2050_RCP45_HI.nc
+### CESM_09x125_PM25_2050_RCP45_NoFire.nc
+####
+
+# Files identical to above, except future projection under 4.5. 10-year average for 2041-2050.
+
+# Note, the _HI (human influence) file allows population change (ie, ignition/suppression) effects.
+# File ending _RCP45.nc does not allow population change.
+
+####
+### CESM_09x125_PM25_2050_RCP85.nc
+### CESM_09x125_PM25_2050_RCP85_HI.nc
+### CESM_09x125_PM25_2050_RCP85_NoFire.nc
+####
+
+# Identical to above, except future projection under 8.5. 10-year average for 2041-2050.
+
+
+####
+### CESM_09x125_PM25_2100_RCP45.nc
+### CESM_09x125_PM25_2100_RCP45_HI.nc
+### CESM_09x125_PM25_2100_RCP45_NoFire.nc
+####
+
+# Identical to above, except future projection under 4.5. 9-year average for 2091-2099.
+
+####
+### CESM_09x125_PM25_2100_RCP85.nc
+### CESM_09x125_PM25_2100_RCP85_HI.nc
+### CESM_09x125_PM25_2100_RCP85_NoFire.nc
+####
+
+# Identical to above, except future projection under 8.5. 9-year average for 2091-2099.
