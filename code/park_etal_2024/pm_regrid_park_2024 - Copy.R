@@ -13,7 +13,8 @@
 #          (2) Compute fPM = PM2.5(models) - PM2.5(withoutfire) for each model.
 #          (3) Reshape to wide format (one column per model x year).
 #          (4) Merge with population data and the master pop_pm dataset.
-
+#          (5) Validate against authors' results1206.mat; render CONUS sanity-
+#              check maps; diagnose the native 4° x 5° simulation resolution.
 # Execution order:
 #   files run before: pm_to_pop_regrid.R and pop_regrid_park_2024.R
 #   files run after: pop_regrid_zhao_2025.R and pm_regrid_zhao_2025.R
@@ -493,8 +494,8 @@ pm25_fpm_wide <- fpm_wide %>%
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ merge with pop_regrid_park_2024 and our master data ############
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-pop_pm_combined <- read.csv(here("output", "pop_pm_combined.csv"))
-pop_park <- read.csv(here("output", "pop_regrid_park_2024.csv"))
+pop_pm_combined <- read.csv(here("output", "pm_joined", "pop_pm_combined.csv"))
+pop_park <- read.csv(here("output", "pm_joined", "pop_regrid_park_2024.csv"))
 
 # Merge pop_wide with pm25_fpm_wide by lon and lat
 pm25_pop_merged <- pm25_fpm_wide %>%
@@ -534,6 +535,96 @@ cat("\nFirst 5x5 corner:\n")
 print(fpm_matrix[1:5, 1:5])
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ Validation: Compare with Original MAT File ####################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# Purpose: Verify that our processed Classic 2015 fire PM2.5 (NetCDF -> regrid
+# -> classic minus withoutfire) matches the authors' pre-computed PMfire data
+# in results1206.mat, as a sanity check on the full pipeline.
+
+# Read the MAT file
+mat_data <- readMat(here("input", "Park_etal_2024", "results1206.mat"))
+
+# Extract Classic model data
+PMfire_classic <- mat_data$PMfire[[1]][[1]]  # Classic model: 360(lat, north -> south) x 720(lon) x 6(years) x 2(scenarios)
+cat("\n=== Original MAT File ===\n")
+cat("PMfire_classic dimensions:", dim(PMfire_classic), "\n")
+
+# Extract 2015 data (year 6, scenario 1)
+PMfire_classic_2015 <- PMfire_classic[, , 6, 1]  # 360 x 720
+
+# Convert our data to matrix and transpose to match
+# expand.grid(lon, lat) -> lon varies first, so nrow = 720 (lon), ncol = 360 (lat).
+# Transpose to get lat as rows, lon as cols (standard raster convention).
+fpm_vector <- combined_data$park_classic_2015_fpm
+fpm_matrix <- matrix(fpm_vector, nrow = 720, ncol = 360)
+fpm_matrix_t <- t(fpm_matrix)  # Now 360 (lat: south -> north) x 720 (lon)
+
+# Flip lat: our data is south -> north, but the MAT file stores lat north -> south.
+# This is comparison-only; combined_data itself keeps the standard south -> north order.
+fpm_matrix_t <- fpm_matrix_t[360:1, ]
+
+# Round to some decimal places for comparison
+PMfire_rounded <- round(PMfire_classic_2015, 6)
+fpm_rounded <- round(fpm_matrix_t, 6)
+
+# Compare
+max_diff <- max(abs(fpm_rounded - PMfire_rounded))
+mean_diff <- mean(abs(fpm_rounded - PMfire_rounded))
+cat("Comparing: our park_classic_2015_fpm (lat-flipped) vs MAT PMfire[Classic, 2015, scenario 1]\n")
+cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
+cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
+cat("Maximum difference:", max_diff, "\n")
+cat("Mean difference:", mean_diff, "\n")
+cat("\nFirst 5x5 from MAT file (rounded):\n")
+print(PMfire_rounded[1:5, 1:5])
+cat("\nFirst 5x5 from our data (rounded):\n")
+print(fpm_rounded[1:5, 1:5])
+if (max_diff == 0) {
+  cat("\n SUCCESS: Matrices are identical at 6 decimal precision!\n")
+} else {
+  cat("\n WARNING: Matrices differ at 6 decimal precision!\n")
+}
+
+# Truncate to some decimal places (keep only some digits after decimal)
+PMfire_truncated <- trunc(PMfire_classic_2015 * 1e6) / 1e6
+fpm_truncated <- trunc(fpm_matrix_t * 1e6) / 1e6
+
+# Compare
+max_diff <- max(abs(fpm_truncated - PMfire_truncated))
+mean_diff <- mean(abs(fpm_truncated - PMfire_truncated))
+cat("Our matrix dimensions:", dim(fpm_matrix_t), "\n")
+cat("MAT matrix dimensions:", dim(PMfire_classic_2015), "\n")
+cat("Maximum difference:", max_diff, "\n")
+cat("Mean difference:", mean_diff, "\n")
+cat("\nFirst 5x5 from MAT file (truncated):\n")
+print(PMfire_truncated[1:5, 1:5])
+cat("\nFirst 5x5 from our data (truncated):\n")
+print(fpm_truncated[1:5, 1:5])
+if (max_diff == 0) {
+  cat("\n SUCCESS: Matrices are identical after truncation!\n")
+} else {
+  cat("\n Difference remains:", max_diff, "\n")
+}
+
+# Find different cells
+# the source NetCDF grid centers are at -179.5..180,
+# while our target grid centers are at -179.75..179.75 (offset by 0.25 deg),
+# so bilinear regridding introduces minor smoothing.
+diff_matrix <- fpm_matrix_t - PMfire_classic_2015
+diff_indices <- which(abs(diff_matrix) > 0, arr.ind = TRUE)
+cat("\nNumber of different cells:", nrow(diff_indices), "\n")
+if (nrow(diff_indices) > 0) {
+  cat("\nFirst 10 different cells:\n")
+  for (i in 1:min(20, nrow(diff_indices))) {
+    row <- diff_indices[i, 1]
+    col <- diff_indices[i, 2]
+    cat(sprintf("Position[%d,%d]: MAT=%.10f, Ours=%.10f, Diff=%.10e\n", 
+                row, col, PMfire_classic_2015[row, col], fpm_matrix_t[row, col], diff_matrix[row, col]))
+  }
+}
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ######################## save final master data to local ####################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -555,7 +646,7 @@ combined_data <- combined_data %>%
     }
   )
 
-write.csv(combined_data, here("output", "pop_pm_combined_with_park2024.csv"), row.names = FALSE)
+write.csv(combined_data, here("output", "pm_joined", "pop_pm_combined_with_park2024.csv"), row.names = FALSE)
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ SANITY CHECK: Plot US fpm for ALL models x years ##############
