@@ -24,8 +24,8 @@
 ##                     FE_climate_attributable/fpm_gmt_regression_FE_all_cli.R
 ##                     FE_climate_attributable/fpm_gmt_regression_park_cli.R
 ##                     regression_FE_stats_all.R
-##                     single_study/fpm_gmt_regression_pierce.R
-##                     single_study/fpm_gmt_regression_park.R
+##                     FE_sensitivity/fpm_gmt_regression_pierce.R
+##                     FE_sensitivity/fpm_gmt_regression_park.R
 ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

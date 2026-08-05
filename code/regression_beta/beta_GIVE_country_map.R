@@ -12,7 +12,7 @@
 #   - output/GIVE_betas/beta_country_meta_pierce.csv
 #   - output/GIVE_betas/beta_country_meta_fe_all.csv
 # Execution order:
-#   files run before: single_study/fpm_gmt_regression_pierce.R   --> writes fpm_gmt_regression_coefs_pierce.csv
+#   files run before: FE_sensitivity/fpm_gmt_regression_pierce.R   --> writes fpm_gmt_regression_coefs_pierce.csv
 #                     FE/fpm_gmt_regression_FE_all.R             --> writes fpm_gmt_regression_coefs_FE_all.csv
 #   files run after: NA
 

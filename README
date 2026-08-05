@@ -39,7 +39,7 @@ fire-pm25-temperature-response/
 |   |-- regression_beta/         beta_c / beta_i regressions, GIVE country mapping, tables
 |   |   |-- FE/                    preferred pooled fixed-effects specification
 |   |   |-- FE_fact_cfact/         factual + counterfactual Park sensitivity specification
-|   |   |-- single_study/          single-source (Pierce-only, Park-only) specifications
+|   |   |-- FE_sensitivity/          single-source (Pierce-only, Park-only) specifications
 |   |-- plots/                   figures built from regression outputs
 |       |-- FE/
 |       |-- FE_fact_cfact/
@@ -106,8 +106,8 @@ STAGE 4 -- regressions (needs Stage 3 and/or Stage 2 grid data, plus Stage 1d GM
   code/regression_beta/FE/fpm_gmt_regression_FE_all.R         (preferred country-level spec)
   code/regression_beta/FE/fpm_gmt_regress_FE_grid_all.R       (grid-cell-level spec)
   code/regression_beta/FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R  (sensitivity)
-  code/regression_beta/single_study/fpm_gmt_regression_pierce.R  (sensitivity)
-  code/regression_beta/single_study/fpm_gmt_regression_park.R    (sensitivity)
+  code/regression_beta/FE_sensitivity/fpm_gmt_regression_pierce.R  (sensitivity)
+  code/regression_beta/FE_sensitivity/fpm_gmt_regression_park.R    (sensitivity)
   code/regression_beta/regression_FE_stats_all.R               (descriptive stats + Figure 4)
 
 STAGE 5 -- comparison, GIVE mapping, and plots (needs Stage 4 outputs)
@@ -193,8 +193,8 @@ regression_beta/
   FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R  Sensitivity spec: adds Park
                                 factual + counterfactual (obsclim/counterclim) runs as
                                 separate fixed-effect levels.
-  single_study/fpm_gmt_regression_pierce.R  Sensitivity spec: Pierce-only OLS, no FE.
-  single_study/fpm_gmt_regression_park.R    Sensitivity spec: one OLS per Park fire model
+  FE_sensitivity/fpm_gmt_regression_pierce.R  Sensitivity spec: Pierce-only OLS, no FE.
+  FE_sensitivity/fpm_gmt_regression_park.R    Sensitivity spec: one OLS per Park fire model
                                 (CLASSIC/JULES/SSiB4), no FE.
   regression_FE_stats_all.R    Descriptive statistics for the regression inputs and the
                                 preferred-spec estimates; produces Figure 4.

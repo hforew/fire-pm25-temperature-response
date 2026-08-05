@@ -32,8 +32,8 @@
 ##   files run before: none — reads raw input data directly
 ##   files run after: fpm_gmt_regression_FE_all.R, fpm_gmt_regress_FE_grid_all.R,
 ##                    regression_FE_stats_all.R, plots_stats_fpm_all.R,
-##                    single_study/fpm_gmt_regression_pierce.R,
-##                    single_study/fpm_gmt_regression_park.R,
+##                    FE_sensitivity/fpm_gmt_regression_pierce.R,
+##                    FE_sensitivity/fpm_gmt_regression_park.R,
 ##                    FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R
 ##                    (all read one or more of the three GMT outputs above)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
