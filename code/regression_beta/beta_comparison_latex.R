@@ -12,11 +12,18 @@
 ##   fpm_gmt_regression_coefs_ssib4.csv
 ##   betas_fe_all/fpm_gmt_regression_coefs_FE_all.csv
 ##   fpm_gmt_regression_coefs_pierce.csv
-## Outputs: 
+##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_full.csv
+##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_CESM.csv
+##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_classic.csv
+##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_jules.csv
+##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_ssib4.csv
+##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_Zhao.csv
+## Outputs:
 ##    beta_select.tex
 ##    beta_summary.tex
 ## Execution Order:
-##   Execute after: fpm_gmt_regression_park.R, fpm_gmt_regression_pierce.R, fpm_gmt_regression_FE_all.R
+##   Execute after: fpm_gmt_regression_park.R, fpm_gmt_regression_pierce.R, fpm_gmt_regression_FE_all.R,
+##                  fpm_gmt_regression_FE_cfact_sensitivity.R
 ##   Execute before: NA
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -53,9 +60,16 @@ head(beta_fe)
 beta_pierce <- read_csv(here("output", "betas_single_study", "fpm_gmt_regression_coefs_pierce.csv"))
 head(beta_pierce)
 
-# beta from FE regression with factual + counterfactual Park data
-beta_fe_fact_cfact <- read_csv(here("output", "betas_fe_fact_cfact", "fpm_gmt_regression_coefs_FE_all_fact_cfact.csv"))
+# beta from FE regression with factual + counterfactual Park data (full model, all FE levels)
+beta_fe_fact_cfact <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_full.csv"))
 head(beta_fe_fact_cfact)
+
+# leave-one-model-out sensitivity variants: same FE regression with one fire-model source excluded
+beta_ex_cesm    <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_CESM.csv"))
+beta_ex_classic <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_classic.csv"))
+beta_ex_jules   <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_jules.csv"))
+beta_ex_ssib4   <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_ssib4.csv"))
+beta_ex_zhao    <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_Zhao.csv"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Join and Compare betas ##############################
@@ -91,9 +105,35 @@ beta_comparison <- beta_fe |>
   ) |>
   mutate(across(where(is.numeric), \(x) round(x, 4)))                   # round all numeric to 4dp
 
-# fact/cfact FE beta only: three-column reference table used downstream
+# fact/cfact FE beta plus leave-one-model-out sensitivity betas, joined by country
 beta_comparison_fact_cfact <- beta_fe_fact_cfact |>
-  select(country_code_iso3, beta_fe = estimate_beta_c, se_fe = std.error_beta_c)
+  select(country_code_iso3, beta_fe = estimate_beta_c, se_fe = std.error_beta_c) |>          # full model
+  left_join(
+    beta_ex_cesm |>
+      select(country_code_iso3, beta_ex_cesm = estimate_beta_c, se_ex_cesm = std.error_beta_c), # excl. CESM
+    by = "country_code_iso3"
+  ) |>
+  left_join(
+    beta_ex_classic |>
+      select(country_code_iso3, beta_ex_classic = estimate_beta_c, se_ex_classic = std.error_beta_c), # excl. CLASSIC
+    by = "country_code_iso3"
+  ) |>
+  left_join(
+    beta_ex_jules |>
+      select(country_code_iso3, beta_ex_jules = estimate_beta_c, se_ex_jules = std.error_beta_c), # excl. JULES
+    by = "country_code_iso3"
+  ) |>
+  left_join(
+    beta_ex_ssib4 |>
+      select(country_code_iso3, beta_ex_ssib4 = estimate_beta_c, se_ex_ssib4 = std.error_beta_c), # excl. SSiB4
+    by = "country_code_iso3"
+  ) |>
+  left_join(
+    beta_ex_zhao |>
+      select(country_code_iso3, beta_ex_zhao = estimate_beta_c, se_ex_zhao = std.error_beta_c), # excl. Zhao
+    by = "country_code_iso3"
+  ) |>
+  mutate(across(where(is.numeric), \(x) round(x, 4)))                   # round all numeric to 4dp
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Compare select betas ##############################
@@ -155,18 +195,30 @@ beta_summary <- beta_comparison |>
 
 beta_summary
 
-# fact/cfact FE only: "All models" row matching beta_summary structure
-beta_summary_fact_cfact <- beta_fe_fact_cfact |>
-  summarise(
-    model         = "All models",
-    pct_beta_pos  = round(mean(estimate_beta_c > 0,    na.rm = TRUE) * 100, 2),
-    pct_beta_sig5 = round(mean(p.value_beta_c  < 0.05, na.rm = TRUE) * 100, 2),
-    beta_min      = round(min(estimate_beta_c,             na.rm = TRUE), 2),
-    beta_p25      = round(quantile(estimate_beta_c, 0.25,  na.rm = TRUE), 2),
-    beta_median   = round(median(estimate_beta_c,          na.rm = TRUE), 2),
-    beta_p75      = round(quantile(estimate_beta_c, 0.75,  na.rm = TRUE), 2),
-    beta_max      = round(max(estimate_beta_c,             na.rm = TRUE), 2)
-  )
+# fact/cfact FE full model plus leave-one-model-out sensitivity variants:
+# one summary row per model, matching beta_summary structure
+fact_cfact_models <- list(
+  "All models" = beta_fe_fact_cfact,
+  "ex CESM"    = beta_ex_cesm,
+  "ex CLASSIC" = beta_ex_classic,
+  "ex JULES"   = beta_ex_jules,
+  "ex SSiB4"   = beta_ex_ssib4,
+  "ex Zhao"    = beta_ex_zhao
+)
+
+beta_summary_fact_cfact <- purrr::imap_dfr(fact_cfact_models, function(df, model_label) {
+  df |>
+    summarise(
+      model         = model_label,
+      pct_beta_pos  = round(mean(estimate_beta_c > 0,    na.rm = TRUE) * 100, 2),
+      pct_beta_sig5 = round(mean(p.value_beta_c  < 0.05, na.rm = TRUE) * 100, 2),
+      beta_min      = round(min(estimate_beta_c,             na.rm = TRUE), 2),
+      beta_p25      = round(quantile(estimate_beta_c, 0.25,  na.rm = TRUE), 2),
+      beta_median   = round(median(estimate_beta_c,          na.rm = TRUE), 2),
+      beta_p75      = round(quantile(estimate_beta_c, 0.75,  na.rm = TRUE), 2),
+      beta_max      = round(max(estimate_beta_c,             na.rm = TRUE), 2)
+    )
+})
 
 beta_summary
 beta_summary_fact_cfact
@@ -208,7 +260,7 @@ latex_beta_select <- beta_comparison_select |>
 # Row 2: Country | beta | p | beta | p | ...
 # \cmidrule(lr){} draws partial rules under each group in row 1
 header_row <- paste0(
-  " & \\multicolumn{2}{c}{FE} & \\multicolumn{2}{c}{CESM} & ",
+  " & \\multicolumn{2}{c}{All models} & \\multicolumn{2}{c}{CESM} & ",
   "\\multicolumn{2}{c}{CLASSIC} & \\multicolumn{2}{c}{JULES} & ",
   "\\multicolumn{2}{c}{SSiB4} \\\\\n",
   "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}\\cmidrule(lr){6-7}",

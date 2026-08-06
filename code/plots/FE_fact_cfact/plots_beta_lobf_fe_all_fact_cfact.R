@@ -288,13 +288,16 @@ print("Multiplot saved to images/regression_beta/beta_FE_all_fact_cfact/")
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # For each selected country, plot all 43 observations (18 Park factual + 18 Park
-# counterfactual + 5 Pierce + 2 Zhao) with eight fitted lines -- one per fire model --
-# on raw exposure_percap.
+# counterfactual + 5 Pierce + 2 Zhao) with five fitted lines -- one per fire model
+# (CLASSIC, JULES, SSiB4, CESM, Zhao) -- on raw exposure_percap.
 #
 # y-axis: exposure_percap (raw per-capita fire PM2.5 exposure).
 # Fitted lines: one per fire model, each using the FE intercept for that model
-# (alpha_classic + delta_m) and the shared slope beta_c. All eight lines are
+# (alpha_classic + delta_m) and the shared slope beta_c. All five lines are
 # parallel (common slope) but vertically offset by their model-level intercepts.
+# Park factual and counterfactual runs of the same model share one FE group (see
+# fpm_gmt_regression_FE_all_fact_cfact.R), so counterfactual points fall on the
+# same line as their factual counterpart -- only the 5 base-model lines are drawn.
 #
 # Data objects from source():
 #   reg_data_combined -- 43 rows per country: T_ps, exposure_percap, fire_model
@@ -417,27 +420,22 @@ for (iso in countries_to_plot) {
 
   # Extract per-model FE intercepts from the tidy coefficient table.
   # (Intercept) = classic baseline; other models add their delta offset.
-  tidied_c              <- reg_results %>% filter(country_code_iso3 == iso) %>% unnest(tidied)
-  alpha_classic         <- tidied_c %>% filter(term == "(Intercept)")                %>% pull(estimate)  # classic baseline intercept
-  delta_jules           <- tidied_c %>% filter(term == "fire_modeljules")            %>% pull(estimate)  # jules offset from classic
-  delta_ssib4           <- tidied_c %>% filter(term == "fire_modelssib4")            %>% pull(estimate)  # ssib4 offset from classic
-  delta_classic_counter <- tidied_c %>% filter(term == "fire_modelclassic_counter")  %>% pull(estimate)  # classic_counter offset
-  delta_jules_counter   <- tidied_c %>% filter(term == "fire_modeljules_counter")    %>% pull(estimate)  # jules_counter offset
-  delta_ssib4_counter   <- tidied_c %>% filter(term == "fire_modelssib4_counter")    %>% pull(estimate)  # ssib4_counter offset
-  delta_CESM            <- tidied_c %>% filter(term == "fire_modelCESM")             %>% pull(estimate)  # CESM offset from classic
-  delta_Zhao            <- tidied_c %>% filter(term == "fire_modelZhao")             %>% pull(estimate)  # Zhao offset from classic
+  # NB: Park factual and counterfactual runs of the same model are pooled into one
+  # FE group (see fpm_gmt_regression_FE_all_fact_cfact.R) -- there is no separate
+  # *_counter dummy term, so only the 5 base-model lines are built below.
+  tidied_c      <- reg_results %>% filter(country_code_iso3 == iso) %>% unnest(tidied)
+  alpha_classic <- tidied_c %>% filter(term == "(Intercept)")     %>% pull(estimate)  # classic baseline intercept
+  delta_jules   <- tidied_c %>% filter(term == "fire_modeljules") %>% pull(estimate)  # jules offset from classic
+  delta_ssib4   <- tidied_c %>% filter(term == "fire_modelssib4") %>% pull(estimate)  # ssib4 offset from classic
+  delta_CESM    <- tidied_c %>% filter(term == "fire_modelCESM")  %>% pull(estimate)  # CESM offset from classic
+  delta_Zhao    <- tidied_c %>% filter(term == "fire_modelZhao")  %>% pull(estimate)  # Zhao offset from classic
 
   lines_df <- tibble(
-    model       = factor(c("CLASSIC", "JULES", "SSiB4",
-                           "classic_counter", "jules_counter", "ssib4_counter",
-                           "CESM", "Zhao"),
+    model       = factor(c("CLASSIC", "JULES", "SSiB4", "CESM", "Zhao"),
                          levels = names(model_colors)),
     intercept_m = c(alpha_classic,                             # classic: base intercept
                     alpha_classic + delta_jules,               # jules:   base + model offset
                     alpha_classic + delta_ssib4,               # ssib4:   base + model offset
-                    alpha_classic + delta_classic_counter,     # classic_counter
-                    alpha_classic + delta_jules_counter,       # jules_counter
-                    alpha_classic + delta_ssib4_counter,       # ssib4_counter
                     alpha_classic + delta_CESM,                # CESM:    base + model offset
                     alpha_classic + delta_Zhao),               # Zhao:    base + model offset
     slope       = beta_c                                       # shared slope across all models
@@ -485,8 +483,10 @@ print("Line of best fit plots saved to images/regression_beta/beta_FE_all_fact_c
 ## Layout: 2 rows x 3 columns, single legend.
 ## Strip label: country code + beta_c + SE.
 ## y-axis: exposure_percap (raw per-capita fire PM2.5 exposure).
-## Eight parallel dotted fitted lines per panel: one per fire model, each using its
-## FE intercept (alpha_classic + delta_m) and the shared slope beta_c.
+## Five parallel dotted fitted lines per panel: one per fire model (CLASSIC, JULES,
+## SSiB4, CESM, Zhao), each using its FE intercept (alpha_classic + delta_m) and the
+## shared slope beta_c. Park counterfactual points share their factual model's FE
+## group, so they fall on the same line rather than getting a separate one.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 multiplot_countries <- c("global", "CHN", "IND", "USA", "IDN", "PAK")
@@ -521,18 +521,17 @@ build_lobf_multi <- function(countries) {
   df <- df %>%
     mutate(strip_label = factor(strip_label, levels = strip_levels))
 
-  # One row per country x fire model: FE intercept + shared slope for geom_abline
-  lines <- purrr::map_dfr(countries, function(iso) {   # 8 rows per country (one per model)
-    tidied_c              <- reg_results %>% filter(country_code_iso3 == iso) %>% unnest(tidied)
-    beta_c_val            <- tidied_c %>% filter(term == "T_ps")                        %>% pull(estimate)
-    alpha_classic         <- tidied_c %>% filter(term == "(Intercept)")                 %>% pull(estimate)
-    delta_jules           <- tidied_c %>% filter(term == "fire_modeljules")             %>% pull(estimate)
-    delta_ssib4           <- tidied_c %>% filter(term == "fire_modelssib4")             %>% pull(estimate)
-    delta_classic_counter <- tidied_c %>% filter(term == "fire_modelclassic_counter")   %>% pull(estimate)
-    delta_jules_counter   <- tidied_c %>% filter(term == "fire_modeljules_counter")     %>% pull(estimate)
-    delta_ssib4_counter   <- tidied_c %>% filter(term == "fire_modelssib4_counter")     %>% pull(estimate)
-    delta_CESM            <- tidied_c %>% filter(term == "fire_modelCESM")              %>% pull(estimate)
-    delta_Zhao            <- tidied_c %>% filter(term == "fire_modelZhao")              %>% pull(estimate)
+  # One row per country x fire model: FE intercept + shared slope for geom_abline.
+  # Park factual/counterfactual runs of a model are pooled into one FE group (see
+  # fpm_gmt_regression_FE_all_fact_cfact.R), so only the 5 base-model lines exist.
+  lines <- purrr::map_dfr(countries, function(iso) {   # 5 rows per country (one per model)
+    tidied_c      <- reg_results %>% filter(country_code_iso3 == iso) %>% unnest(tidied)
+    beta_c_val    <- tidied_c %>% filter(term == "T_ps")            %>% pull(estimate)
+    alpha_classic <- tidied_c %>% filter(term == "(Intercept)")     %>% pull(estimate)
+    delta_jules   <- tidied_c %>% filter(term == "fire_modeljules") %>% pull(estimate)
+    delta_ssib4   <- tidied_c %>% filter(term == "fire_modelssib4") %>% pull(estimate)
+    delta_CESM    <- tidied_c %>% filter(term == "fire_modelCESM")  %>% pull(estimate)
+    delta_Zhao    <- tidied_c %>% filter(term == "fire_modelZhao")  %>% pull(estimate)
 
     strip_lbl <- df %>%
       filter(country_code_iso3 == iso) %>%
@@ -542,16 +541,11 @@ build_lobf_multi <- function(countries) {
     tibble(
       country_code_iso3 = iso,
       strip_label       = strip_lbl,                                         # must match df for facet subsetting
-      model             = factor(c("CLASSIC", "JULES", "SSiB4",
-                                   "classic_counter", "jules_counter", "ssib4_counter",
-                                   "CESM", "Zhao"),
+      model             = factor(c("CLASSIC", "JULES", "SSiB4", "CESM", "Zhao"),
                                  levels = names(model_colors)),
       intercept_m       = c(alpha_classic,
                             alpha_classic + delta_jules,
                             alpha_classic + delta_ssib4,
-                            alpha_classic + delta_classic_counter,
-                            alpha_classic + delta_jules_counter,
-                            alpha_classic + delta_ssib4_counter,
                             alpha_classic + delta_CESM,
                             alpha_classic + delta_Zhao),
       slope             = beta_c_val

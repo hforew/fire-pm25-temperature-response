@@ -12,22 +12,21 @@
 ## per-capita fire PM2.5 per 1°C GMT), and alpha_cm are fire-model-specific
 ## intercepts (fixed effects absorbing model-level mean differences in exposure levels).
 ##
-## Eight fire-model fixed effect levels:
-##   classic (reference), jules, ssib4          --> Park et al. factual (obsclim) models
-##   classic_counter, jules_counter, ssib4_counter --> Park et al. counterfactual (counterclim) models
-##   CESM                                        --> Pierce et al. projections
-##   Zhao                                        --> Zhao et al. projections
-##
-## Factual and counterfactual Park runs receive separate intercepts because they are
-## driven by different climates and produce systematically different mean PM2.5 levels.
+## Five fire-model fixed effect levels:
+##   classic (reference), jules, ssib4 --> Park et al. factual (obsclim) AND counterfactual
+##                                         (counterclim) runs of the same model pooled into
+##                                         one intercept -- distinguished by T_ps (0 for
+##                                         counterfactual decades), not by a separate FE level
+##   CESM                               --> Pierce et al. projections
+##   Zhao                               --> Zhao et al. projections
 ##
 ## Data spans three sources combined:
 ##   - Pierce et al. projections: baseline (~2001–2010), 2041–2050, and 2091–2100
 ##     under RCP4.5 and RCP8.5 — 5 (period × scenario) observations per country.
 ##   - Park et al. historical factual: 1960s–2010s across 3 fire models (classic, JULES, SSIB4)
 ##     — 18 (decade × fire model) observations per country.
-##   - Park et al. historical counterfactual: 1960s–2010s across 3 fire models
-##     (classic_counter, JULES_counter, SSIB4_counter) — 18 observations per country.
+##   - Park et al. historical counterfactual: 1960s–2010s across the same 3 fire models
+##     — 18 observations per country, pooled into the same FE group as their factual runs.
 ##   - Zhao et al. projections: ~2095 under SSP2-4.5 and SSP5-8.5 — 2 observations per country.
 ##   Combined: up to 43 observations per country for the regression.
 ##
@@ -274,7 +273,10 @@ print(head(park_data_long, 18))
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Mirrors the factual Park reshape above, using counterfactual (counterclim) exposure.
-# One row per (country, fire_model_counter, decade) — 18 obs per country.
+# One row per (country, fire_model, decade) — 18 obs per country. fire_model is labelled
+# to match the factual reshape (e.g. "classic", not "classic_counter") so factual and
+# counterfactual runs of the same Park model share one FE group / intercept below —
+# they're distinguished by T_ps (0 for counterfactual) rather than by fire_model.
 
 park_counter_data_wide <- pop_wght %>%
   select(country_code_iso3,
@@ -308,9 +310,9 @@ park_counter_data_long <- park_counter_data_wide %>%
   # counterfactual decades share T_ps = 0 (°C anomaly rel. to 1850-1900 PI baseline).
   mutate(T_ps = 0) %>%
   mutate(fire_model = case_when(
-    grepl("classic", period_scenario) ~ "classic_counter",
-    grepl("jules",   period_scenario) ~ "jules_counter",
-    grepl("ssib4",   period_scenario) ~ "ssib4_counter"
+    grepl("classic", period_scenario) ~ "classic",
+    grepl("jules",   period_scenario) ~ "jules",
+    grepl("ssib4",   period_scenario) ~ "ssib4"
   )) %>%
   filter(!is.na(exposure_percap))
 
@@ -323,16 +325,18 @@ print(head(park_counter_data_long, 18))
 
 # One regression per country across all observations:
 #   18 Park factual obs (classic, jules, ssib4 × 6 decades)
-#   + 18 Park counterfactual obs (classic_counter, jules_counter, ssib4_counter × 6 decades)
+#   + 18 Park counterfactual obs (classic, jules, ssib4 × 6 decades — same fire_model
+#     labels as the factual obs, so each Park model's factual and counterfactual runs
+#     pool into one FE group / intercept)
 #   + 5 Pierce obs (1 base + 4 future)
 #   + 2 Zhao obs (SSP2-4.5, SSP5-8.5) = 43 total.
 reg_data_combined <- bind_rows(park_data_long, park_counter_data_long, reg_data_long) %>%
   # Set fire_model as factor with "classic" as reference level. FE dummies for
-  # jules, ssib4, classic_counter, jules_counter, ssib4_counter, CESM, Zhao are
-  # all interpreted relative to classic.
+  # jules, ssib4, CESM, Zhao are all interpreted relative to classic. classic, jules,
+  # and ssib4 each pool their Park factual + counterfactual observations into one
+  # intercept (5 FE groups total, not 8).
   mutate(fire_model = factor(fire_model,
                              levels = c("classic", "jules", "ssib4",
-                                        "classic_counter", "jules_counter", "ssib4_counter",
                                         "CESM", "Zhao")))
 
 # Sanity check: total rows and per-country observation counts.
@@ -342,12 +346,11 @@ print(reg_data_combined %>% count(country_name) %>% summary())
 # Expected: Combined rows: 7525 | n Min=43, Mean=43, Max=43 (175 countries * 43 obs)
 
 # Transparency: show observation count by fire_model across all countries.
-# Per country: classic=6, jules=6, ssib4=6, classic_counter=6, jules_counter=6,
-#              ssib4_counter=6, CESM=5, Zhao=2 (total=43).
+# Per country: classic=12 (6 factual + 6 counterfactual), jules=12, ssib4=12,
+#              CESM=5, Zhao=2 (total=43).
 cat("\nTotal observations by fire_model (all countries combined):\n")
 print(reg_data_combined %>% count(fire_model))
-# Expected: classic=1050, jules=1050, ssib4=1050, classic_counter=1050, jules_counter=1050,
-#           ssib4_counter=1050, CESM=875, Zhao=350 (175 countries each)
+# Expected: classic=2100, jules=2100, ssib4=2100, CESM=875, Zhao=350 (175 countries each)
 
 # Inspect the reshaped data to confirm structure ( fire_model visible)
 afg <- reg_data_combined %>%
@@ -369,11 +372,11 @@ print(tail(afg, 23), n = 23)
 ##   outside the data range (all obs at ~1°C or higher), so alpha_cm is extrapolated
 ##   and should not be interpreted as a meaningful exposure estimate.
 ##
-## Eight FE levels: classic (reference), jules, ssib4, classic_counter, jules_counter,
-##   ssib4_counter, CESM, Zhao. Parameters: 1 intercept + 7 dummies + 1 slope = 9.
-##   Degrees of freedom: 43 - 9 = 34.
+## Five FE levels: classic (reference; pools Park factual + counterfactual), jules
+##   (pools factual + counterfactual), ssib4 (pools factual + counterfactual), CESM, Zhao.
+##   Parameters: 1 intercept + 4 dummies + 1 slope = 6. Degrees of freedom: 43 - 6 = 37.
 ##
-## Countries with fewer than 9 valid observations are dropped (cannot fit 9 parameters).
+## Countries with fewer than 6 valid observations are dropped (cannot fit 6 parameters).
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -407,11 +410,12 @@ print(
 #     the model matrix, and metadata needed for summary(), predict(), and other methods.
 #   - The model is: PM_bar_ctsm = alpha_cm + beta_c * T_ts + epsilon_ctsm,
 #     where alpha_cm is the fire-model-specific intercept for country c (CLASSIC
-#     is the reference level; jules, ssib4, classic_counter, jules_counter, ssib4_counter,
-#     CESM, and Zhao enter as dummies relative to it),
+#     is the reference level; jules, ssib4, CESM, and Zhao enter as dummies relative
+#     to it; classic/jules/ssib4 each pool their Park factual + counterfactual
+#     observations into one intercept),
 #     and beta_c is the GMT slope (key damage function parameter).
-#   - OLS minimises the sum of squared residuals to find all 9 parameters.
-#   - See last section for how R actually implements this specification. 
+#   - OLS minimises the sum of squared residuals to find all 6 parameters.
+#   - See last section for how R actually implements this specification.
 usa_model <- lm(exposure_percap ~ T_ps + fire_model, data = usa_data)
 
 # summary() on an lm object prints:
@@ -466,13 +470,13 @@ cat("Global R-squared:", round(global_r2, 4), "\n")
 # The result is a list-column of tidy regression coefficient tables.
 reg_results <- reg_data_combined %>%
   group_by(country_code_iso3, country_name) %>%
-  # Keep only countries with at least 9 non-NA observations (minimum to fit 9 parameters;
+  # Keep only countries with at least 6 non-NA observations (minimum to fit 6 parameters;
   # in practice all countries have 43 observations after the pop_bar_c == 0 filter)
-  filter(n() >= 9) %>%
+  filter(n() >= 6) %>%
   # Nest all observations for each country into a sub-dataframe
   nest() %>%
   mutate(
-    # Fit OLS: PM_bar_ctsm = alpha_cm + beta_c * T_ts  (CLASSIC reference + 7 model FE dummies)
+    # Fit OLS: PM_bar_ctsm = alpha_cm + beta_c * T_ts  (CLASSIC reference + 4 model FE dummies)
     model = purrr::map(data, ~ lm(exposure_percap ~ T_ps + fire_model, data = .x)),
 
     # Extract tidy coefficient table (term, estimate, std.error, statistic, p.value)
@@ -532,16 +536,16 @@ print(reg_coefs %>% filter(estimate_beta_c < 0) %>% select(country_code_iso3, es
 # Compute the t critical value for a 95% confidence interval.
 #
 # Degrees of freedom (DF): each country regression has n = 43 observations and
-#   estimates 9 parameters (intercept + slope + 7 model FE dummies), so DF = n - 9 = 34.
-df <- nrow(usa_data) - 9
-t_critical <- qt(0.975, df)   # ~2.032 for 95% CI with 34 degrees of freedom
-cat("\nt_critical (95% CI, df = 34):", round(t_critical, 4), "\n")
+#   estimates 6 parameters (intercept + slope + 4 model FE dummies), so DF = n - 6 = 37.
+df <- nrow(usa_data) - 6
+t_critical <- qt(0.975, df)   # ~2.026 for 95% CI with 37 degrees of freedom
+cat("\nt_critical (95% CI, df = 37):", round(t_critical, 4), "\n")
 
 t_critical_largesample <- 1.96
 
 reg_coefs <- reg_coefs %>%
   mutate(
-    # 95% CI bounds for beta_c using exact t_critical for df = 34
+    # 95% CI bounds for beta_c using exact t_critical for df = 37
     lower_beta_c        = estimate_beta_c - t_critical * std.error_beta_c,
     upper_beta_c        = estimate_beta_c + t_critical * std.error_beta_c,
 
@@ -550,15 +554,15 @@ reg_coefs <- reg_coefs %>%
     upper_beta_c_1.96   = estimate_beta_c + t_critical_largesample * std.error_beta_c,
 
     # Store both critical values as columns for reference
-    t_critical_df34        = t_critical,
+    t_critical_df37        = t_critical,
     t_critical_largesample = t_critical_largesample,
 
-    # gamma: beta_c scaled by 0.008 RR (Pope et al.) 
+    # gamma: beta_c scaled by 0.008 RR (Pope et al.)
     gamma_beta_c        = 0.008 * estimate_beta_c
   ) %>%
   select(
     country_code_iso3, country_name, gamma_beta_c,
-    t_critical_df34, t_critical_largesample,
+    t_critical_df37, t_critical_largesample,
     lower_beta_c, lower_beta_c_1.96,
     estimate_beta_c,
     upper_beta_c_1.96, upper_beta_c,
@@ -593,41 +597,32 @@ cat("Saved combined regression input data to output/betas_fe_fact_cfact/reg_data
 # R implementation of PM_bar_ctsm = alpha_cm + beta_c * T_ts + epsilon_ctsm:
 #
 # Because fire_model is a factor with classic as the reference level, R automatically
-# creates seven indicator (dummy) variables — one for each non-reference model:
-#   D_jules           = 1 if fire_model == "jules",           0 otherwise
-#   D_ssib4           = 1 if fire_model == "ssib4",           0 otherwise
-#   D_classic_counter = 1 if fire_model == "classic_counter", 0 otherwise
-#   D_jules_counter   = 1 if fire_model == "jules_counter",   0 otherwise
-#   D_ssib4_counter   = 1 if fire_model == "ssib4_counter",   0 otherwise
-#   D_CESM            = 1 if fire_model == "CESM",            0 otherwise
-#   D_Zhao            = 1 if fire_model == "Zhao",            0 otherwise
+# creates four indicator (dummy) variables — one for each non-reference model:
+#   D_jules = 1 if fire_model == "jules", 0 otherwise
+#   D_ssib4 = 1 if fire_model == "ssib4", 0 otherwise
+#   D_CESM  = 1 if fire_model == "CESM",  0 otherwise
+#   D_Zhao  = 1 if fire_model == "Zhao",  0 otherwise
 #
-# Factual and counterfactual runs of the same fire model receive separate intercepts
-# because they are driven by different climates and produce systematically different
-# mean PM2.5 levels. Sharing one intercept would conflate that mean difference with
-# residual noise and distort beta_c.
+# Each Park model's factual and counterfactual runs are pooled into fire_model's
+# classic/jules/ssib4 levels rather than getting separate intercepts, so within-group
+# variation includes both T_ps ~= 0.25-1.1 (factual decades) and T_ps = 0 (counterfactual
+# decades).
 #
 # The expanded model estimated by lm() is:
 #   PM_bar = alpha_c_classic
-#            + delta_jules           * D_jules
-#            + delta_ssib4           * D_ssib4
-#            + delta_classic_counter * D_classic_counter
-#            + delta_jules_counter   * D_jules_counter
-#            + delta_ssib4_counter   * D_ssib4_counter
-#            + delta_CESM            * D_CESM
-#            + delta_Zhao            * D_Zhao
-#            + beta_c                * T_ts
+#            + delta_jules * D_jules
+#            + delta_ssib4 * D_ssib4
+#            + delta_CESM  * D_CESM
+#            + delta_Zhao  * D_Zhao
+#            + beta_c      * T_ts
 #            + epsilon
 #
 # alpha_cm for each model is therefore:
-#   classic         --> (Intercept)
-#   jules           --> (Intercept) + fire_modeljules
-#   ssib4           --> (Intercept) + fire_modelssib4
-#   classic_counter --> (Intercept) + fire_modelclassic_counter
-#   jules_counter   --> (Intercept) + fire_modeljules_counter
-#   ssib4_counter   --> (Intercept) + fire_modelssib4_counter
-#   CESM            --> (Intercept) + fire_modelCESM
-#   Zhao            --> (Intercept) + fire_modelZhao
+#   classic --> (Intercept)
+#   jules   --> (Intercept) + fire_modeljules
+#   ssib4   --> (Intercept) + fire_modelssib4
+#   CESM    --> (Intercept) + fire_modelCESM
+#   Zhao    --> (Intercept) + fire_modelZhao
 #
 # beta_c is the T_ts coefficient — shared across all models for country c.
 

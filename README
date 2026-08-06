@@ -123,7 +123,6 @@ DIAGNOSTIC / VALIDATION UTILITIES (not part of the main pipeline; run standalone
 
   code/other_mapping/country_map_pop_pm_validation.R   -- pierce data (CLM file) vs. World Bank population check
   code/park_etal_2024/org_park_summary.R                -- yearly PM2.5 summary stats by model
-  code/park_etal_2024/park_read_test.R                  -- ad hoc NetCDF read scratch file
   code/park_etal_2024/sanity_check_pm_park_us_all.R     -- CONUS PM2.5 map QC
   code/park_etal_2024/sanity_check_pm_park_world_classic.R -- global PM2.5 map QC (CLASSIC)
   code/park_etal_2024/sanity_check_pop_park_2024.R      -- city-level population QC
@@ -157,7 +156,6 @@ park_etal_2024/
   sanity_check_pm_park_*.R     Diagnostic: render CONUS / global PM2.5 choropleth maps as
                                 self-contained HTML for visual QC of the regridded PM2.5.
   sanity_check_pop_park_2024.R Diagnostic: spot-check regridded population for 5 US cities.
-  park_read_test.R             Diagnostic scratch file for reading Park NetCDFs.
 
 zhao_etal_2025/
   pop_regrid_zhao_2025.R       Convert the Zhao 0.1deg population .npz to a 0.5deg long-format
