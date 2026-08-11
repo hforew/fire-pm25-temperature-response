@@ -21,6 +21,8 @@
 ## Outputs:
 ##    beta_select.tex
 ##    beta_summary.tex
+##    beta_select_fact_cfact.tex
+##    beta_summary_fact_cfact.tex
 ## Execution Order:
 ##   Execute after: fpm_gmt_regression_park.R, fpm_gmt_regression_pierce.R, fpm_gmt_regression_FE_all.R,
 ##                  fpm_gmt_regression_FE_cfact_sensitivity.R
@@ -287,6 +289,74 @@ print(
                                     command = header_row),
   sanitize.text.function     = identity,                     # pass cell values to LaTeX as-is (no escaping)
   file = here("output", "latex", "beta_select.tex")
+)
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+############ LaTeX Tables - Fact + Counterfact #############################################################
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+# LaTeX math column headers; rendered correctly via sanitize.colnames.function = identity
+colnames(beta_summary_fact_cfact) <- c("Model",
+  "\\% $\\beta_c > 0$", "\\% $p < .05$",
+  "Min", "P25", "Median", "P75", "Max")
+
+print(
+  xtable(
+    beta_summary_fact_cfact,
+    caption = paste0("Summary statistics of country-level $\\beta_c$ estimates",
+                     " (factual + counterfactual Park data) across leave-one-",
+                     "model-out sensitivity specifications."),
+    label   = "tab:beta_summary_fact_cfact",              # \ref{tab:beta_summary_fact_cfact} in LaTeX
+    # length 9: 1 mandatory row-name slot + 8 data cols; 0dp for % cols, 2dp for beta cols
+    digits  = c(0, 0, 0, 0, 2, 2, 2, 2, 2)
+  ),
+  booktabs                   = TRUE,                      # \toprule/\midrule/\bottomrule rules
+  caption.placement          = "top",                     # caption above table
+  include.rownames           = FALSE,                     # suppress R row indices (1,2,3...)
+  sanitize.colnames.function = identity,                  # pass col names to LaTeX as-is (no escaping)
+  sanitize.text.function     = identity,                  # pass cell values to LaTeX as-is (no escaping)
+  file = here("output", "latex", "beta_summary_fact_cfact.tex")
+)
+
+# Double-header table for beta_comparison_select_fact_cfact.
+# xtable does not natively support spanning headers, so the two-row header is
+# injected as raw LaTeX via add.to.row; include.colnames = FALSE suppresses
+# the default single-row header.
+latex_beta_select_fact_cfact <- beta_comparison_select_fact_cfact |>
+  mutate(country_code_iso3 = as.character(country_code_iso3))  # drop factor for xtable
+
+# Row 1: model group labels spanning 2 cols each (beta + SE)
+# Row 2: Country | beta | SE | beta | SE | ...
+# \cmidrule(lr){} draws partial rules under each group in row 1
+header_row_fact_cfact <- paste0(
+  " & \\multicolumn{2}{c}{All models} & \\multicolumn{2}{c}{ex CESM} & ",
+  "\\multicolumn{2}{c}{ex CLASSIC} & \\multicolumn{2}{c}{ex JULES} & ",
+  "\\multicolumn{2}{c}{ex SSiB4} & \\multicolumn{2}{c}{ex Zhao} \\\\\n",
+  "\\cmidrule(lr){2-3}\\cmidrule(lr){4-5}\\cmidrule(lr){6-7}",
+  "\\cmidrule(lr){8-9}\\cmidrule(lr){10-11}\\cmidrule(lr){12-13}\n",
+  "Country & $\\beta$ & SE & $\\beta$ & SE & $\\beta$ & SE & ",
+  "$\\beta$ & SE & $\\beta$ & SE & $\\beta$ & SE \\\\\n",
+  "\\midrule\n"
+)
+
+print(
+  xtable(
+    latex_beta_select_fact_cfact,
+    caption = paste0("$\\beta_c$ estimates and standard errors (factual +",
+                     " counterfactual Park data) across leave-one-model-out",
+                     " sensitivity specifications for largest countries."),
+    label  = "tab:beta_select_fact_cfact",                # \ref{tab:beta_select_fact_cfact} in LaTeX
+    # length 14: 1 row-name slot + 13 data cols; 0dp for country, 3dp for all numeric
+    digits = c(0, 0, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3)
+  ),
+  booktabs                   = TRUE,                         # \toprule/\midrule/\bottomrule rules
+  caption.placement          = "top",                        # caption above table
+  include.rownames           = FALSE,                        # suppress R row indices (1,2,3...)
+  include.colnames           = FALSE,                        # suppressed; replaced by add.to.row header
+  add.to.row                 = list(pos = list(0),           # inject header before first data row
+                                    command = header_row_fact_cfact),
+  sanitize.text.function     = identity,                     # pass cell values to LaTeX as-is (no escaping)
+  file = here("output", "latex", "beta_select_fact_cfact.tex")
 )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
