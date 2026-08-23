@@ -48,7 +48,7 @@ library(patchwork)
 # source() runs fpm_gmt_regress_country.R; reg_coefs/reg_results below are the "full"
 # group pulled out of coefs_by_group/results_by_group (see extraction above). Key objects:
 #   reg_coefs         -- one row per country; estimate_beta_c is the OLS slope:
-#                        change in per-capita fire PM2.5 (µg/m^3/yr) per 1°C GMT.
+#                        change in per-capita fire PM2.5 (µg/m^3/yr) per 1degC GMT.
 #                        Positive = more fire PM with warming; negative = less.
 #   reg_data_combined -- 43 rows per country: T_ps, exposure_percap, fire_model
 #                        (18 Park factual + 18 Park counterfactual + 5 Pierce + 2 Zhao)
@@ -71,7 +71,7 @@ str(reg_coefs)
 ############ Histogram of beta_c ####################################################
 ##
 ## Summarises the cross-country distribution of beta_c (OLS slope: change in per-capita
-## fire PM2.5 per 1°C GMT increase). Three headline stats are computed and printed to
+## fire PM2.5 per 1degC GMT increase). Three headline stats are computed and printed to
 ## console: total countries, share with positive beta_c (warming --> more fire PM),
 ## and share with p < .05 (statistically distinguishable from zero). These stats are
 ## also rendered as an annotation below the x-axis. The median is marked with a dotted
@@ -214,7 +214,7 @@ cut_beta <- function(x) {
 #   exposure_percap = alpha_c_m + beta_c * T_ps + epsilon
 #
 # It is the key damage function parameter: the change in per-capita fire PM2.5
-# exposure (µg/m³/yr) per 1°C increase in global mean temperature (GMT).
+# exposure (µg/m³/yr) per 1degC increase in global mean temperature (GMT).
 #
 # Interpretation:
 #   beta_c > 0  --> warming increases fire PM2.5 exposure in that country

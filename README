@@ -19,7 +19,7 @@ spatial pattern). It:
   3) pairs each grid cell/country observation with its GMT anomaly, and
   4) runs country- and grid-cell-level fixed-effects regressions of fire PM2.5 on GMT.
 
-The resulting beta_c estimates (output/betas_fe_all/fpm_gmt_regression_coefs_FE_all.csv)
+The resulting beta_c estimates (output/betas/fpm_gmt_betas_country_full.csv)
 are the damage-function parameter that feeds the GIVE/SC-CO2 valuation step,
 which lives outside this repo (see note at the top of Section 5 below).
 
@@ -37,12 +37,8 @@ fire-pm25-temperature-response/
 |   |-- other_mapping/           country-code assignment, death-rate join
 |   |-- gmt_chg/                 GMT anomaly series for all three studies
 |   |-- regression_beta/         beta_c / beta_i regressions, GIVE country mapping, tables
-|   |   |-- FE/                    preferred pooled fixed-effects specification
-|   |   |-- FE_fact_cfact/         factual + counterfactual Park sensitivity specification
-|   |   |-- FE_sensitivity/          single-source (Pierce-only, Park-only) specifications
+|   |   |-- regression/            main spec + leave-one-model-out sensitivity (country & grid)
 |   |-- plots/                   figures built from regression outputs
-|       |-- FE/
-|       |-- FE_fact_cfact/
 |-- input/                       raw source data (NetCDF/CSV/.mat/.npz) -- see Section 4
 |   |-- pierce_etal_2017/
 |   |-- Park_etal_2024/
@@ -54,9 +50,7 @@ fire-pm25-temperature-response/
 |-- output/                      processed CSVs, regression coefficients, latex tables
 |   |-- pm_joined/
 |   |-- gmt/
-|   |-- betas_fe_all/
-|   |-- betas_fe_fact_cfact/
-|   |-- betas_single_study/
+|   |-- betas/
 |   |-- GIVE_betas/
 |   |-- latex/
 |-- images/                      manuscript figures + diagnostic maps
@@ -103,20 +97,21 @@ STAGE 3 -- country-level aggregation (needs 2)
 
 STAGE 4 -- regressions (needs Stage 3 and/or Stage 2 grid data, plus Stage 1d GMT)
 
-  code/regression_beta/FE/fpm_gmt_regression_FE_all.R         (preferred country-level spec)
-  code/regression_beta/FE/fpm_gmt_regress_FE_grid_all.R       (grid-cell-level spec)
-  code/regression_beta/FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R  (sensitivity)
-  code/regression_beta/FE_sensitivity/fpm_gmt_regression_pierce.R  (sensitivity)
-  code/regression_beta/FE_sensitivity/fpm_gmt_regression_park.R    (sensitivity)
-  code/regression_beta/regression_FE_stats_all.R               (descriptive stats + Figure 4)
+  code/regression_beta/regression/fpm_gmt_regress_country.R   (country-level; fits the main
+                                                    spec AND 5 leave-one-model-out sensitivity
+                                                    variants in one loop -> beta_c per group)
+  code/regression_beta/regression/fpm_gmt_regress_grid.R      (same main + leave-one-model-out
+                                                    design at the grid-cell level -> beta_i)
+  code/regression_beta/regress_desc_stats.R        (descriptive stats + Figure 4; reads the
+                                                    "full" group output written above)
 
 STAGE 5 -- comparison, GIVE mapping, and plots (needs Stage 4 outputs)
 
-  code/regression_beta/beta_comparison_latex.R     -> Tables 4-5
-  code/regression_beta/beta_GIVE_country_map.R     -> maps beta_c onto full GIVE country list
-  code/plots/FE/plots_beta_lobf_fe_all.R           -> Figures 3, 5
-  code/plots/FE/plots_beta_lobf_fe_grid_all.R      -> Figures 1, 6
-  code/plots/FE_fact_cfact/plots_beta_lobf_fe_all_fact_cfact.R  (sensitivity-spec figures)
+  code/regression_beta/beta_comparison_latex.R     -> Tables 4-5 (main vs. each excl_* group)
+  code/regression_beta/beta_GIVE_country_map.R     -> maps beta_c (main + each excl_* group)
+                                                       onto the full GIVE country list
+  code/plots/plots_beta_lobf.R                     -> Figures 3, 5 (main/"full" group)
+  code/plots/plots_beta_lobf_grid.R                -> Figures 1, 6, for all 6 groups
   code/plots/plots_stats_fpm_all.R                 -> descriptive plots across all datasets
 
 DIAGNOSTIC / VALIDATION UTILITIES (not part of the main pipeline; run standalone for QC)
@@ -126,6 +121,10 @@ DIAGNOSTIC / VALIDATION UTILITIES (not part of the main pipeline; run standalone
   code/park_etal_2024/sanity_check_pm_park_us_all.R     -- CONUS PM2.5 map QC
   code/park_etal_2024/sanity_check_pm_park_world_classic.R -- global PM2.5 map QC (CLASSIC)
   code/park_etal_2024/sanity_check_pop_park_2024.R      -- city-level population QC
+  code/park_etal_2024/coordinate_check_park.R           -- inspect a single Park NetCDF's
+                                                            native grid (centers vs. edges)
+  code/pierce_etal_2017/pm_pop_edge_center_check.R      -- confirm whether Pierce PM2.5/pop
+                                                            NetCDF coords are centers or edges
 
   IMPORTANT: what happens after beta_c leaves this repo (Monte Carlo sampling of beta_c and
   the concentration-response coefficient, the GIVE wildfire-PM2.5 damage function, discounting,
@@ -144,6 +143,8 @@ pierce_etal_2017/
                                 converting density to totals via grid-cell area.
   pm_to_pop_regrid.R           Re-grid coarse (1.25deg) PM2.5 onto the fine (0.5deg) population
                                 grid by nearest-neighbor matching; merge into one table.
+  pm_pop_edge_center_check.R   Diagnostic: confirm whether PM2.5 and population NetCDF
+                                coordinates are cell centers or edges, before regridding.
 
 park_etal_2024/
   pop_regrid_park_2024.R       Convert the Park .mat population grid (360x720x6 decades) to a
@@ -156,6 +157,8 @@ park_etal_2024/
   sanity_check_pm_park_*.R     Diagnostic: render CONUS / global PM2.5 choropleth maps as
                                 self-contained HTML for visual QC of the regridded PM2.5.
   sanity_check_pop_park_2024.R Diagnostic: spot-check regridded population for 5 US cities.
+  coordinate_check_park.R      Diagnostic: read one Park NetCDF and confirm whether its
+                                native grid coordinates are cell centers or edges.
 
 zhao_etal_2025/
   pop_regrid_zhao_2025.R       Convert the Zhao 0.1deg population .npz to a 0.5deg long-format
@@ -165,7 +168,7 @@ zhao_etal_2025/
                                 master pop_pm table -> pop_pm_combined_final.csv.
 
 gmt_chg/
-  temp_chg.R                   Compute GMT anomaly (°C, relative to 1850-1900) for every
+  temp_chg.R                   Compute GMT anomaly (degC, relative to 1850-1900) for every
                                 period/decade/scenario used downstream, from three sources:
                                 Pierce CESM NetCDFs (area-weighted), OWID observed series
                                 (Park decades), and MimiSSP series (Zhao SSPs).
@@ -183,32 +186,32 @@ regression_beta/
   pop_wght_pm_cntry.R           Aggregate grid-cell fPM to country-level population-weighted
                                 per-capita exposure (all three studies); append death rates
                                 and a global row.
-  FE/fpm_gmt_regression_FE_all.R      PREFERRED SPEC: country-level FE regression of fPM on
-                                GMT, pooled across Pierce/Park/Zhao with fire-model fixed
-                                effects -- produces beta_c (Equation 1 in the paper).
-  FE/fpm_gmt_regress_FE_grid_all.R    Same specification at the grid-cell level -> beta_i,
-                                used only to characterize the spatial pattern (Figures 1, 6).
-  FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R  Sensitivity spec: adds Park
-                                factual + counterfactual (obsclim/counterclim) runs as
-                                separate fixed-effect levels.
-  FE_sensitivity/fpm_gmt_regression_pierce.R  Sensitivity spec: Pierce-only OLS, no FE.
-  FE_sensitivity/fpm_gmt_regression_park.R    Sensitivity spec: one OLS per Park fire model
-                                (CLASSIC/JULES/SSiB4), no FE.
-  regression_FE_stats_all.R    Descriptive statistics for the regression inputs and the
-                                preferred-spec estimates; produces Figure 4.
-  beta_comparison_latex.R      Compare beta_c across the pooled-FE and single-model specs;
-                                exports Tables 4-5 as LaTeX.
-  beta_GIVE_country_map.R      Left-join beta_c estimates onto the full GIVE country list,
-                                filling missing countries with the global-row estimate.
+  regression/fpm_gmt_regress_country.R  MAIN + SENSITIVITY, in one script: country-level FE
+                                regression of fPM on GMT, pooled across Pierce/Park/Zhao with
+                                fire-model fixed effects (Park factual + counterfactual runs of
+                                the same model pooled into one FE level). Fits the full 5-FE-
+                                level model (-> beta_c, Equation 1 in the paper) plus 5 leave-
+                                one-model-out variants (excl_CESM/classic/jules/ssib4/Zhao) that
+                                each drop one fire-model source entirely, to test whether
+                                beta_c depends on any single data source.
+  regression/fpm_gmt_regress_grid.R     Same main + leave-one-model-out design at the grid-cell
+                                level -> beta_i per group, used to characterize the spatial
+                                pattern and its sensitivity to any one source (Figures 1, 6).
+  regress_desc_stats.R         Descriptive statistics for the regression inputs and the
+                                main ("full" group) estimates; produces Figure 4.
+  beta_comparison_latex.R      Compare beta_c across the main spec and the 5 leave-one-model-
+                                out variants; exports Tables 4-5 as LaTeX.
+  beta_GIVE_country_map.R      Left-join beta_c estimates (main + each leave-one-model-out
+                                variant) onto the full GIVE country list.
 
 plots/
-  FE/plots_beta_lobf_fe_all.R          Country-level beta_c: histogram, choropleth, per-
-                                country line-of-best-fit scatter, and multi-country grid
-                                (Figures 3, 5) from the preferred FE spec.
-  FE/plots_beta_lobf_fe_grid_all.R     Grid-cell beta_i: histogram, world raster map, and
-                                CONUS raster map (Figures 1, 6).
-  FE_fact_cfact/plots_beta_lobf_fe_all_fact_cfact.R  Same plot set as FE/plots_beta_lobf_fe_all.R,
-                                for the factual/counterfactual sensitivity spec.
+  plots_beta_lobf.R            Country-level beta_c (main/"full" group): histogram +
+                                choropleth combined multiplot, standalone map, per-country
+                                line-of-best-fit scatter, and multi-country grid (Figures 3, 5).
+  plots_beta_lobf_grid.R       Grid-cell beta_i, for all 6 groups (full + 5 leave-one-model-
+                                out variants): histogram, world raster map, and CONUS raster
+                                map per group (Figures 1, 6 for "full"), sharing one fixed
+                                color scale so groups are directly comparable.
   plots_stats_fpm_all.R        Descriptive plots and summary stats of fire PM2.5 across all
                                 three studies, globally and for the USA.
 
@@ -252,12 +255,17 @@ beta_i (this repo's output) have a source here; the GIVE model SC-CO2 estimation
 damage-function integration, and the Qiu et al. comparison happen downstream, outside this
 repo -- those items are flagged "NOT IN THIS REPO" below so you can fill in the source.
 
-  Figure 1  images/regression_beta/beta_FE_grid_all/fig1_map_beta_i_fe_grid.png
+  Figure 1  images/regression_beta/beta_grid/full/fig1_map_beta_i_grid.png
   Figure 2  NOT IN THIS REPO -- global SC-CO2 Monte Carlo distribution + sector comparison
-  Figure 3  images/regression_beta/beta_FE_all/fig3_multiplot_beta_c_wide.png
-  Figure 4  images/regression_beta/beta_FE_all/fig4_desc_stats.png
-  Figure 5  images/regression_beta/beta_FE_all/fig5_lof_multi_fe.png
-  Figure 6  images/regression_beta/beta_FE_grid_all/fig6_map_beta_i_fe_grid_usa.png
+  Figure 3  images/regression_beta/beta_country/fig3_multiplot_beta_c.png
+  Figure 4  images/regression_beta/beta_country/fig4_desc_stats.png
+  Figure 5  images/regression_beta/beta_country/fig5_lof_multi.png
+  Figure 6  images/regression_beta/beta_grid/full/fig6_map_beta_i_grid_usa.png
+
+  Figures 1 and 6 are also available for each leave-one-model-out sensitivity group, at
+  images/regression_beta/beta_grid/<excl_classic|excl_jules|excl_ssib4|excl_CESM|excl_Zhao>/
+  (same filenames as the "full" group above, plus hist_beta_i_grid.png in each folder).
+
   Figure 7  NOT IN THIS REPO -- USA SC-CO2 Monte Carlo distribution + sector comparison
   Figure 8  NOT IN THIS REPO -- linear vs. Qiu et al. quadratic damage-function comparison
 

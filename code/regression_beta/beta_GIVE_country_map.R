@@ -2,11 +2,11 @@
 ## MAP BETA_C COEFFICIENTS TO GIVE COUNTRY LIST ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Goal: Map country-level beta_c regression coefficients (change in per-capita
-#   fire PM2.5 per 1°C GMT increase) onto the GIVE IAM country list, producing
+#   fire PM2.5 per 1degC GMT increase) onto the GIVE IAM country list, producing
 #   a country-coverage-complete dataset for use as a damage function input.
 # Input:
 #   - input/GIVE/GIVE_countries.csv
-#   - output/betas/fpm_gmt_regression_coefs_FE_sensitivity_*.csv     (FE leave-one-fire-model-out sensitivity)
+#   - output/betas/fpm_gmt_betas_country_*.csv     (FE leave-one-fire-model-out sensitivity)
 # Output:
 #   - output/GIVE_betas/beta_give_main.csv
 #   - output/GIVE_betas/beta_give_excl_CESM.csv
@@ -15,7 +15,7 @@
 #   - output/GIVE_betas/beta_give_excl_jules.csv
 #   - output/GIVE_betas/beta_give_excl_ssib4.csv
 # Execution order:
-#   files run before: regression/fpm_gmt_regress_country.R --> writes fpm_gmt_regression_coefs_FE_sensitivity_*.csv
+#   files run before: regression/fpm_gmt_regress_country.R --> writes fpm_gmt_betas_country_*.csv
 #   files run after: NA
 
 rm(list = ls())
@@ -39,12 +39,12 @@ colnames(give_countries)
 # regression FE leave-one-fire-model-out sensitivity variants
 # (full model + one variant per excluded fire-emissions product)
 fe_sensitivity_files <- c(
-  main         = "fpm_gmt_regression_coefs_FE_sensitivity_full.csv",
-  excl_CESM    = "fpm_gmt_regression_coefs_FE_sensitivity_excl_CESM.csv",
-  excl_Zhao    = "fpm_gmt_regression_coefs_FE_sensitivity_excl_Zhao.csv",
-  excl_classic = "fpm_gmt_regression_coefs_FE_sensitivity_excl_classic.csv",
-  excl_jules   = "fpm_gmt_regression_coefs_FE_sensitivity_excl_jules.csv",
-  excl_ssib4   = "fpm_gmt_regression_coefs_FE_sensitivity_excl_ssib4.csv"
+  main         = "fpm_gmt_betas_country_full.csv",
+  excl_CESM    = "fpm_gmt_betas_country_excl_CESM.csv",
+  excl_Zhao    = "fpm_gmt_betas_country_excl_Zhao.csv",
+  excl_classic = "fpm_gmt_betas_country_excl_classic.csv",
+  excl_jules   = "fpm_gmt_betas_country_excl_jules.csv",
+  excl_ssib4   = "fpm_gmt_betas_country_excl_ssib4.csv"
 )
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

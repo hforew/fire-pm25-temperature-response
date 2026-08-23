@@ -1,7 +1,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## GLOBAL MEAN TEMPERATURE CHANGE: Compute GMT anomalies from three sources
 ##
-## Goal: Produce GMT anomaly (°C, relative to 1850-1900 pre-industrial baseline)
+## Goal: Produce GMT anomaly (degC, relative to 1850-1900 pre-industrial baseline)
 ##   for each period/decade/scenario needed by the downstream fPM~GMT regressions:
 ##   1. Pierce et al. CESM (RCP4.5/8.5) — area-weighted mean from gridded NetCDF
 ##      (grid cell areas via spherical Earth formula), for periods 2006-2010,
@@ -30,7 +30,7 @@
 ##
 ## Execution order:
 ##   files run before: none — reads raw input data directly
-##   files run after: regression_FE_stats_all.R, plots_stats_fpm_all.R,
+##   files run after: regress_desc_stats.R, plots_stats_fpm_all.R,
 ##                    regression/fpm_gmt_regress_country.R,
 ##                    regression/fpm_gmt_regress_grid.R
 ##                    (all read one or more of the three GMT outputs above)

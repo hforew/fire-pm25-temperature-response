@@ -20,7 +20,7 @@
 ##
 ## Execution order:
 ##   files run before: other_mapping/death_rate_processing.R   --> writes output/pm_joined/pop_pm_country_death_final.csv
-##   files run after:  regression_FE_stats_all.R
+##   files run after:  regress_desc_stats.R
 ##                     regression/fpm_gmt_regress_country.R
 ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

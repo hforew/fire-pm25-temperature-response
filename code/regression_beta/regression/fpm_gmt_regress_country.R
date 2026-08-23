@@ -1,15 +1,15 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## FPM–GMT RELATIONSHIP: Main specification and leave-one-model-out sensitivity for beta_c
-##                        (per-capita fire PM2.5 change per 1°C GMT)
+##                        (per-capita fire PM2.5 change per 1degC GMT)
 ##
 ## Goal: For each country c, estimate the linear regression with fire-model fixed effects:
 ##   PM_bar_ctsm = alpha_cm + beta_c * T_ts + epsilon_ctsm
 ##
 ## where PM_bar_ctsm is population-weighted per-capita fire PM2.5 exposure (µg/m^3/yr)
 ## for country c, time period t, scenario s, and fire model m;
-## T_ts is GMT anomaly relative to the 1850-1900 pre-industrial baseline (°C);
+## T_ts is GMT anomaly relative to the 1850-1900 pre-industrial baseline (degC);
 ## beta_c is the key damage function parameter (change in population-weighted
-## per-capita fire PM2.5 per 1°C GMT), and alpha_cm are fire-model-specific
+## per-capita fire PM2.5 per 1degC GMT), and alpha_cm are fire-model-specific
 ## intercepts (fixed effects absorbing model-level mean differences in exposure levels).
 ##
 ## This script refits the regression once per "exclusion group" -- the full 5-FE-level
@@ -50,15 +50,15 @@
 ##
 ## Outputs (one pair per exclusion group -- full, excl_classic, excl_jules, excl_ssib4,
 ## excl_CESM, excl_Zhao -- written to output/betas/):
-##   fpm_gmt_regression_coefs_FE_sensitivity_<group>.csv (beta_c per country with SE, CI,
-##                                                        p-value, and gamma_beta_c for
-##                                                        that exclusion group)
-##   reg_data_combined_fe_sensitivity_<group>.csv        (that group's combined long-format
-##                                                        regression input data)
+##   fpm_gmt_betas_country_<group>.csv    (beta_c per country with SE, CI,
+##                                        p-value, and gamma_beta_c for
+##                                        that exclusion group)
+##   regress_data_country_<group>.csv     (that group's combined long-format
+##                                        regression input data)
 ##
 ## Execution order:
 ##   files run before: pop_wght_pm_cntry.R --> writes pop_wght_pm_cntry_final.csv
-##   files run after: regression_FE_stats_all.R, beta_comparison_latex.R,
+##   files run after: regress_desc_stats.R, beta_comparison_latex.R,
 ##                    beta_GIVE_country_map.R (all read this script's "full" group output)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -85,7 +85,6 @@ library(broom)      # for tidy() and glance() to extract regression coefficients
 #   exposure_percap_fpm_2050_45/85   --> 2041–2050 under RCP4.5 / RCP8.5
 #   exposure_percap_fpm_2100_45/85   --> 2091–2100 under RCP4.5 / RCP8.5
 
-#pop_wght <- read_csv(here("output", "pop_wght_pm_cntry.csv"))
 pop_wght <- read_csv(here("output", "pop_wght_pm_cntry_final.csv"))
 
 # Drop GIVE countries with no corresponding data in the Pierce or Park PM gridded data.
@@ -93,18 +92,18 @@ pop_wght <- read_csv(here("output", "pop_wght_pm_cntry_final.csv"))
 pop_wght <- pop_wght %>%
   filter(pop_bar_c != 0)
 
-# Import decadal mean GMT anomaly (°C relative to 1850–1900 pre-industrial baseline)
+# Import decadal mean GMT anomaly (degC relative to 1850–1900 pre-industrial baseline)
 # for each period × scenario combination.
 # Rows: "2006-2010" (baseline), "2041-2050", "2091-2100"
 # Columns: mean_gmt_45 (RCP4.5), mean_gmt_85 (RCP8.5)
 gmt_chg <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))
 
-# Import Park decade GMT values (°C relative to pre-industrial baseline)
+# Import Park decade GMT values (degC relative to pre-industrial baseline)
 # Rows: one per Park snapshot decade (1960s–2010s)
 # Columns: park_year, decade, mean_gmt_pi
 gmt_park <- read_csv(here("output", "gmt", "gmt_park_hist.csv"))
 
-# Import Zhao et al. ~2095 GMT anomalies (°C relative to pre-industrial baseline)
+# Import Zhao et al. ~2095 GMT anomalies (degC relative to pre-industrial baseline)
 # Rows: SSP245, SSP585 --- these temp changes assigned to Zhao but sourced from MimiSSPs
 # Columns: scenario, mean_gmt_pi
 gmt_zhao <- read_csv(here("output", "gmt", "gmt_zhao_SSPs.csv"))
@@ -313,7 +312,7 @@ park_counter_data_long <- park_counter_data_wide %>%
     values_to = "exposure_percap"
   ) %>%
   # Counterclim runs hold CO2 (and thus GMT) fixed at 1901 levels, so all
-  # counterfactual decades share T_ps = 0 (°C anomaly rel. to 1850-1900 PI baseline).
+  # counterfactual decades share T_ps = 0 (degC anomaly rel. to 1850-1900 PI baseline).
   mutate(T_ps = 0) %>%
   mutate(fire_model = case_when(
     grepl("classic", period_scenario) ~ "classic",
@@ -400,9 +399,9 @@ if (!dir.exists(here("output", "betas"))) {
 ## exclusion group below drops one source's observations and re-derives its own parameter
 ## count and degrees of freedom from however many FE levels remain.
 ##
-## beta_c (slope)        = change in per-capita fire PM2.5 (µg/m^3/yr) per 1°C GMT increase.
+## beta_c (slope)        = change in per-capita fire PM2.5 (µg/m^3/yr) per 1degC GMT increase.
 ## alpha_cm (intercept)  = fire-model-specific intercept for country c. T_ts = 0 lies
-##   outside the data range (all obs at ~1°C or higher), so alpha_cm is extrapolated
+##   outside the data range (all obs at ~1degC or higher), so alpha_cm is extrapolated
 ##   and should not be interpreted as a meaningful exposure estimate.
 ##
 ## Countries with fewer valid observations than parameters are dropped (cannot fit the model).
@@ -476,7 +475,7 @@ for (group_name in names(exclusion_groups)) {
   cat("\n--- [", group_name, "] USA lm() summary ---\n", sep = "")
   print(summary(usa_model))
 
-  usa_beta_c <- coef(usa_model)[["T_ps"]]  # beta_c: slope (µg/m^3/yr per 1°C GMT)
+  usa_beta_c <- coef(usa_model)[["T_ps"]]  # beta_c: slope (µg/m^3/yr per 1degC GMT)
 
   cat("[", group_name, "] USA beta^(c) (slope, fPM change per 1°C GMT): ",
       round(usa_beta_c, 6), " µg/m^3/yr per °C\n", sep = "")
@@ -515,7 +514,7 @@ for (group_name in names(exclusion_groups)) {
   cat("\n--- [", group_name, "] Global lm() summary ---\n", sep = "")
   print(summary(global_model))
 
-  global_beta_c <- coef(global_model)[["T_ps"]]  # beta_c: slope (µg/m^3/yr per 1°C GMT)
+  global_beta_c <- coef(global_model)[["T_ps"]]  # beta_c: slope (µg/m^3/yr per 1degC GMT)
 
   cat("[", group_name, "] Global beta^(c) (slope, fPM change per 1°C GMT): ",
       round(global_beta_c, 6), " µg/m^3/yr per °C\n", sep = "")
@@ -674,19 +673,19 @@ for (group_name in names(exclusion_groups)) {
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
   coefs_path <- here("output", "betas",
-                      paste0("fpm_gmt_regression_coefs_FE_sensitivity_", group_name, ".csv"))
+                      paste0("fpm_gmt_betas_country_", group_name, ".csv"))
   data_path  <- here("output", "betas",
-                      paste0("reg_data_combined_fe_sensitivity_", group_name, ".csv"))
+                      paste0("regress_data_country_", group_name, ".csv"))
 
   # Save the coefficient table (beta_c with SEs and p-values) for this exclusion group.
   write_csv(reg_coefs, coefs_path)
   cat("[", group_name, "] Saved regression coefficients to output/betas/",
-      "fpm_gmt_regression_coefs_FE_sensitivity_", group_name, ".csv\n", sep = "")
+      "fpm_gmt_betas_country_", group_name, ".csv\n", sep = "")
 
   # Save this exclusion group's combined long-format regression input data.
   write_csv(group_data, data_path)
   cat("[", group_name, "] Saved combined regression input data to output/betas/",
-      "reg_data_combined_fe_sensitivity_", group_name, ".csv\n", sep = "")
+      "regress_data_country_", group_name, ".csv\n", sep = "")
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

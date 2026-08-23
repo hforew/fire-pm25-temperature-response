@@ -1,16 +1,16 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## FPM–GMT RELATIONSHIP COMPARISON: Compare beta^(c) (per-capita fire PM2.5 change per 1°C GMT)
+## FPM–GMT RELATIONSHIP COMPARISON: Compare beta^(c) (per-capita fire PM2.5 change per 1degC GMT)
 ##                        from multiple regression specifications
 ##
-## Goal: For each country c, compare betas from the fact/cfact FE regression (full model)
+## Goal: For each country c, compare betas from main FE regression (full model)
 ##    against leave-one-model-out sensitivity variants (excl. CESM/CLASSIC/JULES/SSiB4/Zhao)
 ## Inputs:
-##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_full.csv
-##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_CESM.csv
-##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_classic.csv
-##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_jules.csv
-##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_ssib4.csv
-##   betas_fe_sensitivity/fpm_gmt_regression_coefs_FE_sensitivity_excl_Zhao.csv
+##   betas/fpm_gmt_betas_country_full.csv
+##   betas/fpm_gmt_betas_country_excl_CESM.csv
+##   betas/fpm_gmt_betas_country_excl_classic.csv
+##   betas/fpm_gmt_betas_country_excl_jules.csv
+##   betas/fpm_gmt_betas_country_excl_ssib4.csv
+##   betas/fpm_gmt_betas_country_excl_Zhao.csv
 ## Outputs:
 ##    beta_select.tex
 ##    beta_summary.tex
@@ -36,15 +36,15 @@ library(xtable)     # for LaTeX table output
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # beta from FE regression with factual + counterfactual Park data (full model, all FE levels)
-beta_fe <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_full.csv"))
+beta_fe <- read_csv(here("output", "betas", "fpm_gmt_betas_country_full.csv"))
 head(beta_fe)
 
 # leave-one-model-out sensitivity variants: same FE regression with one fire-model source excluded
-beta_ex_cesm    <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_CESM.csv"))
-beta_ex_classic <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_classic.csv"))
-beta_ex_jules   <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_jules.csv"))
-beta_ex_ssib4   <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_ssib4.csv"))
-beta_ex_zhao    <- read_csv(here("output", "betas_fe_sensitivity", "fpm_gmt_regression_coefs_FE_sensitivity_excl_Zhao.csv"))
+beta_ex_cesm    <- read_csv(here("output", "betas", "fpm_gmt_betas_country_excl_CESM.csv"))
+beta_ex_classic <- read_csv(here("output", "betas", "fpm_gmt_betas_country_excl_classic.csv"))
+beta_ex_jules   <- read_csv(here("output", "betas", "fpm_gmt_betas_country_excl_jules.csv"))
+beta_ex_ssib4   <- read_csv(here("output", "betas", "fpm_gmt_betas_country_excl_ssib4.csv"))
+beta_ex_zhao    <- read_csv(here("output", "betas", "fpm_gmt_betas_country_excl_Zhao.csv"))
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Join and Compare betas ##############################

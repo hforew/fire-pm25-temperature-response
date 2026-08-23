@@ -120,7 +120,7 @@ for (group_name in group_names) {
   # ---- Import: coefficients for this group ----
   # One row per grid cell. Key columns:
   #   row_id, lon, lat      -- cell identifier and centre coordinates
-  #   estimate_beta_i       -- OLS slope: change in fire PM2.5 (µg/m^3) per 1°C GMT
+  #   estimate_beta_i       -- OLS slope: change in fire PM2.5 (µg/m^3) per 1degC GMT
   reg_coefs <- read_csv(here("output", "betas",
                               paste0("fpm_gmt_betas_grid_", group_name, ".csv")))
 
@@ -155,7 +155,7 @@ for (group_name in group_names) {
 
   # ---- Map: beta_i, global ----
   # beta_i is the OLS slope: change in fire PM2.5 concentration (µg/m^3)
-  # per 1°C GMT increase at this grid cell.
+  # per 1degC GMT increase at this grid cell.
   #   beta_i > 0 --> warming increases local fire PM2.5
   #   beta_i < 0 --> warming decreases local fire PM2.5
   map_beta_i <- reg_coefs %>%

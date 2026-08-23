@@ -1,13 +1,13 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## FPM–GMT RELATIONSHIP: Main specification and grid-cell leave-one-model-out sensitivity for beta_i
-##                        (raw fire PM2.5 concentration change per 1°C GMT)
+##                        (raw fire PM2.5 concentration change per 1degC GMT)
 ##
 ## Goal: For each grid cell i, estimate the linear regression with fire-model fixed effects:
 ##   fPM_itsm = alpha_im + beta_i * T_ts + epsilon_itsm
 ##
 ## where fPM_itsm is fire PM2.5 concentration (µg/m^3) at cell i, time period t, scenario s,
-## and fire model m; T_ts is GMT anomaly relative to the 1850-1900 pre-industrial baseline (°C);
-## beta_i is the key damage function parameter (change in fPM concentration per 1°C GMT at
+## and fire model m; T_ts is GMT anomaly relative to the 1850-1900 pre-industrial baseline (degC);
+## beta_i is the key damage function parameter (change in fPM concentration per 1degC GMT at
 ## cell i), and alpha_im are fire-model-specific intercepts (fixed effects absorbing
 ## model-level mean differences in concentration levels).
 ##
@@ -201,7 +201,7 @@ park_counter_long <- grid %>%
   ) %>%
   mutate(
     # Counterclim runs hold CO2 (and thus GMT) fixed at 1901 levels, so all
-    # counterfactual decades share T_ps = 0 (°C anomaly rel. to 1850-1900 PI baseline).
+    # counterfactual decades share T_ps = 0 (degC anomaly rel. to 1850-1900 PI baseline).
     T_ps = 0,
     fire_model = case_when(
       grepl("classic", period_scenario) ~ "classic",
@@ -277,9 +277,9 @@ n_params_list <- purrr::map_dbl(group_data_list, ~ n_distinct(.x$fire_model) + 1
 ## observations and re-derives its own parameter count and degrees of freedom from
 ## however many FE levels remain.
 ##
-## beta_i (slope)        = change in raw fire PM2.5 concentration (µg/m^3) per 1°C GMT increase.
+## beta_i (slope)        = change in raw fire PM2.5 concentration (µg/m^3) per 1degC GMT increase.
 ## alpha_im (intercept)  = fire-model-specific intercept for cell i. T_ts = 0 lies outside
-##   the data range (all obs at ~1°C or higher), so alpha_im is extrapolated and should not
+##   the data range (all obs at ~1degC or higher), so alpha_im is extrapolated and should not
 ##   be interpreted as a meaningful concentration estimate.
 ##
 ## Cells with fewer valid observations than parameters are dropped (cannot fit the model).

@@ -2,7 +2,7 @@
 ## This code provides descriptive statistics for dataset used and points estimated obtained 
 ## from the below regression specification 
 
-## FPM–GMT RELATIONSHIP: Estimate beta^(c) (per-capita fire PM2.5 change per 1°C GMT)
+## FPM–GMT RELATIONSHIP: Estimate beta^(c) (per-capita fire PM2.5 change per 1degC GMT)
 ##
 ## specification: For each country c, we estimate the linear regression with fire-model fixed effects:
 ##   PM_bar^(c)_psm = alpha^(c)_m + beta^(c) * T_ps + epsilon^(c)_psm
@@ -51,18 +51,18 @@ pop_wght <- read_csv(here("output", "pop_wght_pm_cntry_final.csv"))
 pop_wght <- pop_wght %>%
   filter(pop_bar_c != 0)
 
-# Import decadal mean GMT anomaly (°C relative to 1850–1900 pre-industrial baseline)
+# Import decadal mean GMT anomaly (degC relative to 1850–1900 pre-industrial baseline)
 # for each period × scenario combination.
 # Rows: "2006-2010" (baseline), "2041-2050", "2091-2100"
 # Columns: mean_gmt_45 (RCP4.5), mean_gmt_85 (RCP8.5)
 gmt_chg <- read_csv(here("output", "gmt", "gmt_pierce_RCPs.csv"))
 
-# Import Park decade GMT values (°C relative to pre-industrial baseline)
+# Import Park decade GMT values (degC relative to pre-industrial baseline)
 # Rows: one per Park snapshot decade (1960s–2010s)
 # Columns: park_year, decade, mean_gmt_pi
 gmt_park <- read_csv(here("output", "gmt", "gmt_park_hist.csv"))
 
-# Import Zhao et al. ~2095 GMT anomalies (°C relative to pre-industrial baseline)
+# Import Zhao et al. ~2095 GMT anomalies (degC relative to pre-industrial baseline)
 # Rows: SSP245, SSP585 --- these temp changes assigned to Zhao but sourced from MimiSSPs 
 # Columns: scenario, mean_gmt_pi
 gmt_zhao <- read_csv(here("output", "gmt", "gmt_zhao_SSPs.csv"))
@@ -112,12 +112,12 @@ cat("GMT SSP245 2095-99:", gmt_2090s_245, "GMT SSP585 2095-99:", gmt_2090s_585, 
 
 # Import country-level regression coefficients (beta^(c)) estimated from the FE regression.
 # Each row is a country; columns include beta^(c) estimate, SE, CI bounds, p-value, and gamma.
-reg_coefs <- read_csv(here("output", "betas", "fpm_gmt_regression_coefs_FE_sensitivity_full.csv"))
+reg_coefs <- read_csv(here("output", "betas", "fpm_gmt_betas_country_full.csv"))
 
 # Import combined long-format regression input data (43 obs per country).
 # One row per (country, fire_model, period x scenario); columns: country_code_iso3,
 # country_name, period_scenario, exposure_percap, T_ps, fire_model.
-reg_data <- read_csv(here("output", "betas", "reg_data_combined_fe_sensitivity_full.csv")) %>%
+reg_data <- read_csv(here("output", "betas", "regress_data_country_full.csv")) %>%
   mutate(
     fire_model = recode(fire_model,
                         "classic" = "CLASSIC",
@@ -172,7 +172,7 @@ print(panel_table, n = Inf)
 ##
 ## Reports mean, SD, min, median, and max for the two core regression variables:
 ##   exposure_percap  (µg/m^3/yr) -- the dependent variable PM_bar^(c)_psm
-##   T_ps             (°C)        -- the GMT regressor
+##   T_ps             (degC)        -- the GMT regressor
 ##
 ## Computed across all observations in reg_data (excluding the global pseudo-country),
 ## so the sample matches the one actually used in the regressions.
@@ -388,7 +388,7 @@ p_gmt <- ggplot(gmt_dots, aes(x = source, y = T_ps)) +
 ## each of the five fire-model fixed-effect levels: CLASSIC, JULES, and SSiB4
 ## (Park et al. historical), CESM (Pierce et al. projections), and Zhao
 ## (Zhao et al. projections).
-## Panel B shows the discrete GMT anomaly values (°C relative to the 1850–1900
+## Panel B shows the discrete GMT anomaly values (degC relative to the 1850–1900
 ## pre-industrial baseline) used as regressors, by data source: 7 for Park et al.
 ## (6 historical decade means plus one shared T_ps = 0 point from counterfactual
 ## runs), 5 for Pierce et al. (baseline and four period x scenario combinations),
