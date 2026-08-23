@@ -1,5 +1,5 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## FPM–GMT RELATIONSHIP: Grid-cell leave-one-model-out sensitivity for beta_i
+## FPM–GMT RELATIONSHIP: Main specification and grid-cell leave-one-model-out sensitivity for beta_i
 ##                        (raw fire PM2.5 concentration change per 1°C GMT)
 ##
 ## Goal: For each grid cell i, estimate the linear regression with fire-model fixed effects:
@@ -11,12 +11,11 @@
 ## cell i), and alpha_im are fire-model-specific intercepts (fixed effects absorbing
 ## model-level mean differences in concentration levels).
 ##
-## This is the grid-cell counterpart to FE_sensitivity/fpm_gmt_regression_FE_cfact_sensitivity.R
+## This is the grid-cell counterpart to regression/fpm_gmt_regress_country.R
 ## (country-level): same leave-one-model-out design -- refit once for the full 5-FE-level
 ## model, then five exclusion groups that each drop one fire-model source's observations
 ## entirely -- but fit per grid cell rather than per country, and on raw fPM concentration
-## rather than population-weighted per-capita exposure (mirrors FE/fpm_gmt_regress_FE_grid_all.R's
-## grid-cell mechanics). Park factual/counterfactual pairs of the same model (e.g. ssib4
+## rather than population-weighted per-capita exposure. Park factual/counterfactual pairs of the same model (e.g. ssib4
 ## factual + ssib4 counterfactual) are always dropped together, since they already share
 ## one FE group; CESM and Zhao are dropped alone.
 ##
@@ -44,15 +43,14 @@
 ##   output/gmt/gmt_zhao_SSPs.csv            (GMT anomaly for Zhao ~2095 SSP245 and SSP585)
 ##
 ## Outputs (one pair per exclusion group -- full, excl_classic, excl_jules, excl_ssib4,
-## excl_CESM, excl_Zhao -- written to output/betas_fe_sensitivity/):
+## excl_CESM, excl_Zhao -- written to output/betas/):
 ##   fpm_gmt_betas_grid_<group>.csv   (beta_i per grid cell with SE, CI, p-value, gamma_beta_i,
 ##                                     lon, lat, for that exclusion group)
 ##   regress_data_grid_<group>.csv    (that group's combined long-format regression input data)
 ##
 ## Execution order:
 ##   files run before: death_rate_processing.R         --> writes output/pm_joined/pop_pm_country_death_final.csv
-##   files run after:  NA (diagnostic/sensitivity companion to FE/fpm_gmt_regress_FE_grid_all.R,
-##                     which produces the primary beta_i output used downstream for grid-level mapping)
+##   files run after:  plots_beta_lobf_grid.R (reads fpm_gmt_betas_grid_<group>.csv for maps/histograms)
 ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -252,8 +250,8 @@ exclusion_groups <- list(
 )
 
 # Create the sensitivity output directory if it doesn't already exist.
-if (!dir.exists(here("output", "betas_fe_sensitivity"))) {
-  dir.create(here("output", "betas_fe_sensitivity"), recursive = TRUE)
+if (!dir.exists(here("output", "betas"))) {
+  dir.create(here("output", "betas"), recursive = TRUE)
 }
 
 # Precompute each exclusion group's filtered data (excluded fire_model level(s) dropped,
@@ -379,17 +377,17 @@ for (group_name in names(exclusion_groups)) {
   ############ Save output for this exclusion group ######################################
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  coefs_path <- here("output", "betas_fe_sensitivity",
+  coefs_path <- here("output", "betas",
                       paste0("fpm_gmt_betas_grid_", group_name, ".csv"))
-  data_path  <- here("output", "betas_fe_sensitivity",
+  data_path  <- here("output", "betas",
                       paste0("regress_data_grid_", group_name, ".csv"))
 
   write_csv(reg_coefs, coefs_path)
-  cat("[", group_name, "] Saved regression coefficients to output/betas_fe_sensitivity/",
+  cat("[", group_name, "] Saved regression coefficients to output/betas/",
       "fpm_gmt_betas_grid_", group_name, ".csv\n", sep = "")
 
   write_csv(group_data, data_path)
-  cat("[", group_name, "] Saved combined regression input data to output/betas_fe_sensitivity/",
+  cat("[", group_name, "] Saved combined regression input data to output/betas/",
       "regress_data_grid_", group_name, ".csv\n", sep = "")
 }
 

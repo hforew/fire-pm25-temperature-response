@@ -20,12 +20,8 @@
 ##
 ## Execution order:
 ##   files run before: other_mapping/death_rate_processing.R   --> writes output/pm_joined/pop_pm_country_death_final.csv
-##   files run after:  FE/fpm_gmt_regression_FE_all.R
-##                     FE_climate_attributable/fpm_gmt_regression_FE_all_cli.R
-##                     FE_climate_attributable/fpm_gmt_regression_park_cli.R
-##                     regression_FE_stats_all.R
-##                     FE_sensitivity/fpm_gmt_regression_pierce.R
-##                     FE_sensitivity/fpm_gmt_regression_park.R
+##   files run after:  regression_FE_stats_all.R
+##                     regression/fpm_gmt_regress_country.R
 ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

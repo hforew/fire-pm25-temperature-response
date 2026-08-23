@@ -1,5 +1,5 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## FPM–GMT RELATIONSHIP: Leave-one-model-out sensitivity for beta_c
+## FPM–GMT RELATIONSHIP: Main specification and leave-one-model-out sensitivity for beta_c
 ##                        (per-capita fire PM2.5 change per 1°C GMT)
 ##
 ## Goal: For each country c, estimate the linear regression with fire-model fixed effects:
@@ -12,11 +12,10 @@
 ## per-capita fire PM2.5 per 1°C GMT), and alpha_cm are fire-model-specific
 ## intercepts (fixed effects absorbing model-level mean differences in exposure levels).
 ##
-## Unlike the non-sensitivity version of this regression (FE_fact_cfact/
-## fpm_gmt_regression_FE_all_fact_cfact.R), this script refits the regression once per
-## "exclusion group" -- the full 5-FE-level model, then 5 leave-one-model-out variants
-## that each drop one fire-model source's observations entirely -- to test whether beta_c
-## depends on any single data source. Park factual/counterfactual pairs of the same model
+## This script refits the regression once per "exclusion group" -- the full 5-FE-level
+## model, then 5 leave-one-model-out variants that each drop one fire-model source's
+## observations entirely -- to test whether beta_c depends on any single data source.
+## Park factual/counterfactual pairs of the same model
 ## (e.g. ssib4 factual + ssib4 counterfactual) are always dropped together, since they
 ## already share one FE group; CESM and Zhao are dropped alone.
 ##
@@ -50,7 +49,7 @@
 ##                                         sourced from MimiSSPs)
 ##
 ## Outputs (one pair per exclusion group -- full, excl_classic, excl_jules, excl_ssib4,
-## excl_CESM, excl_Zhao -- written to output/betas_fe_sensitivity/):
+## excl_CESM, excl_Zhao -- written to output/betas/):
 ##   fpm_gmt_regression_coefs_FE_sensitivity_<group>.csv (beta_c per country with SE, CI,
 ##                                                        p-value, and gamma_beta_c for
 ##                                                        that exclusion group)
@@ -59,9 +58,8 @@
 ##
 ## Execution order:
 ##   files run before: pop_wght_pm_cntry.R --> writes pop_wght_pm_cntry_final.csv
-##   files run after: NA (diagnostic/sensitivity companion to FE_fact_cfact/
-##                    fpm_gmt_regression_FE_all_fact_cfact.R, which produces the primary
-##                    beta_c output used downstream)
+##   files run after: regression_FE_stats_all.R, beta_comparison_latex.R,
+##                    beta_GIVE_country_map.R (all read this script's "full" group output)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -372,7 +370,7 @@ print(tail(afg, 23), n = 23)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ##
 ## Sensitivity test: does beta_c depend on any single fire-model data source? "full" is
-## the baseline (all 5 FE levels, matches the non-sensitivity script). Each other entry
+## the baseline (all 5 FE levels). Each other entry
 ## drops one fire-model source entirely before refitting. Since Park factual and
 ## counterfactual runs of the same model already share one FE group (see fire_model
 ## above), excluding e.g. "classic" drops both its factual and counterfactual
@@ -387,8 +385,8 @@ exclusion_groups <- list(
 )
 
 # Create the sensitivity output directory if it doesn't already exist.
-if (!dir.exists(here("output", "betas_fe_sensitivity"))) {
-  dir.create(here("output", "betas_fe_sensitivity"), recursive = TRUE)
+if (!dir.exists(here("output", "betas"))) {
+  dir.create(here("output", "betas"), recursive = TRUE)
 }
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -530,6 +528,13 @@ for (group_name in names(exclusion_groups)) {
 ############ Per-country regression, confidence intervals, and save ####################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+# reg_coefs and reg_results are reassigned each loop iteration below, so anything
+# sourcing this script (e.g. plots_beta_lobf.R) that wants a specific group's results
+# after the loop finishes should pull them from these group-keyed lists rather than
+# relying on the bare reg_coefs/reg_results objects, which only hold the last group run.
+coefs_by_group   <- list()
+results_by_group <- list()
+
 for (group_name in names(exclusion_groups)) {
 
   group_data <- group_data_list[[group_name]]
@@ -586,6 +591,11 @@ for (group_name in names(exclusion_groups)) {
       values_from = c(estimate, std.error, statistic, p.value)
     )
 
+  # Store this group's results under its own name before the next loop iteration
+  # overwrites reg_coefs/reg_results.
+  coefs_by_group[[group_name]]   <- reg_coefs
+  results_by_group[[group_name]] <- reg_results
+
   # Inspect coefficient table
   cat("\n--- [", group_name, "] Coefficient table (head) ---\n", sep = "")
   print(head(reg_coefs, 10))
@@ -617,8 +627,8 @@ for (group_name in names(exclusion_groups)) {
   # Compute the t critical value for a 95% confidence interval.
   #
   # Degrees of freedom (DF) depend on this exclusion group's observation count and
-  # parameter count: DF = nrow(usa_data) - n_params (34 for the full model, matching
-  # the non-sensitivity script; fewer for groups with fewer remaining FE levels).
+  # parameter count: DF = nrow(usa_data) - n_params (37 for the full model;
+  # fewer for groups with fewer remaining FE levels).
   df <- nrow(usa_data) - n_params
   t_critical <- qt(0.975, df)
   cat("\n[", group_name, "] t_critical (95% CI, df = ", df, "): ", round(t_critical, 4), "\n", sep = "")
@@ -663,19 +673,19 @@ for (group_name in names(exclusion_groups)) {
   ############ Save output for this exclusion group ######################################
   # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-  coefs_path <- here("output", "betas_fe_sensitivity",
+  coefs_path <- here("output", "betas",
                       paste0("fpm_gmt_regression_coefs_FE_sensitivity_", group_name, ".csv"))
-  data_path  <- here("output", "betas_fe_sensitivity",
+  data_path  <- here("output", "betas",
                       paste0("reg_data_combined_fe_sensitivity_", group_name, ".csv"))
 
   # Save the coefficient table (beta_c with SEs and p-values) for this exclusion group.
   write_csv(reg_coefs, coefs_path)
-  cat("[", group_name, "] Saved regression coefficients to output/betas_fe_sensitivity/",
+  cat("[", group_name, "] Saved regression coefficients to output/betas/",
       "fpm_gmt_regression_coefs_FE_sensitivity_", group_name, ".csv\n", sep = "")
 
   # Save this exclusion group's combined long-format regression input data.
   write_csv(group_data, data_path)
-  cat("[", group_name, "] Saved combined regression input data to output/betas_fe_sensitivity/",
+  cat("[", group_name, "] Saved combined regression input data to output/betas/",
       "reg_data_combined_fe_sensitivity_", group_name, ".csv\n", sep = "")
 }
 
@@ -693,8 +703,8 @@ for (group_name in names(exclusion_groups)) {
 #   D_Zhao  = 1 if fire_model == "Zhao",  0 otherwise
 #
 # Each Park model's factual and counterfactual runs are pooled into fire_model's
-# classic/jules/ssib4 levels rather than getting separate intercepts (unlike the
-# non-sensitivity FE_fact_cfact script), so within-group variation includes both
+# classic/jules/ssib4 levels rather than getting separate intercepts, so within-group
+# variation includes both
 # T_ps ~= 0.25-1.1 (factual decades) and T_ps = 0 (counterfactual decades).
 #
 # The expanded model estimated by lm() is:

@@ -30,11 +30,9 @@
 ##
 ## Execution order:
 ##   files run before: none — reads raw input data directly
-##   files run after: fpm_gmt_regression_FE_all.R, fpm_gmt_regress_FE_grid_all.R,
-##                    regression_FE_stats_all.R, plots_stats_fpm_all.R,
-##                    FE_sensitivity/fpm_gmt_regression_pierce.R,
-##                    FE_sensitivity/fpm_gmt_regression_park.R,
-##                    FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R
+##   files run after: regression_FE_stats_all.R, plots_stats_fpm_all.R,
+##                    regression/fpm_gmt_regress_country.R,
+##                    regression/fpm_gmt_regress_grid.R
 ##                    (all read one or more of the three GMT outputs above)
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

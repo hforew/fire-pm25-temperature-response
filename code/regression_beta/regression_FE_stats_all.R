@@ -4,28 +4,19 @@
 
 ## FPM–GMT RELATIONSHIP: Estimate beta^(c) (per-capita fire PM2.5 change per 1°C GMT)
 ##
-## Goal: For each country c, we estimate the linear regression with fire-model fixed effects:
+## specification: For each country c, we estimate the linear regression with fire-model fixed effects:
 ##   PM_bar^(c)_psm = alpha^(c)_m + beta^(c) * T_ps + epsilon^(c)_psm
-##
-## where PM_bar^(c)_psm is population-weighted per-capita fire PM2.5 exposure (µg/m^3/yr)
-## for country c, period p, scenario s, and fire model m;
-## T_ps is GMT anomaly relative to the 1850-1900 pre-industrial baseline (°C);
-## beta^(c) is the key damage function parameter (change in population-weighted
-## per-capita fire PM2.5 per 1°C GMT), and alpha^(c)_m are fire-model-specific
-## intercepts (fixed effects absorbing model-level mean differences in exposure levels).
-##
-## Five fire-model fixed effect levels:
-##   CLASSIC (reference), JULES, SSiB4  --> Park et al. historical models
-##   CESM                               --> Pierce et al. projections
-##   Zhao                               --> Zhao et al. projections
+##   (see regression code and manuscript for detail)
 ##
 ## Data spans three sources combined:
 ##   - Pierce et al. projections: baseline (~2001–2010), 2041–2050, and 2091–2100
 ##     under RCP4.5 and RCP8.5 — 5 (period × scenario) observations per country.
-##   - Park et al. historical: 1960s–2010s across 3 fire models (CLASSIC, JULES, SSiB4)
+##   - Park et al. historical factual: 1960s–2010s across 3 fire models (CLASSIC, JULES, SSiB4)
 ##     — 18 (decade × fire model) observations per country.
+##   - Park et al. historical counterfactual: 1960s–2010s across the same 3 fire models
+##     — 18 observations per country, pooled into the same FE group as their factual runs.
 ##   - Zhao et al. projections: ~2095 under SSP2-4.5 and SSP5-8.5 — 2 observations per country.
-##   Combined: up to 25 observations per country for the regression.
+##   Combined: up to 43 observations per country for the regression.
 ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -121,12 +112,12 @@ cat("GMT SSP245 2095-99:", gmt_2090s_245, "GMT SSP585 2095-99:", gmt_2090s_585, 
 
 # Import country-level regression coefficients (beta^(c)) estimated from the FE regression.
 # Each row is a country; columns include beta^(c) estimate, SE, CI bounds, p-value, and gamma.
-reg_coefs <- read_csv(here("output", "betas_fe_all", "fpm_gmt_regression_coefs_FE_all.csv"))
+reg_coefs <- read_csv(here("output", "betas", "fpm_gmt_regression_coefs_FE_sensitivity_full.csv"))
 
-# Import combined long-format regression input data (25 obs per country).
+# Import combined long-format regression input data (43 obs per country).
 # One row per (country, fire_model, period x scenario); columns: country_code_iso3,
 # country_name, period_scenario, exposure_percap, T_ps, fire_model.
-reg_data <- read_csv(here("output", "betas_fe_all", "reg_data_combined_fe_all.csv")) %>%
+reg_data <- read_csv(here("output", "betas", "reg_data_combined_fe_sensitivity_full.csv")) %>%
   mutate(
     fire_model = recode(fire_model,
                         "classic" = "CLASSIC",
@@ -329,7 +320,7 @@ print(beta_table, n = Inf)
 ##
 ## Two  panels:
 ##   left:    Per-capita fPM2.5 exposure by fire model (Overall + 5 models)
-##   right: GMT anomaly by data source (Overall + Park grouped + CESM + Zhao)
+##   right: GMT anomaly by data source (Park et al. + Pierce et al. + Zhao et al.)
 ##
 ## Box: 25th-75th percentile; whiskers: 10th-90th percentile; dot: mean.
 ## Pre-computing quantiles and using stat = "identity" in geom_boxplot gives full
@@ -369,7 +360,7 @@ p_exposure <- ggplot(exposure_bw, aes(x = group)) +
   theme_bw(base_size = 11)
 
 # ~~~~ Panel B: GMT anomaly by data source (Cleveland dot plot) ~~~~
-# T_ps values are fixed scalars assigned by construction (6 Park, 5 Pierce, 2 Zhao),
+# T_ps values are fixed scalars assigned by construction (7 Park, 5 Pierce, 2 Zhao),
 # not a continuous distribution. A dot plot shows the actual discrete values honestly.
 
 gmt_dots <- reg_data_cntry %>%
@@ -398,10 +389,10 @@ p_gmt <- ggplot(gmt_dots, aes(x = source, y = T_ps)) +
 ## (Park et al. historical), CESM (Pierce et al. projections), and Zhao
 ## (Zhao et al. projections).
 ## Panel B shows the discrete GMT anomaly values (°C relative to the 1850–1900
-## pre-industrial baseline) used as regressors, by data source: 6 values for
-## Park et al. (1960s–2010s decade means), 5 for Pierce et al. (baseline and
-## four period x scenario combinations), and 2 for Zhao et al. (SSP2-4.5 and
-## SSP5-8.5). Each dot is one unique T_ps value.
+## pre-industrial baseline) used as regressors, by data source: 7 for Park et al.
+## (6 historical decade means plus one shared T_ps = 0 point from counterfactual
+## runs), 5 for Pierce et al. (baseline and four period x scenario combinations),
+## and 2 for Zhao et al. (SSP2-4.5 and SSP5-8.5). Each dot is one unique T_ps value.
 ## In Panel A, the box spans the 25th–75th percentile, the center line is the
 ## median, whiskers extend to the 10th and 90th percentiles, and the red dot
 ## marks the mean.
@@ -418,10 +409,10 @@ fig_wide <- (p_exposure | p_gmt) +
 
 print(fig_wide)
 
-ggsave(here("images", "regression_beta", "beta_FE_all",
+ggsave(here("images", "regression_beta", "beta_country",
             "fig4_desc_stats.png"),
        fig_wide, width = 8.5, height = 4, dpi = 300)
-cat("Saved fig4_desc_stats to images/regression_beta/beta_FE_all/fig4_desc_stats.png\n")
+cat("Saved fig4_desc_stats to images/regression_beta/beta_country/fig4_desc_stats.png\n")
 
 
 # THE END

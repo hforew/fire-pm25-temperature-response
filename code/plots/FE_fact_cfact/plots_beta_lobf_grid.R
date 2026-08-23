@@ -1,8 +1,8 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## PLOTS OF GRID-CELL BETA COEFFICIENTS - FE leave-one-model-out sensitivity (grid-level)
+## PLOTS OF GRID-CELL BETA COEFFICIENTS
 ##
 ## Goal: Visualise grid-cell beta_i estimates from each exclusion group produced by
-##   FE_sensitivity/fpm_gmt_regress_grid.R. For each of the 6 groups (full, excl_classic,
+##   regression/fpm_gmt_regress_grid.R. For each of the 6 groups (full, excl_classic,
 ##   excl_jules, excl_ssib4, excl_CESM, excl_Zhao), produces:
 ##   (1) histogram of beta_i across all grid cells;
 ##   (2) world raster map of beta_i; (3) CONUS raster map of beta_i.
@@ -10,7 +10,7 @@
 ##   to see how sensitive the spatial pattern is to dropping any one fire-model source.
 ##
 ## Inputs:
-##   output/betas_fe_sensitivity/fpm_gmt_betas_grid_<group>.csv   (beta_i per grid cell with SE,
+##   output/betas/fpm_gmt_betas_grid_<group>.csv   (beta_i per grid cell with SE,
 ##                                                   p-value, lon, lat, per exclusion group)
 ##
 ## Outputs (one triplet per exclusion group):
@@ -19,7 +19,7 @@
 ##   images/regression_beta/beta_grid/<group>/fig6_map_beta_i_grid_usa.png
 ##
 ## Execution order:
-##   files run before: FE_sensitivity/fpm_gmt_regress_grid.R   --> writes fpm_gmt_betas_grid_<group>.csv
+##   files run before: regression/fpm_gmt_regress_grid.R   --> writes fpm_gmt_betas_grid_<group>.csv
 ##   files run after: NA
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -37,7 +37,7 @@ library(maps)
 ############ Exclusion groups #############################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# Same 6 groups as FE_sensitivity/fpm_gmt_regress_grid.R -- one input file per group.
+# Same 6 groups as regression/fpm_gmt_regress_grid.R -- one input file per group.
 group_names <- c("full", "excl_classic", "excl_jules", "excl_ssib4", "excl_CESM", "excl_Zhao")
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -121,7 +121,7 @@ for (group_name in group_names) {
   # One row per grid cell. Key columns:
   #   row_id, lon, lat      -- cell identifier and centre coordinates
   #   estimate_beta_i       -- OLS slope: change in fire PM2.5 (µg/m^3) per 1°C GMT
-  reg_coefs <- read_csv(here("output", "betas_fe_sensitivity",
+  reg_coefs <- read_csv(here("output", "betas",
                               paste0("fpm_gmt_betas_grid_", group_name, ".csv")))
 
   out_dir <- here("images", "regression_beta", "beta_grid", group_name)

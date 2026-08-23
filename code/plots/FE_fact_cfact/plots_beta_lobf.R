@@ -1,24 +1,27 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-## PLOTS OF COUNTRY BETA COEFFICIENTS - FACTUAL + COUNTERFACTUAL ##
+## PLOTS OF COUNTRY BETA COEFFICIENTS ##
 ##
-## Goal: Visualise country-level FE regression outputs from
-##   fpm_gmt_regression_FE_all_fact_cfact.R.
-##   Produces: (1) histogram of beta_c distribution; (2) world choropleth map of
-##   beta_c; (3) individual country LOBF scatter plots; (4) 2x3 multi-country LOBF grid.
+## Goal: Visualise the "full" model's country-level FE regression outputs from
+##   fpm_gmt_regress_country.R.
+##   Produces: (1) histogram + world choropleth map of beta_c, combined into one
+##   multiplot, plus the map (Panel B) saved standalone; (2) individual
+##   country LOBF scatter plots; (3) 2x3 multi-country LOBF grid.
 ##
 ## Inputs:
-##   code/regression_beta/FE_fact_cfact/fpm_gmt_regression_FE_all_fact_cfact.R
-##     (sourced directly; provides reg_coefs, reg_data_combined, reg_results)
+##   code/regression_beta/regression/fpm_gmt_regress_country.R
+##     (sourced directly; fits all 6 exclusion groups and stores each group's
+##     results in coefs_by_group/results_by_group. This script pulls out the
+##     "full" group as reg_coefs/reg_results; reg_data_combined is used as-is,
+##     since it already holds the unfiltered full-model data before sourcing returns.)
 ##
 ## Outputs:
-##   images/regression_beta/beta_FE_all_fact_cfact/hist_beta_c_fe.png
-##   images/regression_beta/beta_FE_all_fact_cfact/map_beta_c_fe.png
-##   images/regression_beta/beta_FE_all_fact_cfact/multiplot_beta_c_wide.png
-##   images/regression_beta/beta_FE_all_fact_cfact/lof_{iso}_fe.png   (one per country in countries_to_plot)
-##   images/regression_beta/beta_FE_all_fact_cfact/lof_multi_fe.png
+##   images/regression_beta/beta_country/fig3_multiplot_beta_c.png
+##   images/regression_beta/beta_country/map_beta_c.png   (Panel B of fig3, standalone)
+##   images/regression_beta/beta_country/country_lof/lof_{iso}_fe.png   (one per country in countries_to_plot)
+##   images/regression_beta/beta_country/fig5_lof_multi.png
 ##
 ## Execution order:
-##   files run before: fpm_gmt_regression_FE_all_fact_cfact.R   --> sourced directly; runs automatically
+##   files run before: fpm_gmt_regress_country.R   --> sourced directly; runs automatically
 ##   files run after: NA (no downstream files dependent on this one)
 ##
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,16 +45,23 @@ library(patchwork)
 ############ Import #####################################################
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-# source() loads all objects produced by fpm_gmt_regression_FE_all_fact_cfact.R. Key objects:
+# source() runs fpm_gmt_regress_country.R; reg_coefs/reg_results below are the "full"
+# group pulled out of coefs_by_group/results_by_group (see extraction above). Key objects:
 #   reg_coefs         -- one row per country; estimate_beta_c is the OLS slope:
 #                        change in per-capita fire PM2.5 (µg/m^3/yr) per 1°C GMT.
 #                        Positive = more fire PM with warming; negative = less.
 #   reg_data_combined -- 43 rows per country: T_ps, exposure_percap, fire_model
 #                        (18 Park factual + 18 Park counterfactual + 5 Pierce + 2 Zhao)
 #   reg_results       -- nested list with tidied FE coefficients (intercept +
-#                        7 model dummies) used to recover per-model fitted lines.
+#                        4 model dummies) used to recover per-model fitted lines.
 
-source(here("code/regression_beta/FE_fact_cfact", "fpm_gmt_regression_FE_all_fact_cfact.R"))
+source(here("code/regression_beta/regression", "fpm_gmt_regress_country.R"))
+
+# fpm_gmt_regress_country.R fits 6 exclusion groups in a loop and stores each group's
+# results in coefs_by_group/results_by_group (keyed by group name) precisely because
+# reg_coefs/reg_results are reassigned every iteration; pull out the "full" model here.
+reg_coefs   <- coefs_by_group[["full"]]
+reg_results <- results_by_group[["full"]]
 
 head(reg_coefs)
 str(reg_coefs)
@@ -68,9 +78,11 @@ str(reg_coefs)
 ## vertical line and text label.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-n_total <- nrow(reg_coefs)                                      # total countries in regression
-n_pos   <- sum(reg_coefs$estimate_beta_c > 0,    na.rm = TRUE)  # beta_c > 0: warming increases fire PM
-n_sig   <- sum(reg_coefs$p.value_beta_c  < 0.05, na.rm = TRUE)  # p < .05: slope sig. different from zero
+reg_coefs_hist <- reg_coefs %>% filter(country_name != "global")  # exclude pooled global row from country-level histogram
+
+n_total <- nrow(reg_coefs_hist)                                      # total countries in regression
+n_pos   <- sum(reg_coefs_hist$estimate_beta_c > 0,    na.rm = TRUE)  # beta_c > 0: warming increases fire PM
+n_sig   <- sum(reg_coefs_hist$p.value_beta_c  < 0.05, na.rm = TRUE)  # p < .05: slope sig. different from zero
 
 # Format summary strings for console output; %d = integer, %% = literal percent sign
 beta_c_pos <- sprintf("β(c) > 0: %d of %d (%d%%)", n_pos, n_total, round(100 * n_pos / n_total))
@@ -79,16 +91,16 @@ beta_c_sig <- sprintf("p < .05: %d of %d (%d%%)",  n_sig, n_total, round(100 * n
 cat(beta_c_pos, "\n")
 cat(beta_c_sig, "\n")
 
-med_beta_c <- median(reg_coefs$estimate_beta_c, na.rm = TRUE)  # median beta_c across countries
+med_beta_c <- median(reg_coefs_hist$estimate_beta_c, na.rm = TRUE)  # median beta_c across countries
 
-# Shared HTML label: used as subtitle in standalone, as annotate in multiplot
+# Shared HTML label: used as subtitle on the console preview below, as annotate in multiplot
 stats_label <- paste0("β<sub>c</sub> > 0: ", n_pos, " of ", n_total,
                       " (", round(100 * n_pos / n_total), "%) | ",
                       "p &lt; .05: ", n_sig, " of ", n_total,
                       " (", round(100 * n_sig / n_total), "%)")
 
 # Base histogram: no annotation, no subtitle
-hist_base <- ggplot(reg_coefs, aes(x = estimate_beta_c)) +
+hist_base <- ggplot(reg_coefs_hist, aes(x = estimate_beta_c)) +
   geom_histogram(bins = 50, fill = "steelblue", color = "white") +       # 50 bins; white borders separate bars
   geom_vline(xintercept = 0, linetype = "dashed", color = "red") +       # zero reference: no GMT effect
   geom_vline(xintercept = med_beta_c, linetype = "dotted", color = "black", linewidth = 0.8) +  # median marker
@@ -104,13 +116,12 @@ hist_base <- ggplot(reg_coefs, aes(x = estimate_beta_c)) +
   theme_minimal() +
   theme(plot.margin = margin(b = 0.5, unit = "cm"))
 
-# Standalone: stats as subtitle; element_markdown renders the HTML superscript
+# Console preview only (not saved): stats as subtitle; element_markdown renders the HTML superscript
 hist_beta_c <- hist_base +
   labs(subtitle = stats_label) +
   theme(plot.subtitle = element_markdown(size = 10))
 
 hist_beta_c
-ggsave(here("images/regression_beta/beta_FE_all_fact_cfact", "hist_beta_c_fe.png"), plot = hist_beta_c, width = 8, height = 5, dpi = 300)
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -176,7 +187,6 @@ print_beta_stats(reg_coefs$estimate_beta_c, "GLOBAL")
 band_labels <- c("<0", "0-0.10", "0.10-0.25", "0.25-0.50", "0.50-1.00", ">1.00")
 
 band_colors <- c(
-  # "<0"        = "#F5F0E8",  # off-white    -- warming reduces fire PM2.5
   "<0"        = "azure2",  # azure2    -- warming reduces fire PM2.5
   "0-0.10"    = "#FFE566",  # light yellow -- low positive response
   "0.10-0.25" = "#C8A000",  # dark yellow  -- moderate-low
@@ -241,16 +251,23 @@ map_beta_c <- world_beta %>%
 
 
 map_beta_c
-ggsave(here("images/regression_beta/beta_FE_all_fact_cfact", "map_beta_c_fe.png"),
-       map_beta_c, width = 6.5, height = 3.5, dpi = 300)
 
-print("Beta map saved to images/regression_beta/beta_FE_all_fact_cfact/")
+# theme_minimal() leaves plot.background transparent; add an opaque white
+# background for the standalone save (patchwork gives the multiplot version
+# its own background, so map_beta_c itself is left untouched for reuse there).
+ggsave(here("images/regression_beta/beta_country", "map_beta_c.png"),
+       map_beta_c + theme(plot.background = element_rect(fill = "white", colour = NA)),
+       width = 8, height = 5, units = "in", dpi = 300)
+
+print("Map (Panel B) saved to images/regression_beta/beta_country/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############ Histogram + Map multiplot (Panel A / Panel B) ############################
 ##
-## Combines hist_beta_c (Panel A) and map_beta_c (Panel B) using patchwork.
+## Combines hist_base (Panel A) and map_beta_c (Panel B) using patchwork.
+## (hist_beta_c above is a console-only preview with its own subtitle; it is not
+## reused here -- the multiplot restyles hist_base with its own stats annotation.)
 ## Layout: A left (40%), B right (60%); map given 2x the width.
 ## Individual panel titles are stripped and replaced with a single
 ## plot_annotation() title. A/B tags are added via tag_levels = "A".
@@ -271,16 +288,16 @@ shared_annotation <- plot_annotation(
   tag_levels = "A"
 )
 
-# _wide: A left (40%), B right (60%); widths = c(2, 3) gives the 40/60 split
-multiplot_wide <- (hist_notitle | map_notitle) +
+# A left (40%), B right (60%); widths = c(2, 3) gives the 40/60 split
+multiplot_beta_c <- (hist_notitle | map_notitle) +
   plot_layout(widths = c(2, 3)) +
   shared_annotation
 
-print(multiplot_wide)
-ggsave(here("images/regression_beta/beta_FE_all_fact_cfact", "multiplot_beta_c_wide.png"),
-       multiplot_wide, width = 8.5, height = 3.5, units = "in", dpi = 300)
+print(multiplot_beta_c)
+ggsave(here("images/regression_beta/beta_country", "fig3_multiplot_beta_c.png"),
+       multiplot_beta_c, width = 8.5, height = 3.5, units = "in", dpi = 300)
 
-print("Multiplot saved to images/regression_beta/beta_FE_all_fact_cfact/")
+print("Multiplot saved to images/regression_beta/beta_country/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -296,12 +313,12 @@ print("Multiplot saved to images/regression_beta/beta_FE_all_fact_cfact/")
 # (alpha_classic + delta_m) and the shared slope beta_c. All five lines are
 # parallel (common slope) but vertically offset by their model-level intercepts.
 # Park factual and counterfactual runs of the same model share one FE group (see
-# fpm_gmt_regression_FE_all_fact_cfact.R), so counterfactual points fall on the
+# fpm_gmt_regress_country.R), so counterfactual points fall on the
 # same line as their factual counterpart -- only the 5 base-model lines are drawn.
 #
 # Data objects from source():
 #   reg_data_combined -- 43 rows per country: T_ps, exposure_percap, fire_model
-#   reg_coefs         -- beta_c per country (shared slope across all eight lines)
+#   reg_coefs         -- beta_c per country (shared slope across all five lines)
 #   reg_results       -- tidied FE coefficients used to recover per-model intercepts
 
 # Lookup table: maps each period_scenario to its fire model and warming trajectory.
@@ -370,6 +387,9 @@ trajectory_shapes <- c(
 
 countries_to_plot <- c("global", "USA","DEU", "RUS", "AUS", "CHN", "IND", "ARG", "BRA", "ETH", "NGA")
 
+country_lof_dir <- here("images/regression_beta/beta_country/country_lof")
+if (!dir.exists(country_lof_dir)) dir.create(country_lof_dir, recursive = TRUE)
+
 for (iso in countries_to_plot) {
 
   # Filter to this country's 43 observations, join model/trajectory lookup, and
@@ -421,7 +441,7 @@ for (iso in countries_to_plot) {
   # Extract per-model FE intercepts from the tidy coefficient table.
   # (Intercept) = classic baseline; other models add their delta offset.
   # NB: Park factual and counterfactual runs of the same model are pooled into one
-  # FE group (see fpm_gmt_regression_FE_all_fact_cfact.R) -- there is no separate
+  # FE group (see fpm_gmt_regress_country.R) -- there is no separate
   # *_counter dummy term, so only the 5 base-model lines are built below.
   tidied_c      <- reg_results %>% filter(country_code_iso3 == iso) %>% unnest(tidied)
   alpha_classic <- tidied_c %>% filter(term == "(Intercept)")     %>% pull(estimate)  # classic baseline intercept
@@ -467,12 +487,12 @@ for (iso in countries_to_plot) {
           plot.subtitle     = element_text(size = 12))
 
   print(p)
-  ggsave(here("images/regression_beta/beta_FE_all_fact_cfact", paste0("lof_", tolower(iso), "_fe.png")),
+  ggsave(file.path(country_lof_dir, paste0("lof_", tolower(iso), "_fe.png")),
          p, width = 7, height = 5, dpi = 300)
 }
 
 
-print("Line of best fit plots saved to images/regression_beta/beta_FE_all_fact_cfact/")
+print("Line of best fit plots saved to images/regression_beta/beta_country/country_lof/")
 
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -523,7 +543,7 @@ build_lobf_multi <- function(countries) {
 
   # One row per country x fire model: FE intercept + shared slope for geom_abline.
   # Park factual/counterfactual runs of a model are pooled into one FE group (see
-  # fpm_gmt_regression_FE_all_fact_cfact.R), so only the 5 base-model lines exist.
+  # fpm_gmt_regress_country.R), so only the 5 base-model lines exist.
   lines <- purrr::map_dfr(countries, function(iso) {   # 5 rows per country (one per model)
     tidied_c      <- reg_results %>% filter(country_code_iso3 == iso) %>% unnest(tidied)
     beta_c_val    <- tidied_c %>% filter(term == "T_ps")            %>% pull(estimate)
@@ -582,10 +602,10 @@ build_lobf_multi <- function(countries) {
 p_multi <- build_lobf_multi(multiplot_countries)
 
 print(p_multi)
-ggsave(here("images/regression_beta/beta_FE_all_fact_cfact", "lof_multi_fe.png"),
+ggsave(here("images/regression_beta/beta_country", "fig5_lof_multi.png"),
        p_multi, width = 8.5, height = 5, dpi = 300)
 
-print("Multi-country grid saved to images/regression_beta/beta_FE_all_fact_cfact/")
+print("Multi-country grid saved to images/regression_beta/beta_country/")
 
 ############ THE END  ############################
 
