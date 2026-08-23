@@ -23,6 +23,8 @@ The resulting beta_c estimates (output/betas/fpm_gmt_betas_country_full.csv)
 are the damage-function parameter that feeds the GIVE/SC-CO2 valuation step,
 which lives outside this repo (see note at the top of Section 5 below).
 
+Due to size/format, certain file inputs are not included in GitHub repo. Available upon request. 
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ############################  1 - DIRECTORY STRUCTURE  #######################################
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -127,7 +129,7 @@ DIAGNOSTIC / VALIDATION UTILITIES (not part of the main pipeline; run standalone
                                                             NetCDF coords are centers or edges
 
   IMPORTANT: what happens after beta_c leaves this repo (Monte Carlo sampling of beta_c and
-  the concentration-response coefficient, the GIVE wildfire-PM2.5 damage function, discounting,
+  the concentration-response coefficient, the GIVE fire-PM2.5 damage function, discounting,
   and the resulting SC-CO2) is not implemented in this repo -- see the flagged items in
   Section 5 below.
 
@@ -276,3 +278,5 @@ repo -- those items are flagged "NOT IN THIS REPO" below so you can fill in the 
   Table 5   output/latex/beta_select.tex
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+THE END 
