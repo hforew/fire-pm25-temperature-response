@@ -1,7 +1,7 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ## PLOTS OF COUNTRY BETA COEFFICIENTS ##
 ##
-## Goal: Visualise the "full" model's country-level FE regression outputs from
+## Goal: Visualise the main model's country-level FE regression outputs from
 ##   fpm_gmt_regress_country.R.
 ##   Produces: (1) histogram + world choropleth map of beta_c, combined into one
 ##   multiplot, plus the map (Panel B) saved standalone; (2) individual
@@ -353,32 +353,30 @@ scenario_lookup <- tibble(
     "exposure_percap_fpm_2095_SSP245_Zhao",   "exposure_percap_fpm_2095_SSP585_Zhao"
   ),
   model = c(
-    rep("CLASSIC",         6), rep("JULES",         6), rep("SSiB4",         6),  # factual
-    rep("classic_counter", 6), rep("jules_counter", 6), rep("ssib4_counter", 6),  # counterfactual
-    "CESM", "CESM", "CESM", "CESM", "CESM",                                       # Pierce
-    "Zhao", "Zhao"                                                                 # Zhao
+    rep("CLASSIC", 6), rep("JULES", 6), rep("SSiB4", 6),  # factual
+    rep("CLASSIC", 6), rep("JULES", 6), rep("SSiB4", 6),  # counterfactual -- same model/color as factual
+    "CESM", "CESM", "CESM", "CESM", "CESM",                # Pierce
+    "Zhao et al.", "Zhao et al."                            # Zhao
   ),
   trajectory = c(
-    rep("Historical", 18),   # Park factual
-    rep("Historical", 18),   # Park counterfactual
+    rep("Historical", 18),                    # Park factual
+    rep("Historical - counterfactual", 18),   # Park counterfactual
     "Historical", "RCP4.5", "RCP8.5", "RCP4.5", "RCP8.5",  # Pierce
     "SSP2-4.5", "SSP5-8.5"                                  # Zhao
   )
 )
 
 model_colors <- c(
-  "CESM"            = "#E69F00",  # orange
-  "JULES"           = "#56B4E9",  # blue
-  "SSiB4"           = "#009E73",  # green
-  "CLASSIC"         = "#CC79A7",  # pink
-  "Zhao"            = "#000000",  # black
-  "classic_counter" = "#E8C4D8",  # light pink  -- counterclim CLASSIC
-  "jules_counter"   = "#ABD9F4",  # light blue  -- counterclim JULES
-  "ssib4_counter"   = "#66C4A0"   # light green -- counterclim SSiB4
+  "CESM"    = "#E69F00",  # orange
+  "JULES"   = "#56B4E9",  # blue
+  "SSiB4"   = "#009E73",  # green
+  "CLASSIC" = "#CC79A7",  # pink
+  "Zhao et al." = "#000000"   # black
 )
 
 trajectory_shapes <- c(
-  "Historical" = 16,
+  "Historical"                 = 16,  # filled circle
+  "Historical - counterfactual" = 10, # circle with plus -- Park counterclim runs
   "RCP4.5"   = 17,
   "RCP8.5"   = 15,
   "SSP2-4.5"   = 18,
@@ -451,7 +449,7 @@ for (iso in countries_to_plot) {
   delta_Zhao    <- tidied_c %>% filter(term == "fire_modelZhao")  %>% pull(estimate)  # Zhao offset from classic
 
   lines_df <- tibble(
-    model       = factor(c("CLASSIC", "JULES", "SSiB4", "CESM", "Zhao"),
+    model       = factor(c("CLASSIC", "JULES", "SSiB4", "CESM", "Zhao et al."),
                          levels = names(model_colors)),
     intercept_m = c(alpha_classic,                             # classic: base intercept
                     alpha_classic + delta_jules,               # jules:   base + model offset
@@ -561,7 +559,7 @@ build_lobf_multi <- function(countries) {
     tibble(
       country_code_iso3 = iso,
       strip_label       = strip_lbl,                                         # must match df for facet subsetting
-      model             = factor(c("CLASSIC", "JULES", "SSiB4", "CESM", "Zhao"),
+      model             = factor(c("CLASSIC", "JULES", "SSiB4", "CESM", "Zhao et al."),
                                  levels = names(model_colors)),
       intercept_m       = c(alpha_classic,
                             alpha_classic + delta_jules,
