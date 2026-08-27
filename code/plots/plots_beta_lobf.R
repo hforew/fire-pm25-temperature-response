@@ -306,7 +306,7 @@ print("Multiplot saved to images/regression_beta/beta_country/")
 
 # For each selected country, plot all 43 observations (18 Park factual + 18 Park
 # counterfactual + 5 Pierce + 2 Zhao) with five fitted lines -- one per fire model
-# (CLASSIC, JULES, SSiB4, CESM, Zhao) -- on raw exposure_percap.
+# (CLASSIC, JULES, SSiB4, CESM, Zhao et al.) -- on raw exposure_percap.
 #
 # y-axis: exposure_percap (raw per-capita fire PM2.5 exposure).
 # Fitted lines: one per fire model, each using the FE intercept for that model
@@ -502,7 +502,7 @@ print("Line of best fit plots saved to images/regression_beta/beta_country/count
 ## Strip label: country code + beta_c + SE.
 ## y-axis: exposure_percap (raw per-capita fire PM2.5 exposure).
 ## Five parallel dotted fitted lines per panel: one per fire model (CLASSIC, JULES,
-## SSiB4, CESM, Zhao), each using its FE intercept (alpha_classic + delta_m) and the
+## SSiB4, CESM, Zhao et al.), each using its FE intercept (alpha_classic + delta_m) and the
 ## shared slope beta_c. Park counterfactual points share their factual model's FE
 ## group, so they fall on the same line rather than getting a separate one.
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
